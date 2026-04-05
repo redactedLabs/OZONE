@@ -1,7 +1,15 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { fetchPoolAssets, getTokenLogoSync } from '$lib/utils/tokenLogos';
 
 	let { data }: { data: PageData } = $props();
+
+	let poolAssets = $state<string[]>([]);
+	fetchPoolAssets().then((assets) => { poolAssets = assets; });
+
+	function logo(symbol: string): string | undefined {
+		return getTokenLogoSync(symbol, poolAssets);
+	}
 
 	const typeLabels: Record<string, string> = {
 		swap: 'Swap', addLiquidity: 'Add LP', withdraw: 'Withdraw', send: 'Send', refund: 'Refund',
@@ -12,28 +20,6 @@
 		switch: '#a78bfa', contract: '#64748b', donate: '#f472b6',
 	};
 
-	// Token logos
-	const ICON_CDN = 'https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color';
-	const CMC_CDN = 'https://s2.coinmarketcap.com/static/img/coins/64x64';
-	const tokenLogos: Record<string, string> = {
-		BTC: `${ICON_CDN}/btc.svg`,
-		ETH: `${ICON_CDN}/eth.svg`,
-		SOL: `${CMC_CDN}/5426.png`,
-		DOGE: `${ICON_CDN}/doge.svg`,
-		LTC: `${ICON_CDN}/ltc.svg`,
-		BCH: `${ICON_CDN}/bch.svg`,
-		AVAX: `${ICON_CDN}/avax.svg`,
-		BNB: `${ICON_CDN}/bnb.svg`,
-		ATOM: `${ICON_CDN}/atom.svg`,
-		XRP: `${ICON_CDN}/xrp.svg`,
-		RUNE: `${CMC_CDN}/4157.png`,
-		USDC: `${ICON_CDN}/usdc.svg`,
-		USDT: `${ICON_CDN}/usdt.svg`,
-		DAI: `${ICON_CDN}/dai.svg`,
-		WBTC: `${ICON_CDN}/wbtc.svg`,
-		RUJI: `${CMC_CDN}/4157.png`,
-	};
-
 	const txSwaps = $derived(data.transactions?.filter((t: any) => t.type === 'swap').length || 0);
 	const txAdds = $derived(data.transactions?.filter((t: any) => t.type === 'addLiquidity').length || 0);
 	const txWithdraws = $derived(data.transactions?.filter((t: any) => t.type === 'withdraw').length || 0);
@@ -41,9 +27,9 @@
 
 	function exportCSV() {
 		if (!data.transactions) return;
-		const headers = ['Date', 'Type', 'Asset In', 'Amount In', 'Asset Out', 'Amount Out', 'From', 'To', 'TxID', 'Status'];
+		const headers = ['Date', 'Type', 'Asset In', 'Amount In', 'Asset Out', 'Amount Out', 'Fee Amount', 'Fee Currency', 'From', 'To', 'TxID', 'Status'];
 		const rows = data.transactions.map((tx: any) => [
-			tx.date, tx.type, tx.assetIn, tx.rawAmountIn || tx.amountIn, tx.assetOut, tx.rawAmountOut || tx.amountOut, tx.from, tx.to, tx.txID, tx.status
+			tx.date, tx.type, tx.assetIn, tx.rawAmountIn || tx.amountIn, tx.assetOut, tx.rawAmountOut || tx.amountOut, tx.feeAmount || '', tx.feeCurrency || '', tx.from, tx.to, tx.txID, tx.status
 		]);
 		const csv = [headers, ...rows].map((r: string[]) =>
 			r.map((c: string) => `"${String(c).replace(/"/g, '""')}"`).join(',')
@@ -74,7 +60,9 @@
 				sentAmount !== '0' ? sentCurrency : '',
 				receivedAmount !== '0' ? receivedAmount : '',
 				receivedAmount !== '0' ? receivedCurrency : '',
-				'', '', '', '',
+				tx.feeAmount || '',
+				tx.feeCurrency || '',
+				'', '',
 				label,
 				desc,
 				tx.txID || ''
@@ -180,9 +168,10 @@
 				<div class="text-[10px] mt-4 mb-2" style="color: var(--text-faint);">BALANCES AT TIME OF REPORT</div>
 				<div class="flex flex-wrap gap-2">
 					{#each data.balances as bal}
+						
 						<span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle);">
-							{#if tokenLogos[bal.asset.toUpperCase()]}
-								<img src={tokenLogos[bal.asset.toUpperCase()]} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
+							{#if logo(bal.asset.toUpperCase())}
+								<img src={logo(bal.asset.toUpperCase())} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
 							{/if}
 							<span style="color: var(--text);">{bal.amount}</span>
 							<span style="color: var(--text-faint);">{bal.asset.toUpperCase()}</span>
@@ -196,9 +185,10 @@
 			<div class="text-[10px] mb-2" style="color: var(--text-faint);">BALANCES AT TIME OF REPORT</div>
 			<div class="flex flex-wrap gap-2">
 				{#each data.balances as bal}
+					
 					<span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle);">
-						{#if tokenLogos[bal.asset.toUpperCase()]}
-							<img src={tokenLogos[bal.asset.toUpperCase()]} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
+						{#if logo(bal.asset.toUpperCase())}
+							<img src={logo(bal.asset.toUpperCase())} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
 						{/if}
 						<span style="color: var(--text);">{bal.amount}</span>
 						<span style="color: var(--text-faint);">{bal.asset.toUpperCase()}</span>
@@ -257,8 +247,9 @@
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 							{#if tx.amountIn !== '0'}
 								<span class="inline-flex items-center gap-1.5">
-									{#if tokenLogos[tx.assetIn]}
-										<img src={tokenLogos[tx.assetIn]} alt={tx.assetIn} class="w-4 h-4 rounded-full" />
+									
+									{#if logo(tx.assetIn)}
+										<img src={logo(tx.assetIn)} alt={tx.assetIn} class="w-4 h-4 rounded-full" />
 									{/if}
 									{tx.amountIn} <span style="color: var(--text-faint);">{tx.assetIn}</span>
 								</span>
@@ -267,8 +258,9 @@
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 							{#if tx.amountOut !== '0'}
 								<span class="inline-flex items-center gap-1.5">
-									{#if tokenLogos[tx.assetOut]}
-										<img src={tokenLogos[tx.assetOut]} alt={tx.assetOut} class="w-4 h-4 rounded-full" />
+									
+									{#if logo(tx.assetOut)}
+										<img src={logo(tx.assetOut)} alt={tx.assetOut} class="w-4 h-4 rounded-full" />
 									{/if}
 									{tx.amountOut} <span style="color: var(--text-faint);">{tx.assetOut}</span>
 								</span>

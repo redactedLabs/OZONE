@@ -1,10 +1,13 @@
 <script lang="ts">
+	import { fetchPoolAssets, getTokenLogoSync } from '$lib/utils/tokenLogos';
+
 	let address = $state('');
 	let phase = $state<'idle' | 'loading' | 'done'>('idle');
 	let loadStep = $state(0);
 	let report = $state<any>(null);
 	let error = $state('');
 	let copied = $state(false);
+	let poolAssets = $state<string[]>([]);
 
 	// Share options
 	let dateFrom = $state('');
@@ -13,27 +16,12 @@
 	let revealWallet = $state(false);
 	let showShareOpts = $state(false);
 
-	// Token logos
-	const ICON_CDN = 'https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color';
-	const CMC_CDN = 'https://s2.coinmarketcap.com/static/img/coins/64x64';
-	const tokenLogos: Record<string, string> = {
-		BTC: `${ICON_CDN}/btc.svg`,
-		ETH: `${ICON_CDN}/eth.svg`,
-		SOL: `${CMC_CDN}/5426.png`,
-		DOGE: `${ICON_CDN}/doge.svg`,
-		LTC: `${ICON_CDN}/ltc.svg`,
-		BCH: `${ICON_CDN}/bch.svg`,
-		AVAX: `${ICON_CDN}/avax.svg`,
-		BNB: `${ICON_CDN}/bnb.svg`,
-		ATOM: `${ICON_CDN}/atom.svg`,
-		XRP: `${ICON_CDN}/xrp.svg`,
-		RUNE: `${CMC_CDN}/4157.png`,
-		USDC: `${ICON_CDN}/usdc.svg`,
-		USDT: `${ICON_CDN}/usdt.svg`,
-		DAI: `${ICON_CDN}/dai.svg`,
-		WBTC: `${ICON_CDN}/wbtc.svg`,
-		RUJI: `${CMC_CDN}/4157.png`,
-	};
+	// Load pool assets on mount for dynamic logo resolution
+	fetchPoolAssets().then((assets) => { poolAssets = assets; });
+
+	function logo(symbol: string): string | undefined {
+		return getTokenLogoSync(symbol, poolAssets);
+	}
 
 	const LOAD_STEPS = [
 		'Connecting to THORChain...',
@@ -100,9 +88,9 @@
 
 	function exportCSV() {
 		if (!report) return;
-		const headers = ['Date', 'Type', 'Asset In', 'Amount In', 'Asset Out', 'Amount Out', 'From', 'To', 'TxID', 'Status'];
+		const headers = ['Date', 'Type', 'Asset In', 'Amount In', 'Asset Out', 'Amount Out', 'Fee Amount', 'Fee Currency', 'From', 'To', 'TxID', 'Status'];
 		const rows = report.transactions.map((tx: any) => [
-			tx.date, tx.type, tx.assetIn, tx.rawAmountIn || tx.amountIn, tx.assetOut, tx.rawAmountOut || tx.amountOut, tx.from, tx.to, tx.txID, tx.status
+			tx.date, tx.type, tx.assetIn, tx.rawAmountIn || tx.amountIn, tx.assetOut, tx.rawAmountOut || tx.amountOut, tx.feeAmount || '', tx.feeCurrency || '', tx.from, tx.to, tx.txID, tx.status
 		]);
 		const csv = [headers, ...rows].map((r: string[]) =>
 			r.map((c: string) => `"${String(c).replace(/"/g, '""')}"`).join(',')
@@ -133,7 +121,9 @@
 				sentAmount !== '0' ? sentCurrency : '',
 				receivedAmount !== '0' ? receivedAmount : '',
 				receivedAmount !== '0' ? receivedCurrency : '',
-				'', '', '', '',
+				tx.feeAmount || '',
+				tx.feeCurrency || '',
+				'', '',
 				label,
 				desc,
 				tx.txID || ''
@@ -176,12 +166,12 @@
 	// Type filter
 	let activeFilter = $state<string | null>(null);
 
-	const allTypes = $derived<string[]>(() => {
+	function getAllTypes(): string[] {
 		if (!report?.transactions) return [];
 		const set = new Set<string>();
 		for (const tx of report.transactions) set.add(tx.type);
 		return [...set];
-	});
+	}
 
 	const filteredTxs = $derived(
 		activeFilter
@@ -393,9 +383,10 @@
 				<div class="text-[10px] mb-2" style="color: var(--text-faint);">BALANCES AT TIME OF REPORT</div>
 				<div class="flex flex-wrap gap-2">
 					{#each report.balances as bal}
+						
 						<span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle);">
-							{#if tokenLogos[bal.asset.toUpperCase()]}
-								<img src={tokenLogos[bal.asset.toUpperCase()]} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
+							{#if logo(bal.asset.toUpperCase())}
+								<img src={logo(bal.asset.toUpperCase())} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
 							{/if}
 							<span style="color: var(--text);">{bal.amount}</span>
 							<span style="color: var(--text-faint);">{bal.asset.toUpperCase()}</span>
@@ -434,7 +425,7 @@
 			>
 				All ({report.totalTransactions})
 			</button>
-			{#each allTypes() as t}
+			{#each getAllTypes() as t}
 				{@const color = typeColors[t] || 'var(--text-ghost)'}
 				{#if !['swap', 'addLiquidity', 'withdraw', 'send'].includes(t)}
 					<button
@@ -480,8 +471,9 @@
 							<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 								{#if tx.amountIn !== '0'}
 									<span class="inline-flex items-center gap-1.5">
-										{#if tokenLogos[tx.assetIn]}
-											<img src={tokenLogos[tx.assetIn]} alt={tx.assetIn} class="w-4 h-4 rounded-full" />
+										
+										{#if logo(tx.assetIn)}
+											<img src={logo(tx.assetIn)} alt={tx.assetIn} class="w-4 h-4 rounded-full" />
 										{/if}
 										{tx.amountIn} <span style="color: var(--text-faint);">{tx.assetIn}</span>
 									</span>
@@ -490,8 +482,9 @@
 							<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 								{#if tx.amountOut !== '0'}
 									<span class="inline-flex items-center gap-1.5">
-										{#if tokenLogos[tx.assetOut]}
-											<img src={tokenLogos[tx.assetOut]} alt={tx.assetOut} class="w-4 h-4 rounded-full" />
+										
+										{#if logo(tx.assetOut)}
+											<img src={logo(tx.assetOut)} alt={tx.assetOut} class="w-4 h-4 rounded-full" />
 										{/if}
 										{tx.amountOut} <span style="color: var(--text-faint);">{tx.assetOut}</span>
 									</span>

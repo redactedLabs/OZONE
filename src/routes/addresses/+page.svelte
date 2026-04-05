@@ -1,56 +1,39 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { fetchPoolChains, getChainLogo, getChainColor, CHAIN_COLORS } from '$lib/utils/tokenLogos';
 
 	let { data } = $props();
 
 	let searchQuery = $state(data.search || '');
 	let selectedUser = $state<any>(null);
 	let copiedAddr = $state('');
+	let dynamicChains = $state<string[]>([]);
 
-	const chains = ['', 'BTC', 'ETH', 'SOL', 'DOGE', 'LTC', 'BCH', 'AVAX', 'BSC', 'BASE', 'GAIA', 'TRON', 'XRP', 'THOR'] as const;
+	// Static fallback chains used until pools load
+	const staticChains = ['BTC', 'ETH', 'SOL', 'DOGE', 'LTC', 'BCH', 'AVAX', 'BSC', 'BASE', 'GAIA', 'TRON', 'XRP', 'THOR'];
 
-	const ICON_CDN = 'https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color';
-	const CMC_CDN = 'https://s2.coinmarketcap.com/static/img/coins/64x64';
-	const chainLogos: Record<string, string> = {
-		BTC: `${ICON_CDN}/btc.svg`,
-		ETH: `${ICON_CDN}/eth.svg`,
-		SOL: `${CMC_CDN}/5426.png`,
-		DOGE: `${ICON_CDN}/doge.svg`,
-		LTC: `${ICON_CDN}/ltc.svg`,
-		BCH: `${ICON_CDN}/bch.svg`,
-		AVAX: `${ICON_CDN}/avax.svg`,
-		BSC: `${ICON_CDN}/bnb.svg`,
-		BNB: `${ICON_CDN}/bnb.svg`,
-		BASE: `${CMC_CDN}/27716.png`,
-		GAIA: `${ICON_CDN}/atom.svg`,
-		TRON: `${ICON_CDN}/trx.svg`,
-		TRX: `${ICON_CDN}/trx.svg`,
-		XRP: `${ICON_CDN}/xrp.svg`,
-		THOR: `${CMC_CDN}/4157.png`,
-	};
+	// Load dynamic chains from Midgard pools
+	fetchPoolChains().then((chains) => { dynamicChains = chains; });
+
+	// Merge: dynamic pools + static fallbacks (deduped, sorted)
+	function getChains(): string[] {
+		const all = new Set([...dynamicChains, ...staticChains]);
+		return [...all].sort();
+	}
 
 	// Fallback text icons
 	const chainIcons: Record<string, string> = {
 		BTC: '₿', ETH: 'Ξ', SOL: 'S', DOGE: 'Ð', LTC: 'Ł', BCH: '₿',
-		AVAX: 'A', BSC: 'B', BASE: 'B', GAIA: '⚛', TRON: 'T', XRP: 'X', THOR: 'ᚦ', UNKNOWN: '?'
+		AVAX: 'A', BSC: 'B', BASE: 'B', GAIA: '⚛', TRON: 'T', XRP: 'X', THOR: 'ᚦ', XMR: 'ɱ', UNKNOWN: '?'
 	};
 
-	const chainColors: Record<string, string> = {
-		BTC: 'background: rgba(247, 147, 26, 0.15); border: 1px solid rgba(247, 147, 26, 0.3)',
-		ETH: 'background: rgba(98, 126, 234, 0.15); border: 1px solid rgba(98, 126, 234, 0.3)',
-		SOL: 'background: rgba(153, 69, 255, 0.15); border: 1px solid rgba(153, 69, 255, 0.3)',
-		DOGE: 'background: rgba(196, 164, 48, 0.15); border: 1px solid rgba(196, 164, 48, 0.3)',
-		LTC: 'background: rgba(191, 191, 191, 0.15); border: 1px solid rgba(191, 191, 191, 0.3)',
-		BCH: 'background: rgba(78, 193, 97, 0.15); border: 1px solid rgba(78, 193, 97, 0.3)',
-		AVAX: 'background: rgba(232, 65, 66, 0.15); border: 1px solid rgba(232, 65, 66, 0.3)',
-		BSC: 'background: rgba(243, 186, 47, 0.15); border: 1px solid rgba(243, 186, 47, 0.3)',
-		BNB: 'background: rgba(243, 186, 47, 0.15); border: 1px solid rgba(243, 186, 47, 0.3)',
-		BASE: 'background: rgba(0, 82, 255, 0.15); border: 1px solid rgba(0, 82, 255, 0.3)',
-		GAIA: 'background: rgba(109, 117, 242, 0.15); border: 1px solid rgba(109, 117, 242, 0.3)',
-		TRON: 'background: rgba(255, 0, 19, 0.15); border: 1px solid rgba(255, 0, 19, 0.3)',
-		XRP: 'background: rgba(0, 170, 228, 0.15); border: 1px solid rgba(0, 170, 228, 0.3)',
-		THOR: 'background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3)',
-	};
+	function chainLogo(chain: string): string | undefined {
+		return getChainLogo(chain);
+	}
+
+	function chainColor(chain: string): string {
+		return getChainColor(chain);
+	}
 
 	function setFilter(f: string) {
 		const url = new URL(window.location.href);
@@ -155,10 +138,10 @@
 						<div class="flex items-center gap-3 p-3 rounded-lg" style="background: var(--bg); border: 1px solid var(--app-border);">
 							<span
 								class="flex items-center justify-center w-8 h-8 rounded-full shrink-0"
-								style={chainColors[l1.chain] || 'background: rgba(100,100,100,0.15);'}
+								style={chainColor(l1.chain)}
 							>
-								{#if chainLogos[l1.chain]}
-									<img src={chainLogos[l1.chain]} alt={l1.chain} class="w-5 h-5 rounded-full" />
+								{#if chainLogo(l1.chain)}
+									<img src={chainLogo(l1.chain)} alt={l1.chain} class="w-5 h-5 rounded-full" />
 								{:else}
 									<span class="text-sm font-bold" style="color: #999;">{chainIcons[l1.chain] || '?'}</span>
 								{/if}
@@ -221,12 +204,12 @@
 				class="chain-select rounded-lg px-3 py-2 text-sm outline-none"
 			>
 				<option value="">All Chains</option>
-				{#each chains.slice(1) as c}
+				{#each getChains() as c}
 					<option value={c} selected={data.chain === c}>{c}</option>
 				{/each}
 			</select>
-			{#if data.chain && chainLogos[data.chain]}
-				<img src={chainLogos[data.chain]} alt={data.chain} class="chain-select-icon" />
+			{#if data.chain && chainLogo(data.chain)}
+				<img src={chainLogo(data.chain)} alt={data.chain} class="chain-select-icon" />
 			{/if}
 		</div>
 
@@ -282,11 +265,11 @@
 									{#each getUniqueChains(user.l1Addresses) as chain}
 										<span
 											class="inline-flex items-center justify-center w-7 h-7 rounded-full transition-transform hover:scale-110"
-											style={chainColors[chain] || 'background: rgba(100,100,100,0.15);'}
+											style={chainColor(chain)}
 											title="{chain}: {user.l1Addresses.filter((l: any) => l.chain === chain).length} address(es)"
 										>
-											{#if chainLogos[chain]}
-												<img src={chainLogos[chain]} alt={chain} class="w-4 h-4 rounded-full" />
+											{#if chainLogo(chain)}
+												<img src={chainLogo(chain)} alt={chain} class="w-4 h-4 rounded-full" />
 											{:else}
 												<span class="text-xs font-bold" style="color: #999;">{chainIcons[chain] || '?'}</span>
 											{/if}

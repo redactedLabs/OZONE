@@ -43,11 +43,37 @@ function rawAmount(raw: string): string {
 	return (parseInt(raw) / 1e8).toString();
 }
 
+function extractFees(a: any): { feeAmount: string; feeCurrency: string } {
+	const meta = a.metadata || {};
+
+	// Try networkFees first (present on swaps, withdrawals, etc.)
+	const swapMeta = meta.swap || meta.addLiquidity || meta.withdraw || {};
+	const networkFees = swapMeta.networkFees || a.metadata?.withdraw?.networkFees || [];
+	if (networkFees.length > 0) {
+		const fee = networkFees[0];
+		return {
+			feeAmount: rawAmount(fee.amount || '0'),
+			feeCurrency: cleanAsset(fee.asset || ''),
+		};
+	}
+
+	// Fall back to liquidityFee (swap-specific, denominated in RUNE)
+	if (swapMeta.liquidityFee && swapMeta.liquidityFee !== '0') {
+		return {
+			feeAmount: rawAmount(swapMeta.liquidityFee),
+			feeCurrency: 'RUNE',
+		};
+	}
+
+	return { feeAmount: '', feeCurrency: '' };
+}
+
 function parseAction(a: any) {
 	const ins = a.in || [];
 	const outs = a.out || [];
 	const coinsIn = ins[0]?.coins?.[0] || {};
 	const coinsOut = outs[0]?.coins?.[0] || {};
+	const fees = extractFees(a);
 
 	return {
 		type: a.type || 'unknown',
@@ -62,6 +88,8 @@ function parseAction(a: any) {
 		to: outs[0]?.address || '',
 		txID: ins[0]?.txID || '',
 		status: a.status || 'unknown',
+		feeAmount: fees.feeAmount,
+		feeCurrency: fees.feeCurrency,
 	};
 }
 
