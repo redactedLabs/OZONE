@@ -12,8 +12,8 @@ const ICON_CDN = 'https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/c
 const CMC_CDN = 'https://s2.coinmarketcap.com/static/img/coins/64x64';
 const MIDGARD_POOLS = 'https://gateway.liquify.com/chain/thorchain_midgard/v2/pools';
 
-// Official RUJI logo from Rujira docs
-const RUJI_LOGO = 'https://780454749-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2Fjck9fGNvnlDMHj7pa6Gz%2Fuploads%2FJsYduQn4tMvxeM0gFHD6%2Fruji-logo%20(200x200).png';
+// Official RUJI logo from CoinGecko
+const RUJI_LOGO = 'https://coin-images.coingecko.com/coins/images/55372/small/RUJI_180x180.png';
 
 // Static fallbacks for tokens that might not resolve via SwapKit
 export const STATIC_LOGOS: Record<string, string> = {
