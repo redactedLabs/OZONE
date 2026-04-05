@@ -12,6 +12,28 @@
 		switch: '#a78bfa', contract: '#64748b', donate: '#f472b6',
 	};
 
+	// Token logos
+	const ICON_CDN = 'https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color';
+	const CMC_CDN = 'https://s2.coinmarketcap.com/static/img/coins/64x64';
+	const tokenLogos: Record<string, string> = {
+		BTC: `${ICON_CDN}/btc.svg`,
+		ETH: `${ICON_CDN}/eth.svg`,
+		SOL: `${CMC_CDN}/5426.png`,
+		DOGE: `${ICON_CDN}/doge.svg`,
+		LTC: `${ICON_CDN}/ltc.svg`,
+		BCH: `${ICON_CDN}/bch.svg`,
+		AVAX: `${ICON_CDN}/avax.svg`,
+		BNB: `${ICON_CDN}/bnb.svg`,
+		ATOM: `${ICON_CDN}/atom.svg`,
+		XRP: `${ICON_CDN}/xrp.svg`,
+		RUNE: `${CMC_CDN}/4157.png`,
+		USDC: `${ICON_CDN}/usdc.svg`,
+		USDT: `${ICON_CDN}/usdt.svg`,
+		DAI: `${ICON_CDN}/dai.svg`,
+		WBTC: `${ICON_CDN}/wbtc.svg`,
+		RUJI: `${CMC_CDN}/4157.png`,
+	};
+
 	const txSwaps = $derived(data.transactions?.filter((t: any) => t.type === 'swap').length || 0);
 	const txAdds = $derived(data.transactions?.filter((t: any) => t.type === 'addLiquidity').length || 0);
 	const txWithdraws = $derived(data.transactions?.filter((t: any) => t.type === 'withdraw').length || 0);
@@ -32,6 +54,41 @@
 		const a = document.createElement('a');
 		a.href = url;
 		a.download = `ozone-history-${data.reportId}-${new Date().toISOString().split('T')[0]}.csv`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function exportKoinlyCSV() {
+		if (!data.transactions) return;
+		const headers = ['Date', 'Sent Amount', 'Sent Currency', 'Received Amount', 'Received Currency', 'Fee Amount', 'Fee Currency', 'Net Worth Amount', 'Net Worth Currency', 'Label', 'Description', 'TxHash'];
+		const rows = data.transactions.map((tx: any) => {
+			const sentAmount = tx.rawAmountIn || tx.amountIn;
+			const sentCurrency = tx.assetIn;
+			const receivedAmount = tx.rawAmountOut || tx.amountOut;
+			const receivedCurrency = tx.assetOut;
+			const label = tx.type === 'swap' ? '' : tx.type === 'addLiquidity' ? 'liquidity_in' : tx.type === 'withdraw' ? 'liquidity_out' : '';
+			const desc = tx.type === 'swap' ? `Swap ${tx.assetIn} → ${tx.assetOut}` : tx.type === 'addLiquidity' ? `LP Add ${tx.assetIn}` : tx.type === 'withdraw' ? `Withdraw ${tx.assetOut}` : tx.type === 'send' ? `Send ${sentAmount !== '0' ? tx.assetIn : tx.assetOut}` : typeLabels[tx.type] || tx.type;
+			return [
+				tx.date,
+				sentAmount !== '0' ? sentAmount : '',
+				sentAmount !== '0' ? sentCurrency : '',
+				receivedAmount !== '0' ? receivedAmount : '',
+				receivedAmount !== '0' ? receivedCurrency : '',
+				'', '', '', '',
+				label,
+				desc,
+				tx.txID || ''
+			];
+		});
+		const csv = [headers, ...rows].map((r: string[]) =>
+			r.map((c: string) => `"${String(c).replace(/"/g, '""')}"`).join(',')
+		).join('\n');
+
+		const blob = new Blob([csv], { type: 'text/csv' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `ozone-koinly-${data.reportId}-${new Date().toISOString().split('T')[0]}.csv`;
 		a.click();
 		URL.revokeObjectURL(url);
 	}
@@ -106,6 +163,9 @@
 		<button onclick={exportCSV} class="rounded-lg px-4 py-2 text-xs font-medium transition-all" style="background: var(--app-accent); color: white;">
 			Export CSV
 		</button>
+		<button onclick={exportKoinlyCSV} class="rounded-lg px-4 py-2 text-xs font-medium transition-all" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); color: var(--app-accent);">
+			Koinly CSV
+		</button>
 		<a href="/history" class="rounded-lg px-4 py-2 text-xs font-medium transition-all" style="border: 1px solid var(--app-border); color: var(--text-muted);">
 			Generate your own
 		</a>
@@ -121,6 +181,9 @@
 				<div class="flex flex-wrap gap-2">
 					{#each data.balances as bal}
 						<span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle);">
+							{#if tokenLogos[bal.asset.toUpperCase()]}
+								<img src={tokenLogos[bal.asset.toUpperCase()]} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
+							{/if}
 							<span style="color: var(--text);">{bal.amount}</span>
 							<span style="color: var(--text-faint);">{bal.asset.toUpperCase()}</span>
 						</span>
@@ -134,6 +197,9 @@
 			<div class="flex flex-wrap gap-2">
 				{#each data.balances as bal}
 					<span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle);">
+						{#if tokenLogos[bal.asset.toUpperCase()]}
+							<img src={tokenLogos[bal.asset.toUpperCase()]} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
+						{/if}
 						<span style="color: var(--text);">{bal.amount}</span>
 						<span style="color: var(--text-faint);">{bal.asset.toUpperCase()}</span>
 					</span>
@@ -189,10 +255,24 @@
 							</span>
 						</td>
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
-							{#if tx.amountIn !== '0'}{tx.amountIn} <span style="color: var(--text-faint);">{tx.assetIn}</span>{:else}--{/if}
+							{#if tx.amountIn !== '0'}
+								<span class="inline-flex items-center gap-1.5">
+									{#if tokenLogos[tx.assetIn]}
+										<img src={tokenLogos[tx.assetIn]} alt={tx.assetIn} class="w-4 h-4 rounded-full" />
+									{/if}
+									{tx.amountIn} <span style="color: var(--text-faint);">{tx.assetIn}</span>
+								</span>
+							{:else}--{/if}
 						</td>
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
-							{#if tx.amountOut !== '0'}{tx.amountOut} <span style="color: var(--text-faint);">{tx.assetOut}</span>{:else}--{/if}
+							{#if tx.amountOut !== '0'}
+								<span class="inline-flex items-center gap-1.5">
+									{#if tokenLogos[tx.assetOut]}
+										<img src={tokenLogos[tx.assetOut]} alt={tx.assetOut} class="w-4 h-4 rounded-full" />
+									{/if}
+									{tx.amountOut} <span style="color: var(--text-faint);">{tx.assetOut}</span>
+								</span>
+							{:else}--{/if}
 						</td>
 						<td class="px-4 py-2.5">
 							<span class="text-[10px]" style="color: {tx.status === 'success' ? '#10b981' : '#f59e0b'};">
