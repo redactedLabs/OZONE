@@ -1,0 +1,108 @@
+name: Report Address
+description: Report a hacked, sanctioned, or malicious wallet address for compliance screening
+title: "[REPORT] "
+labels: ["address-report", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping keep DeFi safe. Please provide as much detail as possible so our team can verify and add this address to compliance screening.
+
+  - type: textarea
+    id: addresses
+    attributes:
+      label: Wallet Address(es)
+      description: One address per line. Include the full address.
+      placeholder: |
+        0x1234...abcd
+        bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
+    validations:
+      required: true
+
+  - type: dropdown
+    id: chain
+    attributes:
+      label: Chain
+      description: Which blockchain network is this address on?
+      multiple: true
+      options:
+        - ETH (Ethereum)
+        - BTC (Bitcoin)
+        - TRON
+        - SOL (Solana)
+        - BSC (BNB Chain)
+        - AVAX (Avalanche)
+        - DOGE (Dogecoin)
+        - LTC (Litecoin)
+        - ATOM (Cosmos)
+        - BCH (Bitcoin Cash)
+        - BASE
+        - ARB (Arbitrum)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What type of activity is associated with this address?
+      options:
+        - Hack / Exploit
+        - Sanctions (OFAC, EU, etc.)
+        - Scam / Phishing
+        - Stolen Funds
+        - Rug Pull
+        - Mixer / Tumbler
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Incident Description
+      description: Describe the incident or reason this address should be flagged.
+      placeholder: "e.g., This address received funds from the XYZ protocol exploit on 2024-01-15..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence & Sources
+      description: Links to transactions, news articles, law enforcement notices, or on-chain analysis.
+      placeholder: |
+        - https://etherscan.io/tx/0x...
+        - https://news-article.com/exploit-report
+        - https://ofac.treasury.gov/...
+    validations:
+      required: true
+
+  - type: input
+    id: estimated-value
+    attributes:
+      label: Estimated Value (USD)
+      description: Approximate value of funds involved, if known.
+      placeholder: "$2,500,000"
+    validations:
+      required: false
+
+  - type: textarea
+    id: related-addresses
+    attributes:
+      label: Related Addresses
+      description: Any other addresses connected to this incident (intermediary wallets, mixer outputs, etc.)
+      placeholder: |
+        0xabcd... (intermediary)
+        0xefgh... (mixer output)
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I believe this report is accurate and submitted in good faith
+          required: true

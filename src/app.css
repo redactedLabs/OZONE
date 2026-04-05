@@ -1,0 +1,139 @@
+@import 'tailwindcss';
+
+@variant dark (&:where(.dark, .dark *));
+
+/*
+ * Ozone Theme System
+ * Dark mode only: Deep navy
+ */
+
+/* ── Dark Mode (default) ── */
+:root {
+	--base-hue: 265;
+	--radius-base: 0.275rem;
+
+	/* Backgrounds */
+	--background-inset: #060610;
+	--background: #060610;
+	--background-muted: #0d0d1f;
+	--fixed-light: #f1f5f9;
+	--fixed-dark: #060610;
+
+	/* Text */
+	--foreground: #f1f5f9;
+	--foreground-muted: #64748b;
+
+	/* Accent */
+	--accent: #6366f1;
+	--accent-secondary: #4f46e5;
+
+	/* Borders */
+	--border: rgba(99, 102, 241, 0.15);
+
+	/* Shadows */
+	--shadow-xs: 0px 1px 2px rgba(0, 0, 0, 0.5);
+	--shadow-sm: 0px 1px 2px rgba(0, 0, 0, 0.5), 0px 3px 6px rgba(0, 0, 0, 0.4);
+	--shadow-md: 0px 2px 4px rgba(0, 0, 0, 0.5), 0px 6px 12px rgba(0, 0, 0, 0.4);
+	--shadow-lg: 0px 4px 8px rgba(0, 0, 0, 0.5), 0px 12px 24px rgba(0, 0, 0, 0.4);
+	--shadow-xl: 0px 8px 16px rgba(0, 0, 0, 0.5), 0px 24px 48px rgba(0, 0, 0, 0.4);
+	--shadow-2xl: 0px 16px 32px rgba(0, 0, 0, 0.5), 0px 48px 96px rgba(0, 0, 0, 0.4);
+
+	/* App tokens */
+	--bg: #060610;
+	--bg-card: #0d0d1f;
+	--bg-card-hover: #13132f;
+	--bg-code: #060610;
+	--app-accent: #6366f1;
+	--accent-glow: #818cf8;
+	--danger: #ef4444;
+	--warning: #f59e0b;
+	--success: #10b981;
+	--muted: #334155;
+	--text: #f1f5f9;
+	--text-secondary: #94a3b8;
+	--text-muted: #64748b;
+	--text-faint: #475569;
+	--text-ghost: #334155;
+	--app-border: #1e293b;
+	--app-border-subtle: rgba(30, 41, 59, 0.5);
+	--card-bg: rgba(13, 13, 31, 0.6);
+	--card-border: #1e293b;
+	--card-glow: rgba(99, 102, 241, 0.25);
+	--hero-title: #f1f5f9;
+	--hero-slash: #334155;
+	--hero-sub: #475569;
+	--stat-indigo: #818cf8;
+	--scrollbar-thumb: #334155;
+	--scrollbar-track: #060610;
+	--tooltip-bg: #1e293b;
+	--tooltip-border: #334155;
+	--input-bg: #060610;
+	--input-border: #1e293b;
+	--input-border-focus: #6366f1;
+	--input-placeholder: #475569;
+	--godrays-bg: #060610;
+	--godrays-color: #6366f1;
+	--globe-land: #1e1b4b;
+	--globe-fresnel: #060610;
+	--globe-rim: #6366f1;
+	--globe-atmo: #6366f1;
+	--globe-pill-bg: rgba(13, 13, 31, 0.9);
+}
+
+/* Keep .dark explicit for motion-core compatibility */
+.dark {
+	/* Same as :root defaults — dark is default */
+}
+
+@theme {
+	--color-fixed-light: var(--fixed-light);
+	--color-fixed-dark: var(--fixed-dark);
+	--color-background-inset: var(--background-inset);
+	--color-background: var(--background);
+	--color-background-muted: var(--background-muted);
+	--color-foreground: var(--foreground);
+	--color-foreground-muted: var(--foreground-muted);
+	--color-accent: var(--accent);
+	--color-accent-secondary: var(--accent-secondary);
+	--color-border: var(--border);
+
+	--radius-xs: calc(var(--radius-base) * 1);
+	--radius-sm: calc(var(--radius-base) * 2);
+	--radius-md: calc(var(--radius-base) * 3);
+	--radius-lg: calc(var(--radius-base) * 4);
+	--radius-xl: calc(var(--radius-base) * 6);
+	--radius-2xl: calc(var(--radius-base) * 8);
+	--radius-3xl: calc(var(--radius-base) * 12);
+	--radius-4xl: calc(var(--radius-base) * 16);
+	--radius-full: 9999px;
+
+	--shadow-xs: var(--shadow-xs);
+	--shadow-sm: var(--shadow-sm);
+	--shadow-md: var(--shadow-md);
+	--shadow-lg: var(--shadow-lg);
+	--shadow-xl: var(--shadow-xl);
+	--shadow-2xl: var(--shadow-2xl);
+}
+
+html {
+	background-color: var(--bg);
+	color: var(--text);
+}
+
+body {
+	background-color: var(--bg);
+	color: var(--text);
+	font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	margin: 0;
+	padding: 0;
+	min-height: 100vh;
+}
+
+canvas {
+	background: transparent !important;
+}
+
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
