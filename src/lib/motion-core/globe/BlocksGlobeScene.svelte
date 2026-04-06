@@ -45,7 +45,7 @@
 
 	const landPolygons = parseLandPolygons(landGeoJsonRaw);
 
-	const initialCameraPosition = { x: 0, y: 0, z: 8 };
+	const initialCameraPosition = { x: 0, y: 0, z: 11 };
 
 	// Set scene background to Win98 silver
 	const { scene } = useThrelte();
@@ -301,8 +301,9 @@
 		<GlobeArc
 			from={arc.from}
 			to={arc.to}
-			{radius}
-			color={arc.color || "#000080"}
+			radius={radius * 1.15}
+			color={"#808080"}
+			opacity={1.0}
 			speed={arc.speed || 1.0}
 			transient={arc.transient || false}
 			onfinish={arc.onfinish}
