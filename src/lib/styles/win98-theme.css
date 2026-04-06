@@ -33,8 +33,8 @@
 	--text: #000000;
 	--text-secondary: #000000;
 	--text-muted: #000000;
-	--text-faint: #555555;
-	--text-ghost: #808080;
+	--text-faint: #333333;
+	--text-ghost: #555555;
 	--foreground: #000000;
 	--foreground-muted: #000000;
 	--accent: #000080;
@@ -52,7 +52,7 @@
 	--input-border-focus: #000080;
 	--input-placeholder: #808080;
 	--danger: #ff0000;
-	--warning: #808000;
+	--warning: #000080;
 	--success: #008000;
 	--hero-title: #000000;
 	--hero-slash: #808080;
@@ -120,19 +120,30 @@ html.win98 body {
 .win98 [style*="color: #94a3b8"] { color: #000000 !important; }
 .win98 [style*="color: #64748b"] { color: #000000 !important; }
 .win98 [style*="color: #475569"] { color: #000000 !important; }
-.win98 [style*="color: #334155"] { color: #555555 !important; }
+.win98 [style*="color: #334155"] { color: #000000 !important; }
 .win98 [style*="color: #818cf8"] { color: #000080 !important; }
 .win98 [style*="color: #6366f1"] { color: #000080 !important; }
 .win98 [style*="color: #10b981"] { color: #008000 !important; }
 .win98 [style*="color: #22d3ee"] { color: #000080 !important; }
 .win98 [style*="color: #a855f7"] { color: #000080 !important; }
 .win98 [style*="color: #ef4444"] { color: #ff0000 !important; }
-.win98 [style*="color: #f59e0b"] { color: #808000 !important; }
+.win98 [style*="color: #f59e0b"] { color: #000080 !important; }
 .win98 [style*="color: #26a17b"] { color: #008000 !important; }
 .win98 [style*="color: #3b82f6"] { color: #000080 !important; }
 .win98 [style*="color: #ec4899"] { color: #800080 !important; }
-.win98 [style*="color: #c4a430"] { color: #808000 !important; }
+.win98 [style*="color: #c4a430"] { color: #000080 !important; }
 .win98 [style*="color: #0f172a"] { color: #000000 !important; }
+.win98 [style*="color: #a78bfa"] { color: #000080 !important; }
+.win98 [style*="color: #9945ff"] { color: #800080 !important; }
+.win98 [style*="color: #f472b6"] { color: #800080 !important; }
+.win98 [style*="color: #fb923c"] { color: #ff0000 !important; }
+.win98 [style*="color: #ff0013"] { color: #ff0000 !important; }
+.win98 [style*="color: #f7931a"] { color: #000080 !important; }
+.win98 [style*="color: #627eea"] { color: #000080 !important; }
+.win98 [style*="color: #2ecc71"] { color: #008000 !important; }
+.win98 [style*="color: #e84142"] { color: #ff0000 !important; }
+.win98 [style*="color: #6d75f2"] { color: #000080 !important; }
+.win98 [style*="color: #999"] { color: #000000 !important; }
 
 /* ══════════════════════════════════════════
    NUCLEAR: ALL dark backgrounds → silver
@@ -162,7 +173,7 @@ html.win98 body {
 .win98 [style*="rgba(245,158,11,0."]   { background: #c0c0c0 !important; border-color: #808080 !important; }
 .win98 [style*="rgba(239,68,68,0."]    { background: #c0c0c0 !important; border-color: #808080 !important; }
 .win98 [style*="rgba(15,23,42"]        { background: #c0c0c0 !important; }
-.win98 [style*="rgba(0, 0, 0,"]        { background: transparent !important; }
+/* Keep dark overlays for modals, but remove subtle dark tints */
 
 /* Dark borders → gray */
 .win98 [style*="border: 1px solid #1e293b"]        { border-color: #808080 !important; }
@@ -183,9 +194,16 @@ html.win98 body {
 	color: #000000 !important;
 }
 
-.win98 p, .win98 span, .win98 div, .win98 label {
+.win98 p, .win98 span, .win98 div, .win98 label, .win98 li {
 	color: inherit;
 }
+
+/* Ensure ALL body text is black on silver — no gray text */
+.win98 [style*="color: var(--text-muted)"] { color: #000000 !important; }
+.win98 [style*="color: var(--text-secondary)"] { color: #000000 !important; }
+.win98 [style*="color: var(--text-faint)"] { color: #333333 !important; }
+.win98 [style*="color: var(--text-ghost)"] { color: #555555 !important; }
+.win98 [style*="color: var(--text)"] { color: #000000 !important; }
 
 /* ══════════════════════════════════════════
    Window Chrome — data-win-title
@@ -282,6 +300,8 @@ html.win98 body {
 	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif !important;
 	padding: 2px 8px !important;
 	min-width: 75px;
+	width: auto !important;
+	max-width: fit-content !important;
 	box-shadow: none !important;
 	text-shadow: none !important;
 }
@@ -353,6 +373,54 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
+   Addresses page — filter buttons, table, popup
+   ══════════════════════════════════════════ */
+/* Filter toggle buttons (Linked / Flagged / All) */
+.win98 .flex.rounded-lg.overflow-hidden button {
+	width: auto !important;
+	max-width: none !important;
+	min-width: auto !important;
+}
+.win98 .flex.rounded-lg button[style*="background: var(--app-accent)"] {
+	background: #000080 !important;
+	color: #ffffff !important;
+}
+.win98 .flex.rounded-lg button[style*="background: var(--bg-card)"] {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+}
+
+/* Address popup modal */
+.win98 .fixed[style*="backdrop-filter"] {
+	backdrop-filter: none !important;
+	background: rgba(0,0,0,0.5) !important;
+}
+.win98 .fixed .rounded-2xl[style*="background: var(--bg-card)"] {
+	background: #c0c0c0 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	border-radius: 0 !important;
+}
+
+/* Chain select dropdown */
+.win98 .chain-select {
+	background: #ffffff !important;
+	border: 2px solid !important;
+	border-color: #808080 #dfdfdf #dfdfdf #808080 !important;
+	border-radius: 0 !important;
+	color: #000000 !important;
+}
+
+/* Pagination buttons */
+.win98 a[style*="border: 1px solid var(--app-border)"][class*="rounded"] {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	border-radius: 0 !important;
+}
+
+/* ══════════════════════════════════════════
    Hero
    ══════════════════════════════════════════ */
 .win98 .hero-gradient {
@@ -415,6 +483,8 @@ html.win98 body {
 	border-radius: 0 !important;
 	text-decoration: none !important;
 	box-shadow: none !important;
+	width: auto !important;
+	display: inline-block !important;
 }
 .win98 a[style*="background:"]:active {
 	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a !important;
@@ -442,6 +512,38 @@ html.win98 body {
 	border: 2px solid !important;
 	border-color: #808080 #dfdfdf #dfdfdf #808080 !important;
 	border-radius: 0 !important;
+}
+
+/* ══════════════════════════════════════════
+   Open-source page — info chips, report buttons
+   ══════════════════════════════════════════ */
+.win98 .info-chip {
+	background: #c0c0c0 !important;
+	border: 1px solid #808080 !important;
+	border-radius: 0 !important;
+}
+.win98 .info-chip-label {
+	color: #000080 !important;
+}
+.win98 .info-chip-text {
+	color: #000000 !important;
+}
+.win98 .report-btn-primary {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	border-radius: 0 !important;
+}
+.win98 .report-btn-secondary {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	border-radius: 0 !important;
+}
+.win98 .report-card {
+	border-color: #808080 !important;
 }
 
 /* ══════════════════════════════════════════
@@ -518,6 +620,57 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
+   Button sizing — Win98 buttons are compact, never full-width
+   ══════════════════════════════════════════ */
+.win98 .sync-btn,
+.win98 .report-btn-primary,
+.win98 .report-btn-secondary {
+	width: auto !important;
+	max-width: fit-content !important;
+}
+
+/* Prevent flex children buttons from stretching */
+.win98 .flex button,
+.win98 .flex a[style*="background:"] {
+	flex: none !important;
+}
+
+/* History page: input + button side by side should not stretch to full top */
+.win98 .hist-card .flex.gap-3 button {
+	width: auto !important;
+	max-width: fit-content !important;
+	flex-shrink: 0 !important;
+	align-self: center !important;
+}
+
+/* History page: toggle buttons (Private/Public, Snapshot/Live) */
+.win98 .grid.grid-cols-2.rounded-lg button {
+	width: auto !important;
+	max-width: none !important;
+	min-width: auto !important;
+}
+.win98 .grid.grid-cols-2.rounded-lg button[style*="background: var(--app-accent)"],
+.win98 .grid.grid-cols-2.rounded-lg button[style*="background: #22d3ee"] {
+	background: #000080 !important;
+	color: #ffffff !important;
+}
+.win98 .grid.grid-cols-2.rounded-lg button[style*="color: var(--text-muted)"] {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+}
+
+/* History page: results action buttons */
+.win98 .flex.flex-wrap.gap-2 button[class*="rounded"] {
+	width: auto !important;
+	max-width: fit-content !important;
+}
+
+/* History page: stat filter cards should not stretch */
+.win98 .hist-card button.hist-card {
+	width: auto !important;
+}
+
+/* ══════════════════════════════════════════
    Buttons — CTA, sync, hero
    ══════════════════════════════════════════ */
 .win98 .sync-btn,
@@ -546,10 +699,24 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Globe container
+   Globe container & bottom pill
    ══════════════════════════════════════════ */
 .win98 .globe-container {
 	background: transparent !important;
+}
+/* Bottom status pill in cube/globe area */
+.win98 .globe-container .absolute.bottom-3 {
+	background: #c0c0c0 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	border-radius: 0 !important;
+	backdrop-filter: none !important;
+}
+.win98 .globe-container .absolute.bottom-3 span[style*="color: #10b981"] {
+	color: #008000 !important;
+}
+.win98 .globe-container .absolute.bottom-3 span[style*="color: #ef4444"] {
+	color: #ff0000 !important;
 }
 
 /* ══════════════════════════════════════════
@@ -604,7 +771,7 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   CUBE with TX DROPS
+   CUBE with FLOATING CHAIN LABELS & TX DROPS
    ══════════════════════════════════════════ */
 .win98-cube-wrapper {
 	display: flex;
@@ -615,11 +782,40 @@ html.win98 body {
 	overflow: hidden;
 }
 
+/* Floating Win98 window-style chain labels */
+.win98-chain-label {
+	position: absolute;
+	z-index: 10;
+	background: #c0c0c0;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	min-width: 70px;
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
+	box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+
+.win98-label-titlebar {
+	background: linear-gradient(90deg, #000080, #1084d0);
+	color: #ffffff;
+	font-size: 10px;
+	font-weight: bold;
+	padding: 1px 4px;
+	text-align: left;
+	letter-spacing: 0.5px;
+}
+
+.win98-label-body {
+	padding: 2px 4px;
+	font-size: 9px;
+	color: #000000;
+	text-align: center;
+}
+
 .win98-cube-scene {
-	width: 160px;
-	height: 160px;
-	perspective: 500px;
-	z-index: 2;
+	width: 120px;
+	height: 120px;
+	perspective: 400px;
+	z-index: 5;
 }
 
 .win98-cube {
@@ -627,92 +823,171 @@ html.win98 body {
 	height: 100%;
 	position: relative;
 	transform-style: preserve-3d;
-	animation: win98-spin 12s linear infinite;
+	animation: win98-spin 14s linear infinite;
 }
 
 .win98-cube-face {
 	position: absolute;
-	width: 160px;
-	height: 160px;
+	width: 120px;
+	height: 120px;
 	background: #c0c0c0;
 	border: 2px solid;
 	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
-	font-size: 14px;
-	font-weight: bold;
-	color: #000080;
 	backface-visibility: visible;
 }
 
-.win98-cube-face.front  { transform: rotateY(0deg)    translateZ(80px); }
-.win98-cube-face.back   { transform: rotateY(180deg)  translateZ(80px); }
-.win98-cube-face.right  { transform: rotateY(90deg)   translateZ(80px); }
-.win98-cube-face.left   { transform: rotateY(-90deg)  translateZ(80px); }
-.win98-cube-face.top    { transform: rotateX(90deg)   translateZ(80px); }
-.win98-cube-face.bottom { transform: rotateX(-90deg)  translateZ(80px); }
+.win98-cube-face.front  { transform: rotateY(0deg)    translateZ(60px); }
+.win98-cube-face.back   { transform: rotateY(180deg)  translateZ(60px); }
+.win98-cube-face.right  { transform: rotateY(90deg)   translateZ(60px); }
+.win98-cube-face.left   { transform: rotateY(-90deg)  translateZ(60px); }
+.win98-cube-face.top    { transform: rotateX(90deg)   translateZ(60px); }
+.win98-cube-face.bottom { transform: rotateX(-90deg)  translateZ(60px); }
 
 @keyframes win98-spin {
 	0%   { transform: rotateX(-15deg) rotateY(0deg); }
 	100% { transform: rotateX(-15deg) rotateY(360deg); }
 }
 
-/* Pixelated TX drops — small squares flying around the cube */
+/* Pixelated TX drops — small squares flying BETWEEN the chain labels */
 .win98-drop {
 	position: absolute;
 	width: 6px;
 	height: 6px;
 	background: #000080;
-	z-index: 1;
+	z-index: 8;
 	image-rendering: pixelated;
 }
 
-.win98-drop.d1  { animation: win98-fly1 3s linear infinite; background: #000080; }
-.win98-drop.d2  { animation: win98-fly2 4s linear infinite 0.5s; background: #ff0000; }
-.win98-drop.d3  { animation: win98-fly3 3.5s linear infinite 1s; background: #008000; }
-.win98-drop.d4  { animation: win98-fly4 2.8s linear infinite 0.3s; background: #000080; }
-.win98-drop.d5  { animation: win98-fly5 4.2s linear infinite 1.5s; background: #808000; }
-.win98-drop.d6  { animation: win98-fly1 3.3s linear infinite 2s; background: #800080; width: 4px; height: 4px; }
-.win98-drop.d7  { animation: win98-fly2 3.8s linear infinite 0.8s; background: #000080; width: 4px; height: 4px; }
-.win98-drop.d8  { animation: win98-fly3 4.5s linear infinite 1.2s; background: #008000; width: 4px; height: 4px; }
-.win98-drop.d9  { animation: win98-fly4 3.1s linear infinite 2.2s; background: #ff0000; width: 4px; height: 4px; }
-.win98-drop.d10 { animation: win98-fly5 3.7s linear infinite 0.6s; background: #000080; }
+/* Drops travel between label positions:
+   BTC (top:8%,left:6%) <-> ETH (top:5%,right:10% ~= left:90%)
+   ETH <-> AVAX (top:44%,right:1% ~= left:99%)
+   RUNE (bottom:14%,left:4%) <-> SOL (bottom:10%,right:6% ~= left:94%)
+   BTC <-> RUNE (vertical left side)
+   ETH <-> SOL (vertical right side)
+   DOGE (top:16%,left:37%) <-> GAIA (bottom:2%,left:37% ~= top:98%)
+   USDT (top:44%,left:1%) <-> RUNE
+   AVAX <-> SOL
+*/
 
-/* Drop flight paths — orbiting around the cube from different angles */
-@keyframes win98-fly1 {
-	0%   { top: 50%; left: 10%; opacity: 0; }
+/* BTC (top-left) -> ETH (top-right) */
+.win98-drop.d1  { animation: win98-route1 3s linear infinite; background: #000080; }
+/* ETH (top-right) -> AVAX (mid-right) */
+.win98-drop.d2  { animation: win98-route2 3.5s linear infinite 0.5s; background: #ff0000; }
+/* RUNE (bottom-left) -> SOL (bottom-right) */
+.win98-drop.d3  { animation: win98-route3 3.2s linear infinite 1s; background: #008000; }
+/* BTC (top-left) -> USDT (mid-left) */
+.win98-drop.d4  { animation: win98-route4 2.8s linear infinite 0.3s; background: #000080; }
+/* USDT (mid-left) -> RUNE (bottom-left) */
+.win98-drop.d5  { animation: win98-route5 3.4s linear infinite 1.5s; background: #800080; }
+/* DOGE (top-center) -> GAIA (bottom-center) */
+.win98-drop.d6  { animation: win98-route6 4s linear infinite 0.2s; background: #000080; width: 4px; height: 4px; }
+/* ETH -> SOL (right side vertical) */
+.win98-drop.d7  { animation: win98-route7 3.6s linear infinite 0.8s; background: #000080; width: 4px; height: 4px; }
+/* AVAX -> SOL */
+.win98-drop.d8  { animation: win98-route8 3.1s linear infinite 1.2s; background: #008000; width: 4px; height: 4px; }
+/* BTC -> DOGE */
+.win98-drop.d9  { animation: win98-route9 3.8s linear infinite 2s; background: #ff0000; width: 4px; height: 4px; }
+/* GAIA -> RUNE */
+.win98-drop.d10 { animation: win98-route10 3.3s linear infinite 0.6s; background: #000080; }
+/* ETH -> DOGE */
+.win98-drop.d11 { animation: win98-route11 4.2s linear infinite 1.8s; background: #800080; width: 4px; height: 4px; }
+/* SOL -> GAIA */
+.win98-drop.d12 { animation: win98-route12 3.7s linear infinite 0.4s; background: #008000; }
+
+/* Drop flight paths — flowing between chain label positions */
+/* BTC (8%,6%) -> ETH (5%,90%) */
+@keyframes win98-route1 {
+	0%   { top: 12%; left: 12%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 20%; left: 90%; }
+	50%  { top: 8%; left: 50%; }
 	90%  { opacity: 1; }
-	100% { top: 50%; left: 10%; opacity: 0; }
+	100% { top: 9%; left: 85%; opacity: 0; }
 }
-@keyframes win98-fly2 {
-	0%   { top: 80%; left: 80%; opacity: 0; }
+/* ETH (5%,90%) -> AVAX (44%,95%) */
+@keyframes win98-route2 {
+	0%   { top: 9%; left: 85%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 10%; left: 20%; }
+	50%  { top: 26%; left: 92%; }
 	90%  { opacity: 1; }
-	100% { top: 80%; left: 80%; opacity: 0; }
+	100% { top: 48%; left: 92%; opacity: 0; }
 }
-@keyframes win98-fly3 {
-	0%   { top: 15%; left: 50%; opacity: 0; }
+/* RUNE (86%,4%) -> SOL (90%,94%) */
+@keyframes win98-route3 {
+	0%   { top: 82%; left: 10%; opacity: 0; }
 	10%  { opacity: 1; }
 	50%  { top: 85%; left: 50%; }
 	90%  { opacity: 1; }
-	100% { top: 15%; left: 50%; opacity: 0; }
+	100% { top: 87%; left: 88%; opacity: 0; }
 }
-@keyframes win98-fly4 {
-	0%   { top: 30%; left: 5%; opacity: 0; }
+/* BTC (8%,6%) -> USDT (44%,3%) */
+@keyframes win98-route4 {
+	0%   { top: 14%; left: 10%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 70%; left: 95%; }
+	50%  { top: 30%; left: 6%; }
 	90%  { opacity: 1; }
-	100% { top: 30%; left: 5%; opacity: 0; }
+	100% { top: 48%; left: 7%; opacity: 0; }
 }
-@keyframes win98-fly5 {
-	0%   { top: 90%; left: 40%; opacity: 0; }
+/* USDT (44%,3%) -> RUNE (86%,4%) */
+@keyframes win98-route5 {
+	0%   { top: 52%; left: 7%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 10%; left: 60%; }
+	50%  { top: 68%; left: 5%; }
 	90%  { opacity: 1; }
-	100% { top: 90%; left: 40%; opacity: 0; }
+	100% { top: 80%; left: 10%; opacity: 0; }
+}
+/* DOGE (16%,37%) -> GAIA (96%,37%) */
+@keyframes win98-route6 {
+	0%   { top: 22%; left: 43%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 55%; left: 45%; }
+	90%  { opacity: 1; }
+	100% { top: 92%; left: 43%; opacity: 0; }
+}
+/* ETH (5%,90%) -> SOL (90%,94%) */
+@keyframes win98-route7 {
+	0%   { top: 12%; left: 88%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 50%; left: 90%; }
+	90%  { opacity: 1; }
+	100% { top: 85%; left: 89%; opacity: 0; }
+}
+/* AVAX (44%,95%) -> SOL (90%,94%) */
+@keyframes win98-route8 {
+	0%   { top: 52%; left: 93%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 70%; left: 92%; }
+	90%  { opacity: 1; }
+	100% { top: 86%; left: 90%; opacity: 0; }
+}
+/* BTC (8%,6%) -> DOGE (16%,37%) */
+@keyframes win98-route9 {
+	0%   { top: 12%; left: 14%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 14%; left: 26%; }
+	90%  { opacity: 1; }
+	100% { top: 20%; left: 40%; opacity: 0; }
+}
+/* GAIA (96%,37%) -> RUNE (86%,4%) */
+@keyframes win98-route10 {
+	0%   { top: 92%; left: 42%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 88%; left: 22%; }
+	90%  { opacity: 1; }
+	100% { top: 83%; left: 10%; opacity: 0; }
+}
+/* ETH (5%,90%) -> DOGE (16%,37%) */
+@keyframes win98-route11 {
+	0%   { top: 10%; left: 84%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 14%; left: 60%; }
+	90%  { opacity: 1; }
+	100% { top: 20%; left: 44%; opacity: 0; }
+}
+/* SOL (90%,94%) -> GAIA (96%,37%) */
+@keyframes win98-route12 {
+	0%   { top: 88%; left: 88%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 92%; left: 62%; }
+	90%  { opacity: 1; }
+	100% { top: 94%; left: 44%; opacity: 0; }
 }

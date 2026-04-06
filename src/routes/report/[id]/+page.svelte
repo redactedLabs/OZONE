@@ -14,10 +14,24 @@
 	const typeLabels: Record<string, string> = {
 		swap: 'Swap', addLiquidity: 'Add LP', withdraw: 'Withdraw', send: 'Send', refund: 'Refund',
 		switch: 'Switch', contract: 'Contract', donate: 'Donate',
+		'fin-trade': 'Trade', 'fin-arb': 'Arb', 'fin-range': 'Range LP',
+		'fin-range-fee': 'Range Fee', 'ghost-borrow': 'Borrow', 'ghost-repay': 'Repay',
+		'ghost-lend': 'Lend', 'ghost-withdraw': 'Withdraw Lend',
+		'bow-swap': 'AMM Swap', 'tc-swap': 'Swap (TC)',
+		'calc-init': 'DCA Create', 'calc-process': 'DCA Execute',
+		'calc-withdraw': 'DCA Withdraw', 'calc-create': 'DCA Strategy',
+		'calc-internal': 'DCA (step)', 'calc-update': 'DCA Update',
 	};
 	const typeColors: Record<string, string> = {
 		swap: 'var(--app-accent)', addLiquidity: '#10b981', withdraw: '#f59e0b', send: '#22d3ee', refund: '#ef4444',
 		switch: '#a78bfa', contract: '#64748b', donate: '#f472b6',
+		'fin-trade': '#f59e0b', 'fin-arb': '#f97316', 'fin-range': '#10b981',
+		'fin-range-fee': '#10b981', 'ghost-borrow': '#ef4444', 'ghost-repay': '#22c55e',
+		'ghost-lend': '#6366f1', 'ghost-withdraw': '#a78bfa',
+		'bow-swap': '#6366f1', 'tc-swap': '#6366f1',
+		'calc-init': '#a78bfa', 'calc-process': '#a78bfa',
+		'calc-withdraw': '#a78bfa', 'calc-create': '#a78bfa',
+		'calc-internal': '#94a3b8', 'calc-update': '#94a3b8',
 	};
 
 	const txSwaps = $derived(data.transactions?.filter((t: any) => t.type === 'swap').length || 0);
@@ -52,7 +66,18 @@
 			const sentCurrency = tx.assetIn;
 			const receivedAmount = tx.rawAmountOut || tx.amountOut;
 			const receivedCurrency = tx.assetOut;
-			const label = tx.type === 'swap' ? '' : tx.type === 'addLiquidity' ? 'liquidity_in' : tx.type === 'withdraw' ? 'liquidity_out' : '';
+			const koinlyLabel = (type: string): string => {
+				if (['swap', 'fin-trade', 'fin-arb', 'bow-swap', 'tc-swap', 'calc-process'].includes(type)) return '';
+				if (type === 'addLiquidity' || type === 'fin-range') return 'liquidity_in';
+				if (type === 'withdraw') return 'liquidity_out';
+				if (type === 'ghost-borrow') return 'borrow';
+				if (type === 'ghost-repay') return 'repay';
+				if (type === 'ghost-lend') return 'deposit';
+				if (type === 'ghost-withdraw') return 'withdrawal';
+				if (type === 'fin-range-fee') return 'income';
+				return '';
+			};
+			const label = koinlyLabel(tx.type);
 			const desc = tx.type === 'swap' ? `Swap ${tx.assetIn} → ${tx.assetOut}` : tx.type === 'addLiquidity' ? `LP Add ${tx.assetIn}` : tx.type === 'withdraw' ? `Withdraw ${tx.assetOut}` : tx.type === 'send' ? `Send ${sentAmount !== '0' ? tx.assetIn : tx.assetOut}` : typeLabels[tx.type] || tx.type;
 			return [
 				tx.date,

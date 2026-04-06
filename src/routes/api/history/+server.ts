@@ -43,6 +43,143 @@ function rawAmount(raw: string): string {
 	return (parseInt(raw) / 1e8).toString();
 }
 
+// ── Rujira contract type mapping ──
+const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
+	'wasm-rujira-fin/trade':              { type: 'fin-trade',       label: 'Trade (Orderbook)' },
+	'wasm-rujira-fin/arb':                { type: 'fin-arb',         label: 'Arb' },
+	'wasm-rujira-fin/range.create':       { type: 'fin-range',       label: 'Range LP' },
+	'wasm-rujira-fin/range.fee':          { type: 'fin-range-fee',   label: 'Range Fee' },
+	'wasm-rujira-ghost-vault/borrow':     { type: 'ghost-borrow',    label: 'Borrow' },
+	'wasm-rujira-ghost-vault/repay':      { type: 'ghost-repay',     label: 'Repay' },
+	'wasm-rujira-ghost-vault/deposit':    { type: 'ghost-lend',      label: 'Lend' },
+	'wasm-rujira-ghost-vault/withdraw':   { type: 'ghost-withdraw',  label: 'Withdraw Lend' },
+	'wasm-rujira-bow/swap':               { type: 'bow-swap',        label: 'AMM Swap' },
+	'wasm-rujira-thorchain-swap/swap':    { type: 'tc-swap',         label: 'Swap (TC)' },
+	'wasm-calc-strategy/init':            { type: 'calc-init',       label: 'DCA Create' },
+	'wasm-calc-strategy/process':         { type: 'calc-process',    label: 'DCA Execute' },
+	'wasm-calc-strategy/withdraw':        { type: 'calc-withdraw',   label: 'DCA Withdraw' },
+	'wasm-calc-manager/strategy.create':  { type: 'calc-create',     label: 'DCA Strategy' },
+	'wasm-calc-strategy/process-node.result':   { type: 'calc-internal', label: 'DCA (step)' },
+	'wasm-calc-strategy/process-node.messages': { type: 'calc-internal', label: 'DCA (step)' },
+	'wasm-calc-strategy/update':                { type: 'calc-update',   label: 'DCA Update' },
+	'wasm-calc-manager/strategy.update':        { type: 'calc-update',   label: 'DCA Update' },
+};
+
+function parseFunds(fundsStr: string): Array<{ amount: string; asset: string }> {
+	if (!fundsStr) return [];
+	return fundsStr.split(',').map(part => {
+		const match = part.trim().match(/^(\d+)(.+)$/);
+		if (!match) return null;
+		return { amount: match[1], asset: cleanAsset(match[2]) };
+	}).filter(Boolean) as Array<{ amount: string; asset: string }>;
+}
+
+function parseContractAction(a: any): { type: string; assetIn: string; assetOut: string; amountIn: string; amountOut: string; rawAmountIn: string; rawAmountOut: string } | null {
+	const contract = a.metadata?.contract;
+	if (!contract?.contractType) return null;
+
+	const mapped = RUJIRA_TYPE_MAP[contract.contractType];
+	if (!mapped) return null;
+
+	const attrs = contract.attributes || {};
+	const funds = parseFunds(contract.funds || '');
+	const fundAsset = funds[0]?.asset || '';
+	const fundAmount = funds[0]?.amount || '0';
+
+	let assetIn = '', assetOut = '', rawIn = '0', rawOut = '0';
+
+	switch (mapped.type) {
+		case 'fin-trade': {
+			// Orderbook trade: bid/offer with rate and side
+			const side = attrs.side; // 'quote' or 'base'
+			if (side === 'quote') {
+				// Sent quote asset (e.g. USDC), received base asset
+				assetIn = fundAsset;
+				rawIn = fundAmount;
+				assetOut = fundAsset; // Will show bid amount
+				rawOut = attrs.bid || attrs.offer || '0';
+			} else {
+				assetIn = fundAsset;
+				rawIn = fundAmount;
+				rawOut = attrs.offer || attrs.bid || '0';
+			}
+			break;
+		}
+		case 'bow-swap':
+		case 'tc-swap': {
+			// AMM/TC swap: offer → ask
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			if (attrs.ask) {
+				const askParts = attrs.ask.match(/^(\d+)(.+)$/);
+				if (askParts) { rawOut = askParts[1]; assetOut = cleanAsset(askParts[2]); }
+			}
+			if (attrs.returned) {
+				const retParts = attrs.returned.match(/^(\d+)(.+)$/);
+				if (retParts) { rawOut = retParts[1]; assetOut = cleanAsset(retParts[2]); }
+			}
+			break;
+		}
+		case 'ghost-borrow': {
+			assetOut = fundAsset;
+			rawOut = attrs.amount || fundAmount;
+			break;
+		}
+		case 'ghost-repay': {
+			assetIn = fundAsset;
+			rawIn = attrs.amount || fundAmount;
+			break;
+		}
+		case 'ghost-lend': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			break;
+		}
+		case 'ghost-withdraw': {
+			assetOut = fundAsset;
+			rawOut = fundAmount;
+			break;
+		}
+		case 'fin-range': {
+			// Range LP: deposited base + quote
+			if (funds.length >= 2) {
+				assetIn = funds[0].asset;
+				rawIn = funds[0].amount;
+				assetOut = funds[1].asset;
+				rawOut = funds[1].amount;
+			} else if (funds.length === 1) {
+				assetIn = fundAsset;
+				rawIn = fundAmount;
+			}
+			break;
+		}
+		case 'fin-range-fee': {
+			// Fee collection
+			if (attrs.base && attrs.base !== '0') { rawOut = attrs.base; }
+			if (attrs.quote && attrs.quote !== '0') { rawOut = attrs.quote; }
+			break;
+		}
+		default: {
+			// For DCA and others, use funds if available
+			if (fundAmount !== '0') {
+				assetIn = fundAsset;
+				rawIn = fundAmount;
+			}
+			break;
+		}
+	}
+
+	return {
+		type: mapped.type,
+		assetIn,
+		assetOut,
+		amountIn: formatAmount(rawIn),
+		amountOut: formatAmount(rawOut),
+		rawAmountIn: rawAmount(rawIn),
+		rawAmountOut: rawAmount(rawOut),
+	};
+}
+
 function extractFees(a: any): { feeAmount: string; feeCurrency: string } {
 	const meta = a.metadata || {};
 
@@ -74,6 +211,29 @@ function parseAction(a: any) {
 	const coinsIn = ins[0]?.coins?.[0] || {};
 	const coinsOut = outs[0]?.coins?.[0] || {};
 	const fees = extractFees(a);
+
+	// Try to decode Rujira contract interactions
+	if (a.type === 'contract') {
+		const decoded = parseContractAction(a);
+		if (decoded) {
+			return {
+				type: decoded.type,
+				date: a.date ? new Date(parseInt(a.date) / 1e6).toISOString() : '',
+				assetIn: decoded.assetIn,
+				assetOut: decoded.assetOut,
+				amountIn: decoded.amountIn,
+				amountOut: decoded.amountOut,
+				rawAmountIn: decoded.rawAmountIn,
+				rawAmountOut: decoded.rawAmountOut,
+				from: ins[0]?.address || '',
+				to: outs[0]?.address || '',
+				txID: ins[0]?.txID || '',
+				status: a.status || 'unknown',
+				feeAmount: fees.feeAmount,
+				feeCurrency: fees.feeCurrency,
+			};
+		}
+	}
 
 	return {
 		type: a.type || 'unknown',
