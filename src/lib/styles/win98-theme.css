@@ -264,8 +264,7 @@ html.win98 body {
 .win98 [data-slot="link-text"] span { color: #000000 !important; }
 .win98 [data-slot="link-underline"] { background: #000080 !important; }
 .win98 [data-slot="logo"] img {
-	image-rendering: pixelated;
-	filter: grayscale(1) contrast(1.3) sepia(1) hue-rotate(190deg) saturate(6) brightness(0.35) !important;
+	filter: brightness(0) !important;
 }
 
 .win98 [data-slot="primary-button"],
@@ -787,7 +786,6 @@ html.win98 body {
 .win98 img.rounded-full:not(.live-dot) {
 	border-radius: 50% !important;
 	image-rendering: pixelated;
-	filter: grayscale(1) contrast(1.3) sepia(1) hue-rotate(190deg) saturate(6) brightness(0.35);
 }
 
 /* ══════════════════════════════════════════
