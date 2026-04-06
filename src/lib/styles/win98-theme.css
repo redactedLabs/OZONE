@@ -274,8 +274,7 @@ html.win98 body {
 .win98 [data-slot="link-text"] span { color: #000000 !important; }
 .win98 [data-slot="link-underline"] { background: #000080 !important; }
 .win98 [data-slot="logo"] img {
-	image-rendering: pixelated !important;
-	filter: grayscale(1) sepia(1) hue-rotate(190deg) saturate(5) brightness(0.4) !important;
+	filter: brightness(0) invert(10%) sepia(100%) saturate(10000%) hue-rotate(240deg) !important;
 }
 
 .win98 [data-slot="primary-button"],
