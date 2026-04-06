@@ -128,7 +128,7 @@
 				Screen any THORChain address against 8 compliance databases. Get a verifiable certificate you can share with anyone.
 			</p>
 			<p class="text-sm max-w-xl mx-auto" style="color: var(--text-faint);">
-				OFAC, EU Sanctions, Chainalysis, known hacks, and more. Permanent record with shareable link.
+				No account needed. Permanent record with shareable link.
 			</p>
 		</div>
 
