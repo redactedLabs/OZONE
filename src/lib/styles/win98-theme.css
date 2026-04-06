@@ -212,6 +212,8 @@ html.win98 body {
 /* ══════════════════════════════════════════
    Window Chrome — data-win-title
    ══════════════════════════════════════════ */
+/* Win98 window template — used by all [data-win-title] elements.
+   3D raised border, blue gradient titlebar, silver body, inner padding. */
 .win98 [data-win-title] {
 	border: 2px solid !important;
 	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
@@ -220,9 +222,16 @@ html.win98 body {
 	border-radius: 0 !important;
 	backdrop-filter: none !important;
 	box-shadow: none !important;
-	overflow: hidden !important;
-	max-width: 100% !important;
 	box-sizing: border-box !important;
+	min-width: 0 !important;
+	max-width: 100% !important;
+	overflow: visible !important;
+	word-break: break-word;
+}
+/* Override Tailwind overflow-hidden that clips the 3D border */
+.win98 [data-win-title].overflow-hidden,
+.win98 [data-win-title].overflow-x-auto {
+	overflow: visible !important;
 }
 
 .win98 [data-win-title]::before {
@@ -237,8 +246,9 @@ html.win98 body {
 }
 
 .win98 [data-win-title] > * {
-	padding-left: 4px;
-	padding-right: 4px;
+	padding-left: 6px;
+	padding-right: 6px;
+	min-width: 0;
 }
 .win98 [data-win-title] > *:first-child {
 	padding-top: 6px;
