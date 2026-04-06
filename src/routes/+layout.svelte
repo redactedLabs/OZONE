@@ -27,7 +27,6 @@
 				{ label: 'Overview', href: '/' },
 				{ label: 'Addresses', href: '/addresses' },
 				{ label: 'Sanctioned List', href: '/banned' },
-				{ label: 'API', href: '/api-docs' },
 			]
 		},
 		{
@@ -35,6 +34,7 @@
 			variant: 'default' as const,
 			links: [
 				{ label: 'Open Source', href: '/open-source' },
+				{ label: 'API', href: '/api-docs' },
 				...(isAdmin
 					? [{ label: 'Logout', href: '/login?logout=1' }]
 					: [{ label: 'Login', href: '/login' }]
