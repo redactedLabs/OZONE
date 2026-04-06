@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 
 const MIDGARD_URLS = [
 	'https://gateway.liquify.com/chain/thorchain_midgard',
-	'https://midgard.ninerealms.com',
 ];
 
 const cleanAsset = (asset: string) => {

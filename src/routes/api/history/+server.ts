@@ -5,7 +5,7 @@ import { reports } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 const MIDGARD_URL = 'https://gateway.liquify.com/chain/thorchain_midgard';
-const THORNODE_URL = 'https://thornode.ninerealms.com';
+const THORNODE_URL = 'https://gateway.liquify.com/chain/thorchain_api';
 
 function cleanAsset(asset: string): string {
 	if (!asset) return '';
