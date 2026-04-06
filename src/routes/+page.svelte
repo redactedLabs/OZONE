@@ -314,7 +314,7 @@
 					<span class="today-label" style="color: var(--text-faint);">1d</span>
 				</div>
 			{/if}
-			<div class="stat-tip">Total addresses across all compliance sources: OFAC SDN ({data.stats.ofacEntries}), EU Sanctions ({data.stats.euEntries}), Known Hacks ({data.stats.hackEntries}), Tether Frozen, ScamSniffer, and manual flags. Auto-synced every 30 min.</div>
+			<div class="stat-tip">Total addresses across all compliance sources: OFAC SDN, EU Sanctions, Known Hacks, Tether Frozen, ScamSniffer, and manual flags. Auto-synced every 30 min.</div>
 		</div>
 	</div>
 
