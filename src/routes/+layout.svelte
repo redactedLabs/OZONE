@@ -35,6 +35,10 @@
 			variant: 'default' as const,
 			links: [
 				{ label: 'Open Source', href: '/open-source' },
+				...(isAdmin
+					? [{ label: 'Logout', href: '/login?logout=1' }]
+					: [{ label: 'Login', href: '/login' }]
+				),
 			]
 		},
 		...(isAdmin ? [{
@@ -46,15 +50,6 @@
 				{ label: 'Settings', href: '/admin/settings' },
 			]
 		}] : []),
-		...(isAdmin ? [{
-			title: 'Account',
-			variant: 'default' as const,
-			links: [{ label: 'Logout', href: '/login?logout=1' }]
-		}] : [{
-			title: 'Account',
-			variant: 'default' as const,
-			links: [{ label: 'Login', href: '/login' }]
-		}]),
 	]);
 
 	onMount(() => {
