@@ -1,9 +1,8 @@
 /* ══════════════════════════════════════════
    Win98 Light Theme — scoped under .win98
-   COMPREHENSIVE OVERHAUL
    ══════════════════════════════════════════ */
 
-/* MS Sans Serif font — copied from 98.css package to /static/fonts/ */
+/* MS Sans Serif font */
 @font-face {
 	font-family: 'Pixelated MS Sans Serif';
 	font-style: normal;
@@ -24,7 +23,6 @@
    CSS Variable Overrides
    ══════════════════════════════════════════ */
 .win98 {
-	/* Backgrounds — Win98 Clouds sky blue */
 	--bg: #3a6ea5;
 	--bg-card: #c0c0c0;
 	--bg-card-hover: #d4d0c8;
@@ -32,199 +30,161 @@
 	--background: #c0c0c0;
 	--background-inset: #3a6ea5;
 	--background-muted: #d4d0c8;
-
-	/* Text — dark on light */
 	--text: #000000;
-	--text-secondary: #333333;
-	--text-muted: #555555;
-	--text-faint: #777777;
-	--text-ghost: #999999;
+	--text-secondary: #000000;
+	--text-muted: #000000;
+	--text-faint: #555555;
+	--text-ghost: #808080;
 	--foreground: #000000;
-	--foreground-muted: #555555;
-
-	/* Accent — Win98 navy blue */
+	--foreground-muted: #000000;
 	--accent: #000080;
 	--accent-secondary: #1084d0;
 	--app-accent: #000080;
 	--accent-glow: #1084d0;
-
-	/* Borders — classic 3D bevels */
 	--border: #808080;
 	--app-border: #808080;
-	--app-border-subtle: #a0a0a0;
+	--app-border-subtle: #808080;
 	--card-border: #808080;
-
-	/* Cards */
 	--card-bg: #c0c0c0;
 	--card-glow: none;
-
-	/* Inputs */
 	--input-bg: #ffffff;
 	--input-border: #808080;
 	--input-border-focus: #000080;
 	--input-placeholder: #808080;
-
-	/* Status colors */
 	--danger: #ff0000;
 	--warning: #808000;
 	--success: #008000;
-
-	/* Hero */
 	--hero-title: #000000;
 	--hero-slash: #808080;
-	--hero-sub: #555555;
-
-	/* Stats */
+	--hero-sub: #000000;
 	--stat-indigo: #000080;
-
-	/* Tooltips */
 	--tooltip-bg: #ffffe1;
 	--tooltip-border: #000000;
-
-	/* Scrollbar */
 	--scrollbar-thumb: #c0c0c0;
 	--scrollbar-track: #d4d0c8;
-
-	/* Globe */
 	--godrays-bg: #3a6ea5;
 	--godrays-color: #000080;
-	--globe-land: #008000;
-	--globe-fresnel: #3a6ea5;
-	--globe-rim: #000080;
-	--globe-atmo: #000080;
-	--globe-pill-bg: rgba(192, 192, 192, 0.95);
-
-	/* Fixed */
+	--globe-pill-bg: #c0c0c0;
 	--fixed-light: #000000;
 	--fixed-dark: #c0c0c0;
-
-	/* Shadows — Win98 3D bevel effect */
-	--shadow-xs: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf;
-	--shadow-sm: inset -1px -1px #0a0a0a, inset 1px 1px #fff;
-	--shadow-md: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf;
+	--shadow-xs: none;
+	--shadow-sm: none;
+	--shadow-md: none;
 	--shadow-lg: none;
 	--shadow-xl: none;
 	--shadow-2xl: none;
-
-	/* Radius — Win98 has no border radius */
 	--radius-base: 0px;
-
-	/* Font — MS Sans Serif */
-	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', 'Microsoft Sans Serif', 'Segoe UI', Tahoma, sans-serif;
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', 'Microsoft Sans Serif', Tahoma, sans-serif;
 	-webkit-font-smoothing: none;
 }
 
 /* ══════════════════════════════════════════
-   BODY / HTML — Win98 Clouds wallpaper
+   HTML / BODY — Clouds wallpaper
    ══════════════════════════════════════════ */
 html.win98,
 html.win98 body {
 	background-color: #3a6ea5 !important;
 	color: #000000 !important;
-	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', 'Microsoft Sans Serif', 'Segoe UI', Tahoma, sans-serif !important;
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', 'Microsoft Sans Serif', Tahoma, sans-serif !important;
 	-webkit-font-smoothing: none !important;
 }
 
-/* Clouds wallpaper — CSS only, mimics the classic Win98 "Clouds" */
 html.win98 body {
 	background:
-		/* Large soft clouds */
 		radial-gradient(ellipse 600px 200px at 15% 20%, rgba(255,255,255,0.85) 0%, transparent 70%),
 		radial-gradient(ellipse 500px 180px at 70% 15%, rgba(255,255,255,0.80) 0%, transparent 70%),
 		radial-gradient(ellipse 700px 220px at 45% 35%, rgba(255,255,255,0.75) 0%, transparent 65%),
 		radial-gradient(ellipse 550px 160px at 85% 40%, rgba(255,255,255,0.70) 0%, transparent 70%),
 		radial-gradient(ellipse 450px 150px at 25% 50%, rgba(255,255,255,0.65) 0%, transparent 65%),
-		/* Mid clouds */
 		radial-gradient(ellipse 350px 120px at 55% 55%, rgba(255,255,255,0.60) 0%, transparent 70%),
 		radial-gradient(ellipse 400px 130px at 10% 65%, rgba(255,255,255,0.55) 0%, transparent 65%),
 		radial-gradient(ellipse 500px 170px at 80% 60%, rgba(255,255,255,0.50) 0%, transparent 70%),
 		radial-gradient(ellipse 300px 100px at 40% 75%, rgba(255,255,255,0.45) 0%, transparent 65%),
 		radial-gradient(ellipse 450px 140px at 65% 80%, rgba(255,255,255,0.40) 0%, transparent 70%),
-		/* Small wispy clouds */
 		radial-gradient(ellipse 250px 80px at 30% 30%, rgba(255,255,255,0.50) 0%, transparent 70%),
 		radial-gradient(ellipse 200px 70px at 90% 25%, rgba(255,255,255,0.45) 0%, transparent 70%),
 		radial-gradient(ellipse 280px 90px at 50% 45%, rgba(255,255,255,0.40) 0%, transparent 65%),
 		radial-gradient(ellipse 320px 100px at 20% 85%, rgba(255,255,255,0.35) 0%, transparent 70%),
-		/* Sky gradient — blue at top fading lighter toward bottom */
 		linear-gradient(180deg, #3a6ea5 0%, #5a8ec0 30%, #7bb0d8 55%, #a0cce8 75%, #c4e0f0 100%)
 		!important;
 	background-attachment: fixed !important;
 	background-size: cover !important;
 }
 
-
 /* ══════════════════════════════════════════
-   HARDCODED INLINE STYLE OVERRIDES
-   !important on class rules beats non-!important
-   inline styles. This fixes admin pages that use
-   literal hex colors in style="" attributes.
+   NUCLEAR: ALL colored text → black or navy
+   This ensures everything is readable on silver bg.
    ══════════════════════════════════════════ */
-
-/* Dark-mode text colors → Win98 dark equivalents */
 .win98 [style*="color: #f1f5f9"] { color: #000000 !important; }
 .win98 [style*="color: #e2e8f0"] { color: #000000 !important; }
-.win98 [style*="color: #94a3b8"] { color: #333333 !important; }
-.win98 [style*="color: #64748b"] { color: #555555 !important; }
-.win98 [style*="color: #475569"] { color: #777777 !important; }
-.win98 [style*="color: #334155"] { color: #808080 !important; }
-
-/* Dark-mode accent colors → navy blue */
+.win98 [style*="color: #94a3b8"] { color: #000000 !important; }
+.win98 [style*="color: #64748b"] { color: #000000 !important; }
+.win98 [style*="color: #475569"] { color: #000000 !important; }
+.win98 [style*="color: #334155"] { color: #555555 !important; }
 .win98 [style*="color: #818cf8"] { color: #000080 !important; }
 .win98 [style*="color: #6366f1"] { color: #000080 !important; }
+.win98 [style*="color: #10b981"] { color: #008000 !important; }
+.win98 [style*="color: #22d3ee"] { color: #000080 !important; }
+.win98 [style*="color: #a855f7"] { color: #000080 !important; }
+.win98 [style*="color: #ef4444"] { color: #ff0000 !important; }
+.win98 [style*="color: #f59e0b"] { color: #808000 !important; }
+.win98 [style*="color: #26a17b"] { color: #008000 !important; }
+.win98 [style*="color: #3b82f6"] { color: #000080 !important; }
+.win98 [style*="color: #ec4899"] { color: #800080 !important; }
+.win98 [style*="color: #c4a430"] { color: #808000 !important; }
+.win98 [style*="color: #0f172a"] { color: #000000 !important; }
 
-/* Dark-mode backgrounds → Win98 silver */
+/* ══════════════════════════════════════════
+   NUCLEAR: ALL dark backgrounds → silver
+   ══════════════════════════════════════════ */
 .win98 [style*="background: #0d0d1f"] { background: #c0c0c0 !important; }
 .win98 [style*="background: #060610"] { background: #c0c0c0 !important; }
 .win98 [style*="background:#0d0d1f"]  { background: #c0c0c0 !important; }
 .win98 [style*="background:#060610"]  { background: #c0c0c0 !important; }
-
-/* Dark semi-transparent backgrounds */
 .win98 [style*="background: rgba(13, 13, 31"] { background: #c0c0c0 !important; }
 .win98 [style*="background: rgba(15,23,42"]   { background: #c0c0c0 !important; }
 
-/* Dark-mode borders → Win98 gray */
-.win98 [style*="border: 1px solid #1e293b"]         { border-color: #808080 !important; }
-.win98 [style*="border-bottom: 1px solid #1e293b"]  { border-bottom-color: #808080 !important; }
+/* ALL colored buttons → Win98 raised */
+.win98 [style*="background: #6366f1"] { background: #c0c0c0 !important; color: #000000 !important; }
+.win98 [style*="background: #a855f7"] { background: #c0c0c0 !important; color: #000000 !important; }
+.win98 [style*="background: #10b981"] { background: #c0c0c0 !important; color: #000000 !important; }
+.win98 [style*="background: #22d3ee"] { background: #c0c0c0 !important; color: #000000 !important; }
+.win98 [style*="background: #ef4444"] { background: #c0c0c0 !important; color: #000000 !important; }
 
-/* Accent-colored buttons → Win98 raised buttons */
-.win98 [style*="background: #6366f1"] {
-	background: #c0c0c0 !important;
-	color: #000000 !important;
-}
-.win98 [style*="background: #a855f7"] {
-	background: #c0c0c0 !important;
-	color: #000000 !important;
-}
+/* ALL rgba accent backgrounds → silver or flat */
+.win98 [style*="rgba(255,255,255,0.02)"] { background: #c0c0c0 !important; }
+.win98 [style*="rgba(16,185,129,0.0"]  { background: #c0c0c0 !important; }
+.win98 [style*="rgba(16,185,129,0.1"]  { background: #c0c0c0 !important; border-color: #808080 !important; }
+.win98 [style*="rgba(16,185,129,0.2"]  { border-color: #808080 !important; }
+.win98 [style*="rgba(34,211,238,0."]   { background: #c0c0c0 !important; border-color: #808080 !important; }
+.win98 [style*="rgba(99,102,241,0."]   { background: #c0c0c0 !important; border-color: #808080 !important; }
+.win98 [style*="rgba(168,85,247,0."]   { background: #c0c0c0 !important; border-color: #808080 !important; }
+.win98 [style*="rgba(245,158,11,0."]   { background: #c0c0c0 !important; border-color: #808080 !important; }
+.win98 [style*="rgba(239,68,68,0."]    { background: #c0c0c0 !important; border-color: #808080 !important; }
+.win98 [style*="rgba(15,23,42"]        { background: #c0c0c0 !important; }
+.win98 [style*="rgba(0, 0, 0,"]        { background: transparent !important; }
 
-/* Green/cyan CTA buttons → Win98 buttons */
-.win98 [style*="background: #10b981"] {
-	background: #c0c0c0 !important;
-	color: #000000 !important;
-}
-.win98 [style*="background: #22d3ee"] {
-	background: #c0c0c0 !important;
-	color: #000000 !important;
-}
+/* Dark borders → gray */
+.win98 [style*="border: 1px solid #1e293b"]        { border-color: #808080 !important; }
+.win98 [style*="border-bottom: 1px solid #1e293b"] { border-bottom-color: #808080 !important; }
+.win98 [style*="border: 1px solid rgba("]          { border-color: #808080 !important; }
+.win98 [style*="border-top: 1px solid"]            { border-top-color: #808080 !important; }
+.win98 [style*="border-bottom: 1px solid var"]     { border-bottom-color: #808080 !important; }
 
-/* Inner containers with dark rgba backgrounds */
-.win98 [style*="rgba(255,255,255,0.02)"] {
-	background: #d4d0c8 !important;
-}
-.win98 [style*="rgba(16,185,129,0.03)"] {
-	background: #d4d0c8 !important;
-}
-.win98 [style*="rgba(15,23,42,0.5)"] {
-	background: #d4d0c8 !important;
-}
-.win98 [style*="rgba(15,23,42,0.8)"] {
-	background: #c0c0c0 !important;
+/* Linear gradients → navy gradient */
+.win98 [style*="background: linear-gradient"] {
+	background: linear-gradient(90deg, #000080, #1084d0) !important;
 }
 
 /* ══════════════════════════════════════════
-   HEADINGS — always black in Win98
+   ALL TEXT — readable on silver
    ══════════════════════════════════════════ */
 .win98 h1, .win98 h2, .win98 h3, .win98 h4, .win98 h5, .win98 h6 {
 	color: #000000 !important;
+}
+
+.win98 p, .win98 span, .win98 div, .win98 label {
+	color: inherit;
 }
 
 /* ══════════════════════════════════════════
@@ -236,7 +196,6 @@ html.win98 body {
 	background: #c0c0c0 !important;
 	padding: 0 !important;
 	border-radius: 0 !important;
-	position: relative;
 	backdrop-filter: none !important;
 	box-shadow: none !important;
 }
@@ -258,7 +217,7 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   FloatingMenu overrides (via data-slot)
+   FloatingMenu (data-slot)
    ══════════════════════════════════════════ */
 .win98 [data-slot="root"] {
 	background: #c0c0c0 !important;
@@ -267,32 +226,13 @@ html.win98 body {
 	border-radius: 0 !important;
 	backdrop-filter: none !important;
 }
-
-.win98 [data-slot="header"] {
-	background: #c0c0c0 !important;
-	border-bottom: 1px solid #808080 !important;
-}
-
-.win98 [data-slot="toggle-line"] {
-	background: #000000 !important;
-}
-
-.win98 [data-slot="menu-wrapper"] {
-	background: #c0c0c0 !important;
-}
-
-.win98 [data-slot="group-title"] {
-	color: #000080 !important;
-	font-weight: bold;
-}
-
-.win98 [data-slot="link-text"] span {
-	color: #000000 !important;
-}
-
-.win98 [data-slot="link-underline"] {
-	background: #000080 !important;
-}
+.win98 [data-slot="header"] { background: #c0c0c0 !important; border-bottom: 1px solid #808080 !important; }
+.win98 [data-slot="toggle-line"] { background: #000000 !important; }
+.win98 [data-slot="menu-wrapper"] { background: #c0c0c0 !important; }
+.win98 [data-slot="group-title"] { color: #000080 !important; font-weight: bold; }
+.win98 [data-slot="link-text"] span { color: #000000 !important; }
+.win98 [data-slot="link-underline"] { background: #000080 !important; }
+.win98 [data-slot="logo"] img { filter: brightness(0) !important; }
 
 .win98 [data-slot="primary-button"],
 .win98 [data-slot="secondary-button"] {
@@ -330,13 +270,8 @@ html.win98 body {
 }
 
 .win98 input::placeholder,
-.win98 textarea::placeholder {
-	color: #808080 !important;
-}
-
-.win98 input[type="checkbox"] {
-	accent-color: #000080;
-}
+.win98 textarea::placeholder { color: #808080 !important; }
+.win98 input[type="checkbox"] { accent-color: #000080; }
 
 .win98 button:not([data-slot]):not(.win98-toggle) {
 	background: #c0c0c0 !important;
@@ -356,23 +291,29 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Admin Page Scoped Style Overrides
+   Admin + Page-specific Scoped Classes
    ══════════════════════════════════════════ */
-.win98 .admin-input {
+.win98 .admin-input,
+.win98 .login-input,
+.win98 .hist-input,
+.win98 .cert-input {
 	background: #ffffff !important;
 	border: 2px solid !important;
 	border-color: #808080 #dfdfdf #dfdfdf #808080 !important;
 	color: #000000 !important;
 	border-radius: 0 !important;
+	box-shadow: none !important;
 }
 
-.win98 .admin-input:focus {
+.win98 .admin-input:focus,
+.win98 .login-input:focus,
+.win98 .hist-input:focus,
+.win98 .cert-input:focus {
 	border-color: #000080 !important;
+	box-shadow: none !important;
 }
 
-.win98 .admin-input::placeholder {
-	color: #808080 !important;
-}
+.win98 .admin-input::placeholder { color: #808080 !important; }
 
 .win98 .source-tab {
 	background: #c0c0c0 !important;
@@ -381,11 +322,7 @@ html.win98 body {
 	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
 	border-radius: 0 !important;
 }
-
-.win98 .source-tab:hover {
-	color: #000000 !important;
-}
-
+.win98 .source-tab:hover { color: #000000 !important; }
 .win98 .source-tab.active {
 	background: #000080 !important;
 	color: #ffffff !important;
@@ -398,20 +335,6 @@ html.win98 body {
 	border: 2px solid !important;
 	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
 	border-radius: 0 !important;
-	text-decoration: none !important;
-}
-
-.win98 .login-input {
-	background: #ffffff !important;
-	border: 2px solid !important;
-	border-color: #808080 #dfdfdf #dfdfdf #808080 !important;
-	color: #000000 !important;
-	border-radius: 0 !important;
-}
-
-.win98 .login-input:focus {
-	border-color: #000080 !important;
-	box-shadow: none !important;
 }
 
 .win98 .login-btn {
@@ -422,26 +345,7 @@ html.win98 body {
 	border-radius: 0 !important;
 	box-shadow: none !important;
 }
-
-.win98 .login-btn:hover {
-	background: #d4d0c8 !important;
-	box-shadow: none !important;
-}
-
-.win98 .hist-input,
-.win98 .cert-input {
-	background: #ffffff !important;
-	border: 2px solid !important;
-	border-color: #808080 #dfdfdf #dfdfdf #808080 !important;
-	color: #000000 !important;
-	border-radius: 0 !important;
-}
-
-.win98 .hist-input:focus,
-.win98 .cert-input:focus {
-	border-color: #000080 !important;
-	box-shadow: none !important;
-}
+.win98 .login-btn:hover { background: #d4d0c8 !important; box-shadow: none !important; }
 
 .win98 .scan-spinner {
 	border-color: #808080 !important;
@@ -449,7 +353,7 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Hero / Gradient overrides
+   Hero
    ══════════════════════════════════════════ */
 .win98 .hero-gradient {
 	background: none !important;
@@ -457,87 +361,53 @@ html.win98 body {
 	-webkit-text-fill-color: #000080 !important;
 	color: #000080 !important;
 }
-
 .win98 .hero-badge {
 	background: #c0c0c0 !important;
 	border: 2px solid !important;
 	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
 	color: #000000 !important;
 }
-
 .win98 .hero-title {
 	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif !important;
 }
 
 /* ══════════════════════════════════════════
-   Tailwind Color Class overrides
+   Tailwind Class overrides
    ══════════════════════════════════════════ */
 .win98 .bg-background { background: #c0c0c0 !important; }
 .win98 .text-foreground { color: #000000 !important; }
-.win98 .text-foreground-muted { color: #555555 !important; }
+.win98 .text-foreground-muted { color: #000000 !important; }
 .win98 .bg-background-muted { background: #d4d0c8 !important; }
 
 /* ══════════════════════════════════════════
-   Table overrides
+   Tables
    ══════════════════════════════════════════ */
-.win98 table {
-	background: #ffffff !important;
-	color: #000000 !important;
-	border-radius: 0 !important;
-}
-
-.win98 thead tr {
-	background: #c0c0c0 !important;
-}
-
-.win98 thead th {
-	color: #000000 !important;
-	background: #c0c0c0 !important;
-}
-
-.win98 tbody tr {
-	border-color: #808080 !important;
-}
-
-.win98 tbody td {
-	color: #000000 !important;
-}
-
-.win98 tbody tr:hover {
-	background: #000080 !important;
-	color: #ffffff !important;
-}
-
-.win98 tbody tr:hover td {
-	color: #ffffff !important;
-}
-
+.win98 table { background: #ffffff !important; color: #000000 !important; border-radius: 0 !important; }
+.win98 thead tr { background: #c0c0c0 !important; }
+.win98 thead th { color: #000000 !important; background: #c0c0c0 !important; }
+.win98 tbody tr { border-color: #808080 !important; }
+.win98 tbody td { color: #000000 !important; }
+.win98 tbody tr:hover { background: #000080 !important; }
+.win98 tbody tr:hover td,
 .win98 tbody tr:hover span,
 .win98 tbody tr:hover a,
-.win98 tbody tr:hover button {
-	color: #ffffff !important;
-}
+.win98 tbody tr:hover button { color: #ffffff !important; }
 
 /* ══════════════════════════════════════════
-   Link styling
+   Links
    ══════════════════════════════════════════ */
 .win98 a:not([data-slot]):not(.win98-toggle) {
 	color: #000080 !important;
 }
-
 .win98 a:visited:not([data-slot]):not(.win98-toggle) {
 	color: #800080 !important;
 }
 
-/* CTA links styled as buttons */
+/* CTA links as Win98 buttons */
 .win98 a.hero-cta-primary,
-.win98 a.hero-cta-secondary {
-	color: #000000 !important;
-	text-decoration: none !important;
-}
-
-/* ALL inline-styled links that look like buttons */
-.win98 a[style*="background:"][class*="rounded"] {
+.win98 a.hero-cta-secondary,
+.win98 a[style*="background:"][class*="rounded"],
+.win98 a[style*="background:"][class*="px-"] {
 	background: #c0c0c0 !important;
 	color: #000000 !important;
 	border: 2px solid !important;
@@ -546,39 +416,14 @@ html.win98 body {
 	text-decoration: none !important;
 	box-shadow: none !important;
 }
-
-.win98 a[style*="background:"][class*="rounded"]:active {
+.win98 a[style*="background:"]:active {
 	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a !important;
-}
-
-/* Accent-colored badges/pills → Win98 flat */
-.win98 [style*="background: rgba(99,102,241"] {
-	background: #c0c0c0 !important;
-	border: 1px solid #808080 !important;
-}
-.win98 [style*="background: rgba(16,185,129"] {
-	background: #c0c0c0 !important;
-	border: 1px solid #808080 !important;
-}
-.win98 [style*="background: rgba(34,211,238"] {
-	background: #c0c0c0 !important;
-	border: 1px solid #808080 !important;
-}
-.win98 [style*="background: rgba(168,85,247"] {
-	background: #c0c0c0 !important;
-	border: 1px solid #808080 !important;
-}
-.win98 [style*="background: rgba(245,158,11"] {
-	background: #c0c0c0 !important;
-	border: 1px solid #808080 !important;
 }
 
 /* ══════════════════════════════════════════
    Scrollbar
    ══════════════════════════════════════════ */
-.win98 * {
-	scrollbar-color: #c0c0c0 #d4d0c8;
-}
+.win98 * { scrollbar-color: #c0c0c0 #d4d0c8; }
 
 /* ══════════════════════════════════════════
    Code blocks
@@ -591,11 +436,7 @@ html.win98 body {
 	border-color: #808080 #dfdfdf #dfdfdf #808080 !important;
 	border-radius: 0 !important;
 }
-
-.win98 pre code {
-	border: none !important;
-}
-
+.win98 pre code { border: none !important; }
 .win98 .api-preview {
 	background: #ffffff !important;
 	border: 2px solid !important;
@@ -604,57 +445,41 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Rounded override — flatten everything
+   Flatten ALL border-radius
    ══════════════════════════════════════════ */
 .win98 .rounded-xl,
 .win98 .rounded-2xl,
 .win98 .rounded-3xl,
 .win98 .rounded-lg,
 .win98 .rounded-md,
-.win98 .rounded-full:not(.animate-pulse):not(.animate-ping):not(.live-dot) {
+.win98 .rounded,
+.win98 .rounded-full:not(.live-dot),
+.win98 [class*="rounded"] {
 	border-radius: 0 !important;
 }
 
 /* ══════════════════════════════════════════
-   BACKGROUND — transparent so clouds show through
+   BACKGROUND — transparent so clouds show
    ══════════════════════════════════════════ */
-.win98 .min-h-screen {
-	background: transparent !important;
-}
-
-.win98 .relative.min-h-screen,
+.win98 .min-h-screen,
 .win98 main,
 .win98 main > div,
-.win98 main .relative.overflow-hidden,
 .win98 div[class*="min-h-screen"],
 .win98 [style*="background: var(--bg)"] {
 	background: transparent !important;
 }
 
 /* ══════════════════════════════════════════
-   GodRays / Canvas — hide in win98
+   Hide dark-mode specific elements
    ══════════════════════════════════════════ */
-.win98 .godrays-bg {
-	display: none !important;
-}
+.win98 .godrays-bg { display: none !important; }
+.win98 canvas { display: none !important; }
 
-.win98 canvas {
-	display: none !important;
-}
+/* Disable backdrop blur */
+.win98 [style*="backdrop-filter"] { backdrop-filter: none !important; }
 
 /* ══════════════════════════════════════════
-   Backdrop blur — disable
-   ══════════════════════════════════════════ */
-.win98 .backdrop-blur-sm,
-.win98 .backdrop-blur-md,
-.win98 .backdrop-blur-lg,
-.win98 .backdrop-blur-xl,
-.win98 [style*="backdrop-filter"] {
-	backdrop-filter: none !important;
-}
-
-/* ══════════════════════════════════════════
-   Stat tooltip — Win98 yellow tooltip
+   Stat tooltip — Win98 yellow
    ══════════════════════════════════════════ */
 .win98 .stat-tip {
 	background: #ffffe1 !important;
@@ -665,7 +490,7 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Animations — disable fancy ones
+   Disable fancy animations
    ══════════════════════════════════════════ */
 .win98 .hero-section,
 .win98 .hero-title,
@@ -676,7 +501,7 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Card class overrides
+   Card classes — Win98 raised window
    ══════════════════════════════════════════ */
 .win98 .dash-box,
 .win98 .hist-card,
@@ -693,7 +518,7 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Sync / CTA Buttons
+   Buttons — CTA, sync, hero
    ══════════════════════════════════════════ */
 .win98 .sync-btn,
 .win98 .hero-cta-primary,
@@ -706,13 +531,11 @@ html.win98 body {
 	border-radius: 0 !important;
 	text-shadow: none !important;
 }
-
 .win98 .sync-btn:hover,
 .win98 .hero-cta-primary:hover {
 	background: #d4d0c8 !important;
 	box-shadow: none !important;
 }
-
 .win98 .hero-cta-secondary,
 .win98 .report-btn-secondary {
 	background: #c0c0c0 !important;
@@ -723,141 +546,80 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Globe container — teal bg for cube
+   Globe container
    ══════════════════════════════════════════ */
 .win98 .globe-container {
 	background: transparent !important;
-	min-height: 200px !important;
 }
 
 /* ══════════════════════════════════════════
-   Live dot
+   Misc elements
    ══════════════════════════════════════════ */
-.win98 .live-dot {
-	box-shadow: none !important;
-}
+.win98 .live-dot { box-shadow: none !important; }
+.win98 .stat-inset { background: #c0c0c0 !important; border: 1px solid #808080 !important; border-radius: 0 !important; }
+.win98 .cert-glow { box-shadow: none !important; }
+.win98 .report-glow { display: none !important; }
+.win98 .tx-row { animation: none !important; }
+.win98 .tx-link { color: #000080 !important; }
 
-/* ══════════════════════════════════════════
-   Stat inset
-   ══════════════════════════════════════════ */
-.win98 .stat-inset {
-	background: #c0c0c0 !important;
-	border: 1px solid #808080 !important;
-	border-radius: 0 !important;
-}
-
-/* ══════════════════════════════════════════
-   Info chips
-   ══════════════════════════════════════════ */
-.win98 .info-chip {
-	background: #c0c0c0 !important;
-	border: 1px solid #808080 !important;
-	border-radius: 0 !important;
-}
-
-/* ══════════════════════════════════════════
-   Cert / report glow — disable
-   ══════════════════════════════════════════ */
-.win98 .cert-glow {
-	box-shadow: none !important;
-}
-
-.win98 .report-glow {
-	display: none !important;
-}
-
-/* ══════════════════════════════════════════
-   TX row animations — disable
-   ══════════════════════════════════════════ */
-.win98 .tx-row {
+/* Loading spinner — Win98 style (replace dark mode pulse) */
+.win98 .animate-pulse {
 	animation: none !important;
+	background: #c0c0c0 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
 }
 
-.win98 .tx-link {
-	color: #000080 !important;
+/* Small status dots keep their color but no glow */
+.win98 span.animate-pulse[class*="h-2"][class*="w-2"] {
+	border: none !important;
+}
+
+/* Override opacity on colored elements to keep them readable */
+.win98 [style*="opacity: 0.5"] { opacity: 1 !important; }
+.win98 [style*="opacity: 0.7"] { opacity: 1 !important; }
+.win98 [style*="opacity: 0.3"] { opacity: 1 !important; }
+
+/* Colored pills/badges — all get Win98 flat look */
+.win98 [style*="background:"][style*="border:"][class*="rounded"],
+.win98 [style*="background:"][style*="border:"][class*="px-"] {
+	background: #c0c0c0 !important;
+	border-color: #808080 !important;
+	border-radius: 0 !important;
+	color: #000000 !important;
 }
 
 /* ══════════════════════════════════════════
-   Gradient bars (certificate strips)
+   Images — make round ones square
    ══════════════════════════════════════════ */
-.win98 .p-1[style*="background: linear-gradient"] {
-	background: linear-gradient(90deg, #000080, #1084d0) !important;
+.win98 img {
+	border-radius: 0 !important;
 }
 
 /* ══════════════════════════════════════════
-   WIN98 NETWORK VIZ (replaces globe)
-   — nodes with flying TX arcs
+   SVG icons — flatten
    ══════════════════════════════════════════ */
-.win98-network {
+.win98 svg {
+	border-radius: 0 !important;
+}
+
+/* ══════════════════════════════════════════
+   CUBE with TX DROPS
+   ══════════════════════════════════════════ */
+.win98-cube-wrapper {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	min-height: 350px;
+	position: relative;
+	overflow: hidden;
 }
 
-/* SVG arc layer */
-.win98-arcs {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	z-index: 1;
-}
-
-.win98-arc {
-	fill: none;
-	stroke: #000080;
-	stroke-width: 1;
-	stroke-dasharray: 6 4;
-	opacity: 0.4;
-}
-
-.win98-arc.a1 { stroke-dashoffset: 0; animation: win98-dash 4s linear infinite; }
-.win98-arc.a2 { stroke-dashoffset: 5; animation: win98-dash 5s linear infinite; }
-.win98-arc.a3 { stroke-dashoffset: 10; animation: win98-dash 3.5s linear infinite; }
-.win98-arc.a4 { stroke-dashoffset: 15; animation: win98-dash 6s linear infinite; }
-.win98-arc.a5 { stroke-dashoffset: 3; animation: win98-dash 4.5s linear infinite; }
-.win98-arc.a6 { stroke: #808080; stroke-dashoffset: 8; animation: win98-dash 5.5s linear infinite; }
-.win98-arc.a7 { stroke: #808080; stroke-dashoffset: 12; animation: win98-dash 4s linear infinite; }
-.win98-arc.a8 { stroke: #808080; stroke-dashoffset: 0; animation: win98-dash 3s linear infinite; }
-
-@keyframes win98-dash {
-	to { stroke-dashoffset: -40; }
-}
-
-/* Chain node labels */
-.win98-node {
-	position: absolute;
-	z-index: 2;
-}
-
-.win98-node-box {
-	background: #c0c0c0;
-	border: 2px solid;
-	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
-	padding: 2px 6px;
-	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
-	font-size: 10px;
-	font-weight: bold;
-	color: #000080;
-	white-space: nowrap;
-	box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
-}
-
-.win98-node-center {
-	font-size: 13px;
-	padding: 4px 10px;
-	background: #000080;
-	color: #ffffff;
-	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a;
-}
-
-/* ══════════════════════════════════════════
-   WIN98 3D ROTATING CUBE (kept for bg accent)
-   ══════════════════════════════════════════ */
 .win98-cube-scene {
-	width: 140px;
-	height: 140px;
+	width: 160px;
+	height: 160px;
 	perspective: 500px;
+	z-index: 2;
 }
 
 .win98-cube {
@@ -865,13 +627,13 @@ html.win98 body {
 	height: 100%;
 	position: relative;
 	transform-style: preserve-3d;
-	animation: win98-spin 10s linear infinite;
+	animation: win98-spin 12s linear infinite;
 }
 
 .win98-cube-face {
 	position: absolute;
-	width: 140px;
-	height: 140px;
+	width: 160px;
+	height: 160px;
 	background: #c0c0c0;
 	border: 2px solid;
 	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
@@ -879,20 +641,78 @@ html.win98 body {
 	align-items: center;
 	justify-content: center;
 	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
-	font-size: 13px;
+	font-size: 14px;
 	font-weight: bold;
 	color: #000080;
 	backface-visibility: visible;
 }
 
-.win98-cube-face.front  { transform: rotateY(0deg)    translateZ(70px); }
-.win98-cube-face.back   { transform: rotateY(180deg)  translateZ(70px); }
-.win98-cube-face.right  { transform: rotateY(90deg)   translateZ(70px); }
-.win98-cube-face.left   { transform: rotateY(-90deg)  translateZ(70px); }
-.win98-cube-face.top    { transform: rotateX(90deg)   translateZ(70px); }
-.win98-cube-face.bottom { transform: rotateX(-90deg)  translateZ(70px); }
+.win98-cube-face.front  { transform: rotateY(0deg)    translateZ(80px); }
+.win98-cube-face.back   { transform: rotateY(180deg)  translateZ(80px); }
+.win98-cube-face.right  { transform: rotateY(90deg)   translateZ(80px); }
+.win98-cube-face.left   { transform: rotateY(-90deg)  translateZ(80px); }
+.win98-cube-face.top    { transform: rotateX(90deg)   translateZ(80px); }
+.win98-cube-face.bottom { transform: rotateX(-90deg)  translateZ(80px); }
 
 @keyframes win98-spin {
-	0%   { transform: rotateX(-20deg) rotateY(0deg); }
-	100% { transform: rotateX(-20deg) rotateY(360deg); }
+	0%   { transform: rotateX(-15deg) rotateY(0deg); }
+	100% { transform: rotateX(-15deg) rotateY(360deg); }
+}
+
+/* Pixelated TX drops — small squares flying around the cube */
+.win98-drop {
+	position: absolute;
+	width: 6px;
+	height: 6px;
+	background: #000080;
+	z-index: 1;
+	image-rendering: pixelated;
+}
+
+.win98-drop.d1  { animation: win98-fly1 3s linear infinite; background: #000080; }
+.win98-drop.d2  { animation: win98-fly2 4s linear infinite 0.5s; background: #ff0000; }
+.win98-drop.d3  { animation: win98-fly3 3.5s linear infinite 1s; background: #008000; }
+.win98-drop.d4  { animation: win98-fly4 2.8s linear infinite 0.3s; background: #000080; }
+.win98-drop.d5  { animation: win98-fly5 4.2s linear infinite 1.5s; background: #808000; }
+.win98-drop.d6  { animation: win98-fly1 3.3s linear infinite 2s; background: #800080; width: 4px; height: 4px; }
+.win98-drop.d7  { animation: win98-fly2 3.8s linear infinite 0.8s; background: #000080; width: 4px; height: 4px; }
+.win98-drop.d8  { animation: win98-fly3 4.5s linear infinite 1.2s; background: #008000; width: 4px; height: 4px; }
+.win98-drop.d9  { animation: win98-fly4 3.1s linear infinite 2.2s; background: #ff0000; width: 4px; height: 4px; }
+.win98-drop.d10 { animation: win98-fly5 3.7s linear infinite 0.6s; background: #000080; }
+
+/* Drop flight paths — orbiting around the cube from different angles */
+@keyframes win98-fly1 {
+	0%   { top: 50%; left: 10%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 20%; left: 90%; }
+	90%  { opacity: 1; }
+	100% { top: 50%; left: 10%; opacity: 0; }
+}
+@keyframes win98-fly2 {
+	0%   { top: 80%; left: 80%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 10%; left: 20%; }
+	90%  { opacity: 1; }
+	100% { top: 80%; left: 80%; opacity: 0; }
+}
+@keyframes win98-fly3 {
+	0%   { top: 15%; left: 50%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 85%; left: 50%; }
+	90%  { opacity: 1; }
+	100% { top: 15%; left: 50%; opacity: 0; }
+}
+@keyframes win98-fly4 {
+	0%   { top: 30%; left: 5%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 70%; left: 95%; }
+	90%  { opacity: 1; }
+	100% { top: 30%; left: 5%; opacity: 0; }
+}
+@keyframes win98-fly5 {
+	0%   { top: 90%; left: 40%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 10%; left: 60%; }
+	90%  { opacity: 1; }
+	100% { top: 90%; left: 40%; opacity: 0; }
 }

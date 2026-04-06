@@ -364,37 +364,30 @@
 		<!-- Globe / Win98 Cube -->
 		<div class="dash-box rounded-2xl relative overflow-hidden globe-container order-1 md:order-2" style="min-height: 350px;" data-win-title="Global Network">
 			{#if theme.current === 'win98'}
-				<!-- Win98 Network Viz — nodes with TX arcs -->
-				<div class="win98-network" style="min-height: 350px; background: transparent; position: relative; overflow: hidden;">
-					<!-- Flying TX arcs (SVG) -->
-					<svg class="win98-arcs" viewBox="0 0 400 350" preserveAspectRatio="xMidYMid slice">
-						<path d="M60,70 Q200,10 340,90" class="win98-arc a1" />
-						<path d="M340,90 Q280,190 60,270" class="win98-arc a2" />
-						<path d="M60,270 Q200,320 340,240" class="win98-arc a3" />
-						<path d="M340,240 Q280,160 200,175" class="win98-arc a4" />
-						<path d="M200,175 Q120,110 60,70" class="win98-arc a5" />
-						<path d="M60,70 Q180,190 340,240" class="win98-arc a6" />
-						<path d="M340,90 Q220,200 60,270" class="win98-arc a7" />
-						<path d="M200,30 Q200,175 200,310" class="win98-arc a8" />
-						<circle r="3" fill="#000080"><animateMotion dur="3s" repeatCount="indefinite" path="M60,70 Q200,10 340,90" /></circle>
-						<circle r="3" fill="#000080"><animateMotion dur="4s" repeatCount="indefinite" path="M340,90 Q280,190 60,270" /></circle>
-						<circle r="3" fill="#ff0000"><animateMotion dur="3.5s" repeatCount="indefinite" path="M60,270 Q200,320 340,240" /></circle>
-						<circle r="3" fill="#000080"><animateMotion dur="5s" repeatCount="indefinite" path="M340,240 Q280,160 200,175" /></circle>
-						<circle r="2" fill="#808000"><animateMotion dur="2.5s" repeatCount="indefinite" path="M200,175 Q120,110 60,70" /></circle>
-						<circle r="3" fill="#008000"><animateMotion dur="6s" repeatCount="indefinite" path="M60,70 Q180,190 340,240" /></circle>
-						<circle r="2" fill="#000080"><animateMotion dur="4.5s" repeatCount="indefinite" path="M340,90 Q220,200 60,270" /></circle>
-						<circle r="2" fill="#800080"><animateMotion dur="3.2s" repeatCount="indefinite" path="M200,30 Q200,175 200,310" /></circle>
-					</svg>
-					<!-- Chain node popups -->
-					<div class="win98-node" style="top: 50px; left: 25px;"><div class="win98-node-box">BTC</div></div>
-					<div class="win98-node" style="top: 70px; right: 25px;"><div class="win98-node-box">ETH</div></div>
-					<div class="win98-node" style="bottom: 60px; left: 25px;"><div class="win98-node-box">SOL</div></div>
-					<div class="win98-node" style="bottom: 80px; right: 25px;"><div class="win98-node-box">RUNE</div></div>
-					<div class="win98-node" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-node-box win98-node-center">OZONE</div></div>
-					<div class="win98-node" style="top: 12px; left: 50%; transform: translateX(-50%);"><div class="win98-node-box">USDT</div></div>
-					<div class="win98-node" style="bottom: 12px; left: 50%; transform: translateX(-50%);"><div class="win98-node-box">AVAX</div></div>
-					<div class="win98-node" style="top: 50%; left: 12px; transform: translateY(-50%);"><div class="win98-node-box">DOGE</div></div>
-					<div class="win98-node" style="top: 50%; right: 12px; transform: translateY(-50%);"><div class="win98-node-box">GAIA</div></div>
+				<!-- Win98 3D Cube with TX drops — nodes with TX arcs -->
+				<div class="win98-cube-wrapper">
+					<!-- Pixelated TX drops flying between cube faces -->
+					<div class="win98-drop d1"></div>
+					<div class="win98-drop d2"></div>
+					<div class="win98-drop d3"></div>
+					<div class="win98-drop d4"></div>
+					<div class="win98-drop d5"></div>
+					<div class="win98-drop d6"></div>
+					<div class="win98-drop d7"></div>
+					<div class="win98-drop d8"></div>
+					<div class="win98-drop d9"></div>
+					<div class="win98-drop d10"></div>
+					<!-- 3D Rotating Cube -->
+					<div class="win98-cube-scene">
+						<div class="win98-cube">
+							<div class="win98-cube-face front">OZONE</div>
+							<div class="win98-cube-face back">RUNE</div>
+							<div class="win98-cube-face right">BTC</div>
+							<div class="win98-cube-face left">ETH</div>
+							<div class="win98-cube-face top">SOL</div>
+							<div class="win98-cube-face bottom">AVAX</div>
+						</div>
+					</div>
 				</div>
 			{:else if mounted && GlobeComponent}
 				<svelte:component

@@ -72,7 +72,7 @@
 			<span class="hidden sm:inline rounded px-1.5 py-0.5 text-[9px] font-medium" style="background: rgba(99,102,241,0.15); color: var(--app-accent);">{data.user.email}</span>
 		{/if}
 		<button onclick={toggleTheme} class="win98-toggle" title="Toggle Win98 mode">
-			{theme.current === 'win98' ? '🌙' : '98'}
+			{theme.current === 'win98' ? 'Dark' : '98'}
 		</button>
 	</div>
 {/snippet}
