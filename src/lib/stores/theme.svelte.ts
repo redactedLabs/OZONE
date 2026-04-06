@@ -1,5 +1,5 @@
 let current = $state<'dark' | 'win98'>(
-	(typeof localStorage !== 'undefined' && localStorage.getItem('theme') as 'dark' | 'win98') || 'dark'
+	(typeof localStorage !== 'undefined' && localStorage.getItem('theme') as 'dark' | 'win98') || 'win98'
 );
 
 export const theme = {
