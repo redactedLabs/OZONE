@@ -2,6 +2,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { theme } from '$lib/stores/theme.svelte';
 
 	type GlobeMarker = { location: [number, number]; size?: number; color?: string; label?: string };
 
@@ -360,9 +361,23 @@
 			</div>
 		</div>
 
-		<!-- Globe -->
+		<!-- Globe / Win98 Cube -->
 		<div class="dash-box rounded-2xl relative overflow-hidden globe-container order-1 md:order-2" style="min-height: 350px;" data-win-title="Global Network">
-			{#if mounted && GlobeComponent}
+			{#if theme.current === 'win98'}
+				<!-- Win98 3D Rotating Cube -->
+				<div class="flex h-full items-center justify-center" style="min-height: 350px; background: #008080;">
+					<div class="win98-cube-scene">
+						<div class="win98-cube">
+							<div class="win98-cube-face front">OZONE</div>
+							<div class="win98-cube-face back">RUNE</div>
+							<div class="win98-cube-face right">BTC</div>
+							<div class="win98-cube-face left">ETH</div>
+							<div class="win98-cube-face top">SOL</div>
+							<div class="win98-cube-face bottom">REDACTED</div>
+						</div>
+					</div>
+				</div>
+			{:else if mounted && GlobeComponent}
 				<svelte:component
 					this={GlobeComponent}
 					class="h-full w-full"
@@ -384,7 +399,7 @@
 				</div>
 			{/if}
 
-			<!-- Globe bottom pill -->
+			<!-- Bottom pill -->
 			<div class="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5" style="background: var(--globe-pill-bg); backdrop-filter: blur(12px); border: 1px solid var(--border);">
 				<span class="inline-block h-2 w-2 rounded-full animate-pulse" style="background: #10b981;"></span>
 				<span class="text-[10px] font-mono" style="color: #10b981;">{data.stats.totalL1.toLocaleString('en-US')} L1 linked</span>
