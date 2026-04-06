@@ -329,16 +329,16 @@
 			<div class="hist-card rounded-xl p-5">
 				<div class="flex items-center gap-2 mb-3">
 					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
 					</div>
-					<h3 class="text-sm font-semibold" style="color: var(--text);">All THORChain L1s</h3>
+					<h3 class="text-sm font-semibold" style="color: var(--text);">Tax Season Ready</h3>
 				</div>
 				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
-					Every L1 chain supported by THORChain — BTC, ETH, BNB, AVAX, ATOM, DOGE, LTC, BCH, BASE, BSC, and all pool assets. Powered by Midgard.
+					Swaps, LP adds, withdrawals, and sends — all categorized and labeled. Filter by date range to match your tax year. Share the report with your accountant.
 				</p>
 				<div class="flex flex-wrap gap-1.5">
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Midgard</span>
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">All pool assets</span>
+					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Date filtering</span>
+					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Categorized</span>
 				</div>
 			</div>
 		</div>
@@ -435,26 +435,7 @@
 			</div>
 		</div>
 
-		<!-- E. Supported Chains -->
-		<div class="mb-16 text-center">
-			<h2 class="text-lg font-bold mb-6" style="color: var(--text);">Supported Chains</h2>
-			<div class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 max-w-3xl mx-auto mb-3">
-				{#each ['BTC.BTC', 'ETH.ETH', 'BNB.BNB', 'AVAX.AVAX', 'GAIA.ATOM', 'DOGE.DOGE', 'LTC.LTC', 'BCH.BCH', 'BSC.BNB', 'ETH.USDC', 'ETH.USDT', 'ETH.DAI', 'AVAX.USDC', 'ETH.WBTC', 'THOR.RUNE', 'BASE.ETH'] as chain}
-					{@const sym = chain}
-					<div class="flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all" style="background: var(--card-bg); border: 1px solid var(--card-border);">
-						{#if logo(sym)}
-							<img src={logo(sym)} alt={sym} class="w-6 h-6 rounded-full" />
-						{:else}
-							<div class="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold" style="background: var(--app-border); color: var(--text-faint);">{sym.split('.')[1]?.slice(0, 2)}</div>
-						{/if}
-						<span class="text-[8px] font-mono" style="color: var(--text-faint);">{sym.split('.')[1]}</span>
-					</div>
-				{/each}
-			</div>
-			<p class="text-[10px]" style="color: var(--text-faint);">Auto-discovers new chains as THORChain adds support</p>
-		</div>
-
-		<!-- F. How It Works -->
+		<!-- E. How It Works -->
 		<div class="mb-16">
 			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">How it works</h2>
 			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
