@@ -44,6 +44,7 @@ export const STATIC_LOGOS: Record<string, string> = {
 	YFI: `${CMC_CDN}/5864.png`,
 	COMP: `${CMC_CDN}/5692.png`,
 	SNX: `${CMC_CDN}/2586.png`,
+	BASE: `${SWAPKIT_CDN}/base.eth.png`,
 	RUJI: RUJI_LOGO,
 };
 
