@@ -69,6 +69,22 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 	'wasm-calc-manager/strategy.update':        { type: 'calc-update',   label: 'DCA Update' },
 	'wasm-rujira-fin/order.create':             { type: 'fin-order',     label: 'Limit Order' },
 	'wasm-rujira-fin/order.withdraw':           { type: 'fin-order-wd',  label: 'Cancel Order' },
+	'wasm-autorujira-workflow-manager/execute_instance': { type: 'auto-workflow', label: 'Auto Workflow' },
+};
+
+// Dedup priority — lower = keep; higher = drop when sibling exists
+const DEDUP_PRIORITY: Record<string, number> = {
+	'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
+	'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
+	'calc-create': 20, 'calc-update': 21, 'calc-withdraw': 22,
+	'fin-order': 23, 'fin-order-wd': 24, 'fin-range': 25,
+	'ghost-lend': 26, 'ghost-withdraw': 27,
+	'tc-swap': 30, 'bow-swap': 31, 'fin-trade': 32,
+	'auto-workflow': 40,
+	'calc-process': 50, 'calc-init': 51, 'calc-internal': 52,
+	'ghost-borrow': 60, 'ghost-repay': 61,
+	'fin-arb': 70, 'fin-range-fee': 71,
+	'contract': 100, 'unknown': 999,
 };
 
 function parseFunds(fundsStr: string): Array<{ amount: string; asset: string }> {
@@ -167,6 +183,10 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 			// Limit order withdrawal — amount returned
 			assetOut = fundAsset;
 			rawOut = attrs.amount || fundAmount;
+			break;
+		}
+		case 'auto-workflow': {
+			// Workflow orchestrator — no funds, just metadata
 			break;
 		}
 		default: {
@@ -325,7 +345,29 @@ async function fetchMidgardActions(address: string): Promise<any[]> {
 		}
 	}
 
-	return all;
+	// 3rd pass: dedup by txID — keep only the best representative per group
+	const seen = new Map<string, number>();
+	const deduped: any[] = [];
+	for (const tx of all) {
+		if (!tx.txID) {
+			deduped.push(tx);
+			continue;
+		}
+		const existingIdx = seen.get(tx.txID);
+		if (existingIdx === undefined) {
+			seen.set(tx.txID, deduped.length);
+			deduped.push(tx);
+		} else {
+			const existing = deduped[existingIdx];
+			const existPri = DEDUP_PRIORITY[existing.type] ?? 500;
+			const newPri = DEDUP_PRIORITY[tx.type] ?? 500;
+			if (newPri < existPri) {
+				deduped[existingIdx] = tx;
+			}
+		}
+	}
+
+	return deduped;
 }
 
 async function fetchBalances(address: string): Promise<Array<{ asset: string; amount: string }>> {

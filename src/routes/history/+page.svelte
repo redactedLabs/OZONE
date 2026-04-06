@@ -56,6 +56,8 @@
 		'calc-withdraw': 'DCA Withdraw', 'calc-create': 'DCA Strategy',
 		'calc-internal': 'DCA (step)', 'calc-update': 'DCA Update',
 		'fin-order': 'Limit Order', 'fin-order-wd': 'Cancel Order',
+		'auto-workflow': 'Auto Workflow',
+		'secure': 'Secure', 'tcy_stake': 'TCY Stake', 'tcy_unstake': 'TCY Unstake',
 	};
 	const typeColors: Record<string, string> = {
 		swap: 'var(--app-accent)', addLiquidity: '#10b981', withdraw: '#f59e0b', send: '#22d3ee', refund: '#ef4444',
@@ -69,6 +71,8 @@
 		'calc-withdraw': '#a78bfa', 'calc-create': '#a78bfa',
 		'calc-internal': '#94a3b8', 'calc-update': '#94a3b8',
 		'fin-order': '#f59e0b', 'fin-order-wd': '#f59e0b',
+		'auto-workflow': '#94a3b8',
+		'secure': '#3b82f6', 'tcy_stake': '#10b981', 'tcy_unstake': '#f59e0b',
 	};
 
 	async function fetchHistory() {

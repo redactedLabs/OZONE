@@ -461,7 +461,7 @@ html.win98 body {
 .win98 tbody tr:hover { background: #000080 !important; }
 .win98 tbody tr:hover td,
 .win98 tbody tr:hover span,
-.win98 tbody tr:hover a,
+.win98 tbody tr:hover a:not([data-slot]),
 .win98 tbody tr:hover button { color: #ffffff !important; }
 
 /* ══════════════════════════════════════════
@@ -610,6 +610,7 @@ html.win98 body {
    ══════════════════════════════════════════ */
 .win98 .dash-box,
 .win98 .hist-card,
+.win98 .rpt-card,
 .win98 .cert-card,
 .win98 .api-card,
 .win98 .oss-card,
