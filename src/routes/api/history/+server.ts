@@ -376,12 +376,23 @@ async function fetchBalances(address: string): Promise<Array<{ asset: string; am
 		if (!res.ok) return [];
 		const data = await res.json();
 		const balances = data?.balances || [];
-		return balances
-			.map((b: any) => ({
-				asset: b.denom === 'rune' ? 'RUNE' : cleanAsset(b.denom || ''),
-				amount: formatAmount(b.amount || '0'),
+
+		// Merge duplicates (same cleaned name from different denoms/synths/chains)
+		const merged = new Map<string, number>();
+		for (const b of balances) {
+			const asset = b.denom === 'rune' ? 'RUNE' : cleanAsset(b.denom || '');
+			const raw = parseInt(b.amount || '0');
+			if (raw === 0) continue;
+			merged.set(asset, (merged.get(asset) || 0) + raw);
+		}
+
+		return [...merged.entries()]
+			.sort(([, a], [, b]) => b - a)
+			.map(([asset, total]) => ({
+				asset,
+				amount: formatAmount(String(total)),
 			}))
-			.filter((b: any) => b.amount !== '0');
+			.filter(b => b.amount !== '0');
 	} catch {
 		return [];
 	}

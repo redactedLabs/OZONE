@@ -766,10 +766,13 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   Images — make round ones square
+   Images — square except token logos
    ══════════════════════════════════════════ */
 .win98 img {
 	border-radius: 0 !important;
+}
+.win98 img.rounded-full:not(.live-dot) {
+	border-radius: 50% !important;
 }
 
 /* ══════════════════════════════════════════
