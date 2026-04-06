@@ -55,6 +55,7 @@
 		'calc-init': 'DCA Create', 'calc-process': 'DCA Execute',
 		'calc-withdraw': 'DCA Withdraw', 'calc-create': 'DCA Strategy',
 		'calc-internal': 'DCA (step)', 'calc-update': 'DCA Update',
+		'fin-order': 'Limit Order', 'fin-order-wd': 'Cancel Order',
 	};
 	const typeColors: Record<string, string> = {
 		swap: 'var(--app-accent)', addLiquidity: '#10b981', withdraw: '#f59e0b', send: '#22d3ee', refund: '#ef4444',
@@ -67,6 +68,7 @@
 		'calc-init': '#a78bfa', 'calc-process': '#a78bfa',
 		'calc-withdraw': '#a78bfa', 'calc-create': '#a78bfa',
 		'calc-internal': '#94a3b8', 'calc-update': '#94a3b8',
+		'fin-order': '#f59e0b', 'fin-order-wd': '#f59e0b',
 	};
 
 	async function fetchHistory() {
@@ -238,6 +240,28 @@
 	const txRujiraTrades = $derived(report?.transactions?.filter((t: any) => rujiraTypes.includes(t.type)).length || 0);
 	const txGhost = $derived(report?.transactions?.filter((t: any) => ghostTypes.includes(t.type)).length || 0);
 	const txDCA = $derived(report?.transactions?.filter((t: any) => calcTypes.includes(t.type)).length || 0);
+
+	// DCA step grouping — group calc-internal/calc-update under their parent DCA tx
+	let expandedDCA = $state<Set<number>>(new Set());
+	const dcaInternalTypes = ['calc-internal', 'calc-update'];
+	const dcaParentTypes = ['calc-process', 'calc-create', 'calc-init', 'calc-withdraw'];
+
+	function isDCAParent(type: string) { return dcaParentTypes.includes(type); }
+	function isDCAChild(type: string) { return dcaInternalTypes.includes(type); }
+	function toggleDCA(idx: number) {
+		const next = new Set(expandedDCA);
+		if (next.has(idx)) next.delete(idx); else next.add(idx);
+		expandedDCA = next;
+	}
+	// Count child steps after a DCA parent
+	function countDCAChildren(txs: any[], parentIdx: number): number {
+		let count = 0;
+		for (let i = parentIdx + 1; i < txs.length; i++) {
+			if (isDCAChild(txs[i].type)) count++;
+			else break;
+		}
+		return count;
+	}
 </script>
 
 <svelte:head>
@@ -685,20 +709,30 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each filteredTxs as tx}
-						<tr style="border-bottom: 1px solid var(--app-border-subtle);">
+					{#each filteredTxs as tx, i}
+						{@const childCount = isDCAParent(tx.type) ? countDCAChildren(filteredTxs, i) : 0}
+						{@const isChild = isDCAChild(tx.type)}
+						{@const parentIdx = (() => { if (!isChild) return -1; for (let j = i - 1; j >= 0; j--) { if (isDCAParent(filteredTxs[j].type)) return j; if (!isDCAChild(filteredTxs[j].type)) break; } return -1; })()}
+						{@const hidden = isChild && parentIdx >= 0 && !expandedDCA.has(parentIdx)}
+						{#if !hidden}
+						<tr style="border-bottom: 1px solid var(--app-border-subtle);{isChild ? ' opacity: 0.7;' : ''}">
 							<td class="px-4 py-2.5 text-xs" style="color: var(--text-muted);">
+								{#if isChild}<span class="pl-3" style="color: var(--text-ghost);">&#8627;</span>{/if}
 								{tx.date ? new Date(tx.date).toLocaleDateString() : '--'}
 							</td>
 							<td class="px-4 py-2.5">
 								<span class="text-[10px] font-bold px-2 py-0.5 rounded" style="background: {typeColors[tx.type] || 'var(--text-ghost)'}15; color: {typeColors[tx.type] || 'var(--text-ghost)'};">
 									{typeLabels[tx.type] || tx.type}
 								</span>
+								{#if childCount > 0}
+									<button onclick={() => toggleDCA(i)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(167,139,250,0.1); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2);">
+										{expandedDCA.has(i) ? 'hide' : `+${childCount} steps`}
+									</button>
+								{/if}
 							</td>
 							<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 								{#if tx.amountIn !== '0'}
 									<span class="inline-flex items-center gap-1.5">
-										
 										{#if logo(tx.assetIn)}
 											<img src={logo(tx.assetIn)} alt={tx.assetIn} class="w-4 h-4 rounded-full" />
 										{/if}
@@ -709,7 +743,6 @@
 							<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 								{#if tx.amountOut !== '0'}
 									<span class="inline-flex items-center gap-1.5">
-										
 										{#if logo(tx.assetOut)}
 											<img src={logo(tx.assetOut)} alt={tx.assetOut} class="w-4 h-4 rounded-full" />
 										{/if}
@@ -728,6 +761,7 @@
 								{/if}
 							</td>
 						</tr>
+						{/if}
 					{/each}
 					{#if filteredTxs.length === 0}
 						<tr>

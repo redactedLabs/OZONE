@@ -364,18 +364,9 @@
 		<!-- Globe / Win98 Cube -->
 		<div class="dash-box rounded-2xl relative overflow-hidden globe-container order-1 md:order-2" style="min-height: 350px;" data-win-title="Global Network">
 			{#if theme.current === 'win98'}
-				<!-- Win98 3D Cube with floating chain labels and TX drops between them -->
+				<!-- Win98 3D Cube — chain labels pinned ON faces like globe markers -->
 				<div class="win98-cube-wrapper">
-					<!-- Floating Win98 chain label popups around the cube -->
-				<div class="win98-chain-label" style="top: 8%; left: 6%;"><div class="win98-label-titlebar">BTC</div><div class="win98-label-body">Bitcoin</div></div>
-				<div class="win98-chain-label" style="top: 5%; right: 10%;"><div class="win98-label-titlebar">ETH</div><div class="win98-label-body">Ethereum</div></div>
-				<div class="win98-chain-label" style="bottom: 14%; left: 4%;"><div class="win98-label-titlebar">RUNE</div><div class="win98-label-body">THORChain</div></div>
-				<div class="win98-chain-label" style="bottom: 10%; right: 6%;"><div class="win98-label-titlebar">SOL</div><div class="win98-label-body">Solana</div></div>
-				<div class="win98-chain-label" style="top: 44%; left: 1%;"><div class="win98-label-titlebar">USDT</div><div class="win98-label-body">Tether</div></div>
-				<div class="win98-chain-label" style="top: 44%; right: 1%;"><div class="win98-label-titlebar">AVAX</div><div class="win98-label-body">Avalanche</div></div>
-				<div class="win98-chain-label" style="top: 16%; left: 37%;"><div class="win98-label-titlebar">DOGE</div><div class="win98-label-body">Dogecoin</div></div>
-				<div class="win98-chain-label" style="bottom: 2%; left: 37%;"><div class="win98-label-titlebar">GAIA</div><div class="win98-label-body">Cosmos</div></div>
-				<!-- Pixelated TX drops flowing between the labels -->
+					<!-- TX drops (2D overlay, flow between projected positions) -->
 					<div class="win98-drop d1"></div>
 					<div class="win98-drop d2"></div>
 					<div class="win98-drop d3"></div>
@@ -384,19 +375,29 @@
 					<div class="win98-drop d6"></div>
 					<div class="win98-drop d7"></div>
 					<div class="win98-drop d8"></div>
-					<div class="win98-drop d9"></div>
-					<div class="win98-drop d10"></div>
-					<div class="win98-drop d11"></div>
-					<div class="win98-drop d12"></div>
-					<!-- 3D Rotating Cube — empty silver Win98 windows -->
+					<!-- 3D Rotating Cube with chain labels ON faces -->
 					<div class="win98-cube-scene">
 						<div class="win98-cube">
-							<div class="win98-cube-face front"></div>
-							<div class="win98-cube-face back"></div>
-							<div class="win98-cube-face right"></div>
-							<div class="win98-cube-face left"></div>
-							<div class="win98-cube-face top"></div>
-							<div class="win98-cube-face bottom"></div>
+							<div class="win98-cube-face front">
+								<div class="win98-face-label" style="top: 12px; left: 10px;"><div class="win98-label-titlebar">BTC</div><div class="win98-label-body">Bitcoin</div></div>
+								<div class="win98-face-label" style="bottom: 12px; right: 10px;"><div class="win98-label-titlebar">ETH</div><div class="win98-label-body">Ethereum</div></div>
+							</div>
+							<div class="win98-cube-face back">
+								<div class="win98-face-label" style="top: 12px; right: 10px;"><div class="win98-label-titlebar">RUNE</div><div class="win98-label-body">THORChain</div></div>
+								<div class="win98-face-label" style="bottom: 12px; left: 10px;"><div class="win98-label-titlebar">SOL</div><div class="win98-label-body">Solana</div></div>
+							</div>
+							<div class="win98-cube-face right">
+								<div class="win98-face-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-label-titlebar">AVAX</div><div class="win98-label-body">Avalanche</div></div>
+							</div>
+							<div class="win98-cube-face left">
+								<div class="win98-face-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-label-titlebar">USDT</div><div class="win98-label-body">Tether</div></div>
+							</div>
+							<div class="win98-cube-face top">
+								<div class="win98-face-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-label-titlebar">DOGE</div><div class="win98-label-body">Dogecoin</div></div>
+							</div>
+							<div class="win98-cube-face bottom">
+								<div class="win98-face-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-label-titlebar">GAIA</div><div class="win98-label-body">Cosmos</div></div>
+							</div>
 						</div>
 					</div>
 				</div>

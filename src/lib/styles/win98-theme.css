@@ -727,6 +727,12 @@ html.win98 body {
 .win98 .cert-glow { box-shadow: none !important; }
 .win98 .report-glow { display: none !important; }
 .win98 .tx-row { animation: none !important; }
+/* Live TX type badges — Win98 flat style */
+.win98 .tx-row span[style*="background:"][style*="color:"] {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 1px solid #808080 !important;
+}
 .win98 .tx-link { color: #000080 !important; }
 
 /* Loading spinner — Win98 style (replace dark mode pulse) */
@@ -771,7 +777,7 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   CUBE with FLOATING CHAIN LABELS & TX DROPS
+   CUBE — chain labels ON cube faces (like globe markers)
    ══════════════════════════════════════════ */
 .win98-cube-wrapper {
 	display: flex;
@@ -782,39 +788,10 @@ html.win98 body {
 	overflow: hidden;
 }
 
-/* Floating Win98 window-style chain labels */
-.win98-chain-label {
-	position: absolute;
-	z-index: 10;
-	background: #c0c0c0;
-	border: 2px solid;
-	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
-	min-width: 70px;
-	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
-	box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
-}
-
-.win98-label-titlebar {
-	background: linear-gradient(90deg, #000080, #1084d0);
-	color: #ffffff;
-	font-size: 10px;
-	font-weight: bold;
-	padding: 1px 4px;
-	text-align: left;
-	letter-spacing: 0.5px;
-}
-
-.win98-label-body {
-	padding: 2px 4px;
-	font-size: 9px;
-	color: #000000;
-	text-align: center;
-}
-
 .win98-cube-scene {
-	width: 120px;
-	height: 120px;
-	perspective: 400px;
+	width: 180px;
+	height: 180px;
+	perspective: 600px;
 	z-index: 5;
 }
 
@@ -823,171 +800,133 @@ html.win98 body {
 	height: 100%;
 	position: relative;
 	transform-style: preserve-3d;
-	animation: win98-spin 14s linear infinite;
+	animation: win98-spin 16s linear infinite;
 }
 
 .win98-cube-face {
 	position: absolute;
-	width: 120px;
-	height: 120px;
+	width: 180px;
+	height: 180px;
 	background: #c0c0c0;
 	border: 2px solid;
 	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
 	backface-visibility: visible;
 }
 
-.win98-cube-face.front  { transform: rotateY(0deg)    translateZ(60px); }
-.win98-cube-face.back   { transform: rotateY(180deg)  translateZ(60px); }
-.win98-cube-face.right  { transform: rotateY(90deg)   translateZ(60px); }
-.win98-cube-face.left   { transform: rotateY(-90deg)  translateZ(60px); }
-.win98-cube-face.top    { transform: rotateX(90deg)   translateZ(60px); }
-.win98-cube-face.bottom { transform: rotateX(-90deg)  translateZ(60px); }
+.win98-cube-face.front  { transform: rotateY(0deg)    translateZ(90px); }
+.win98-cube-face.back   { transform: rotateY(180deg)  translateZ(90px); }
+.win98-cube-face.right  { transform: rotateY(90deg)   translateZ(90px); }
+.win98-cube-face.left   { transform: rotateY(-90deg)  translateZ(90px); }
+.win98-cube-face.top    { transform: rotateX(90deg)   translateZ(90px); }
+.win98-cube-face.bottom { transform: rotateX(-90deg)  translateZ(90px); }
 
 @keyframes win98-spin {
-	0%   { transform: rotateX(-15deg) rotateY(0deg); }
-	100% { transform: rotateX(-15deg) rotateY(360deg); }
+	0%   { transform: rotateX(-20deg) rotateY(0deg); }
+	100% { transform: rotateX(-20deg) rotateY(360deg); }
 }
 
-/* Pixelated TX drops — small squares flying BETWEEN the chain labels */
+/* Chain labels pinned ON cube faces — rotate with the cube */
+.win98-face-label {
+	position: absolute;
+	z-index: 10;
+	background: #c0c0c0;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	min-width: 60px;
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
+	box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+}
+
+.win98-label-titlebar {
+	background: linear-gradient(90deg, #000080, #1084d0) !important;
+	color: #ffffff !important;
+	font-size: 9px;
+	font-weight: bold;
+	padding: 1px 3px;
+	text-align: left;
+	letter-spacing: 0.5px;
+}
+
+.win98-label-body {
+	padding: 1px 3px;
+	font-size: 8px;
+	color: #000000 !important;
+	text-align: center;
+	background: #c0c0c0 !important;
+}
+
+/* TX drops — 2D overlay flowing around the cube area */
 .win98-drop {
 	position: absolute;
-	width: 6px;
-	height: 6px;
-	background: #000080;
+	width: 5px;
+	height: 5px;
 	z-index: 8;
 	image-rendering: pixelated;
 }
 
-/* Drops travel between label positions:
-   BTC (top:8%,left:6%) <-> ETH (top:5%,right:10% ~= left:90%)
-   ETH <-> AVAX (top:44%,right:1% ~= left:99%)
-   RUNE (bottom:14%,left:4%) <-> SOL (bottom:10%,right:6% ~= left:94%)
-   BTC <-> RUNE (vertical left side)
-   ETH <-> SOL (vertical right side)
-   DOGE (top:16%,left:37%) <-> GAIA (bottom:2%,left:37% ~= top:98%)
-   USDT (top:44%,left:1%) <-> RUNE
-   AVAX <-> SOL
-*/
+.win98-drop.d1 { animation: win98-orbit1 4s linear infinite;       background: #000080; }
+.win98-drop.d2 { animation: win98-orbit2 5s linear infinite 0.6s;  background: #ff0000; }
+.win98-drop.d3 { animation: win98-orbit3 4.5s linear infinite 1.2s; background: #008000; }
+.win98-drop.d4 { animation: win98-orbit4 3.8s linear infinite 0.3s; background: #800080; }
+.win98-drop.d5 { animation: win98-orbit5 5.2s linear infinite 1.8s; background: #000080; width: 4px; height: 4px; }
+.win98-drop.d6 { animation: win98-orbit6 4.2s linear infinite 0.9s; background: #008000; width: 4px; height: 4px; }
+.win98-drop.d7 { animation: win98-orbit7 3.5s linear infinite 1.5s; background: #ff0000; width: 4px; height: 4px; }
+.win98-drop.d8 { animation: win98-orbit8 4.8s linear infinite 2.1s; background: #800080; width: 4px; height: 4px; }
 
-/* BTC (top-left) -> ETH (top-right) */
-.win98-drop.d1  { animation: win98-route1 3s linear infinite; background: #000080; }
-/* ETH (top-right) -> AVAX (mid-right) */
-.win98-drop.d2  { animation: win98-route2 3.5s linear infinite 0.5s; background: #ff0000; }
-/* RUNE (bottom-left) -> SOL (bottom-right) */
-.win98-drop.d3  { animation: win98-route3 3.2s linear infinite 1s; background: #008000; }
-/* BTC (top-left) -> USDT (mid-left) */
-.win98-drop.d4  { animation: win98-route4 2.8s linear infinite 0.3s; background: #000080; }
-/* USDT (mid-left) -> RUNE (bottom-left) */
-.win98-drop.d5  { animation: win98-route5 3.4s linear infinite 1.5s; background: #800080; }
-/* DOGE (top-center) -> GAIA (bottom-center) */
-.win98-drop.d6  { animation: win98-route6 4s linear infinite 0.2s; background: #000080; width: 4px; height: 4px; }
-/* ETH -> SOL (right side vertical) */
-.win98-drop.d7  { animation: win98-route7 3.6s linear infinite 0.8s; background: #000080; width: 4px; height: 4px; }
-/* AVAX -> SOL */
-.win98-drop.d8  { animation: win98-route8 3.1s linear infinite 1.2s; background: #008000; width: 4px; height: 4px; }
-/* BTC -> DOGE */
-.win98-drop.d9  { animation: win98-route9 3.8s linear infinite 2s; background: #ff0000; width: 4px; height: 4px; }
-/* GAIA -> RUNE */
-.win98-drop.d10 { animation: win98-route10 3.3s linear infinite 0.6s; background: #000080; }
-/* ETH -> DOGE */
-.win98-drop.d11 { animation: win98-route11 4.2s linear infinite 1.8s; background: #800080; width: 4px; height: 4px; }
-/* SOL -> GAIA */
-.win98-drop.d12 { animation: win98-route12 3.7s linear infinite 0.4s; background: #008000; }
-
-/* Drop flight paths — flowing between chain label positions */
-/* BTC (8%,6%) -> ETH (5%,90%) */
-@keyframes win98-route1 {
-	0%   { top: 12%; left: 12%; opacity: 0; }
+/* Orbiting paths around the cube center */
+@keyframes win98-orbit1 {
+	0%   { top: 20%; left: 25%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 8%; left: 50%; }
+	50%  { top: 50%; left: 75%; }
 	90%  { opacity: 1; }
-	100% { top: 9%; left: 85%; opacity: 0; }
+	100% { top: 80%; left: 25%; opacity: 0; }
 }
-/* ETH (5%,90%) -> AVAX (44%,95%) */
-@keyframes win98-route2 {
-	0%   { top: 9%; left: 85%; opacity: 0; }
+@keyframes win98-orbit2 {
+	0%   { top: 15%; left: 70%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 26%; left: 92%; }
+	50%  { top: 55%; left: 30%; }
 	90%  { opacity: 1; }
-	100% { top: 48%; left: 92%; opacity: 0; }
+	100% { top: 85%; left: 70%; opacity: 0; }
 }
-/* RUNE (86%,4%) -> SOL (90%,94%) */
-@keyframes win98-route3 {
-	0%   { top: 82%; left: 10%; opacity: 0; }
+@keyframes win98-orbit3 {
+	0%   { top: 75%; left: 20%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 85%; left: 50%; }
+	50%  { top: 40%; left: 55%; }
 	90%  { opacity: 1; }
-	100% { top: 87%; left: 88%; opacity: 0; }
+	100% { top: 20%; left: 80%; opacity: 0; }
 }
-/* BTC (8%,6%) -> USDT (44%,3%) */
-@keyframes win98-route4 {
-	0%   { top: 14%; left: 10%; opacity: 0; }
+@keyframes win98-orbit4 {
+	0%   { top: 30%; left: 80%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 30%; left: 6%; }
+	50%  { top: 70%; left: 50%; }
 	90%  { opacity: 1; }
-	100% { top: 48%; left: 7%; opacity: 0; }
+	100% { top: 30%; left: 20%; opacity: 0; }
 }
-/* USDT (44%,3%) -> RUNE (86%,4%) */
-@keyframes win98-route5 {
-	0%   { top: 52%; left: 7%; opacity: 0; }
+@keyframes win98-orbit5 {
+	0%   { top: 60%; left: 15%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 68%; left: 5%; }
+	50%  { top: 35%; left: 50%; }
 	90%  { opacity: 1; }
-	100% { top: 80%; left: 10%; opacity: 0; }
+	100% { top: 60%; left: 85%; opacity: 0; }
 }
-/* DOGE (16%,37%) -> GAIA (96%,37%) */
-@keyframes win98-route6 {
-	0%   { top: 22%; left: 43%; opacity: 0; }
+@keyframes win98-orbit6 {
+	0%   { top: 10%; left: 50%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 55%; left: 45%; }
+	50%  { top: 50%; left: 20%; }
 	90%  { opacity: 1; }
-	100% { top: 92%; left: 43%; opacity: 0; }
+	100% { top: 90%; left: 50%; opacity: 0; }
 }
-/* ETH (5%,90%) -> SOL (90%,94%) */
-@keyframes win98-route7 {
-	0%   { top: 12%; left: 88%; opacity: 0; }
+@keyframes win98-orbit7 {
+	0%   { top: 45%; left: 85%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 50%; left: 90%; }
+	50%  { top: 25%; left: 45%; }
 	90%  { opacity: 1; }
-	100% { top: 85%; left: 89%; opacity: 0; }
+	100% { top: 45%; left: 15%; opacity: 0; }
 }
-/* AVAX (44%,95%) -> SOL (90%,94%) */
-@keyframes win98-route8 {
-	0%   { top: 52%; left: 93%; opacity: 0; }
+@keyframes win98-orbit8 {
+	0%   { top: 85%; left: 50%; opacity: 0; }
 	10%  { opacity: 1; }
-	50%  { top: 70%; left: 92%; }
+	50%  { top: 50%; left: 80%; }
 	90%  { opacity: 1; }
-	100% { top: 86%; left: 90%; opacity: 0; }
-}
-/* BTC (8%,6%) -> DOGE (16%,37%) */
-@keyframes win98-route9 {
-	0%   { top: 12%; left: 14%; opacity: 0; }
-	10%  { opacity: 1; }
-	50%  { top: 14%; left: 26%; }
-	90%  { opacity: 1; }
-	100% { top: 20%; left: 40%; opacity: 0; }
-}
-/* GAIA (96%,37%) -> RUNE (86%,4%) */
-@keyframes win98-route10 {
-	0%   { top: 92%; left: 42%; opacity: 0; }
-	10%  { opacity: 1; }
-	50%  { top: 88%; left: 22%; }
-	90%  { opacity: 1; }
-	100% { top: 83%; left: 10%; opacity: 0; }
-}
-/* ETH (5%,90%) -> DOGE (16%,37%) */
-@keyframes win98-route11 {
-	0%   { top: 10%; left: 84%; opacity: 0; }
-	10%  { opacity: 1; }
-	50%  { top: 14%; left: 60%; }
-	90%  { opacity: 1; }
-	100% { top: 20%; left: 44%; opacity: 0; }
-}
-/* SOL (90%,94%) -> GAIA (96%,37%) */
-@keyframes win98-route12 {
-	0%   { top: 88%; left: 88%; opacity: 0; }
-	10%  { opacity: 1; }
-	50%  { top: 92%; left: 62%; }
-	90%  { opacity: 1; }
-	100% { top: 94%; left: 44%; opacity: 0; }
+	100% { top: 15%; left: 50%; opacity: 0; }
 }

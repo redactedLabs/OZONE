@@ -32,15 +32,19 @@ function cleanAsset(asset: string): string {
 function formatAmount(raw: string): string {
 	if (!raw) return '0';
 	const n = parseInt(raw) / 1e8;
+	if (n === 0) return '0';
 	if (n > 10000) return `${(n / 1000).toFixed(1)}k`;
 	if (n > 1) return n.toFixed(2);
 	if (n > 0.001) return n.toFixed(4);
-	return n.toString();
+	if (n > 0.000001) return n.toFixed(6);
+	return n.toFixed(8).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 function rawAmount(raw: string): string {
 	if (!raw) return '0';
-	return (parseInt(raw) / 1e8).toString();
+	const n = parseInt(raw) / 1e8;
+	if (n === 0) return '0';
+	return n.toFixed(8).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 // ── Rujira contract type mapping ──
@@ -63,6 +67,8 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 	'wasm-calc-strategy/process-node.messages': { type: 'calc-internal', label: 'DCA (step)' },
 	'wasm-calc-strategy/update':                { type: 'calc-update',   label: 'DCA Update' },
 	'wasm-calc-manager/strategy.update':        { type: 'calc-update',   label: 'DCA Update' },
+	'wasm-rujira-fin/order.create':             { type: 'fin-order',     label: 'Limit Order' },
+	'wasm-rujira-fin/order.withdraw':           { type: 'fin-order-wd',  label: 'Cancel Order' },
 };
 
 function parseFunds(fundsStr: string): Array<{ amount: string; asset: string }> {
@@ -90,19 +96,11 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 
 	switch (mapped.type) {
 		case 'fin-trade': {
-			// Orderbook trade: bid/offer with rate and side
-			const side = attrs.side; // 'quote' or 'base'
-			if (side === 'quote') {
-				// Sent quote asset (e.g. USDC), received base asset
-				assetIn = fundAsset;
-				rawIn = fundAmount;
-				assetOut = fundAsset; // Will show bid amount
-				rawOut = attrs.bid || attrs.offer || '0';
-			} else {
-				assetIn = fundAsset;
-				rawIn = fundAmount;
-				rawOut = attrs.offer || attrs.bid || '0';
-			}
+			// Orderbook trade: bid attribute is a bare number (no denom)
+			// assetOut left empty — resolved in 2-pass by txID grouping
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			rawOut = attrs.bid || attrs.offer || '0';
 			break;
 		}
 		case 'bow-swap':
@@ -157,6 +155,18 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 			// Fee collection
 			if (attrs.base && attrs.base !== '0') { rawOut = attrs.base; }
 			if (attrs.quote && attrs.quote !== '0') { rawOut = attrs.quote; }
+			break;
+		}
+		case 'fin-order': {
+			// Limit order placement — funds are the offer
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			break;
+		}
+		case 'fin-order-wd': {
+			// Limit order withdrawal — amount returned
+			assetOut = fundAsset;
+			rawOut = attrs.amount || fundAmount;
 			break;
 		}
 		default: {
@@ -289,6 +299,32 @@ async function fetchMidgardActions(address: string): Promise<any[]> {
 			await new Promise(r => setTimeout(r, 150));
 		} catch { break; }
 	}
+
+	// 2-pass: resolve fin-trade output assets from sibling tc-swap/bow-swap
+	const byTxID = new Map<string, any[]>();
+	for (const tx of all) {
+		if (tx.txID) {
+			if (!byTxID.has(tx.txID)) byTxID.set(tx.txID, []);
+			byTxID.get(tx.txID)!.push(tx);
+		}
+	}
+	for (const [, group] of byTxID) {
+		let resolvedOutAsset = '';
+		for (const tx of group) {
+			if ((tx.type === 'tc-swap' || tx.type === 'bow-swap') && tx.assetOut) {
+				resolvedOutAsset = tx.assetOut;
+				break;
+			}
+		}
+		if (resolvedOutAsset) {
+			for (const tx of group) {
+				if (tx.type === 'fin-trade' && !tx.assetOut) {
+					tx.assetOut = resolvedOutAsset;
+				}
+			}
+		}
+	}
+
 	return all;
 }
 

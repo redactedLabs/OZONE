@@ -21,6 +21,7 @@
 		'calc-init': 'DCA Create', 'calc-process': 'DCA Execute',
 		'calc-withdraw': 'DCA Withdraw', 'calc-create': 'DCA Strategy',
 		'calc-internal': 'DCA (step)', 'calc-update': 'DCA Update',
+		'fin-order': 'Limit Order', 'fin-order-wd': 'Cancel Order',
 	};
 	const typeColors: Record<string, string> = {
 		swap: 'var(--app-accent)', addLiquidity: '#10b981', withdraw: '#f59e0b', send: '#22d3ee', refund: '#ef4444',
@@ -32,6 +33,7 @@
 		'calc-init': '#a78bfa', 'calc-process': '#a78bfa',
 		'calc-withdraw': '#a78bfa', 'calc-create': '#a78bfa',
 		'calc-internal': '#94a3b8', 'calc-update': '#94a3b8',
+		'fin-order': '#f59e0b', 'fin-order-wd': '#f59e0b',
 	};
 
 	const txSwaps = $derived(data.transactions?.filter((t: any) => t.type === 'swap').length || 0);
