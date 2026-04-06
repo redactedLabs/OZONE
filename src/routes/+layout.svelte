@@ -26,7 +26,6 @@
 			title: 'Compliance',
 			variant: 'default' as const,
 			links: [
-				{ label: 'Overview', href: '/' },
 				{ label: 'Addresses', href: '/addresses' },
 				{ label: 'Sanctioned List', href: '/banned' },
 			]
@@ -66,7 +65,9 @@
 
 {#snippet logo()}
 	<div class="flex items-center gap-2">
-		<img src="/redacted-logo.svg" alt="Redacted" style="height: 22px; width: auto; opacity: 0.9;" />
+		<a href="/" style="display: flex; align-items: center; text-decoration: none;">
+			<img src="/redacted-logo.svg" alt="Redacted" style="height: 22px; width: auto; opacity: 0.9;" />
+		</a>
 		{#if isAdmin && data?.user?.email}
 			<span class="hidden sm:inline rounded px-1.5 py-0.5 text-[9px] font-medium" style="background: rgba(99,102,241,0.15); color: var(--app-accent);">{data.user.email}</span>
 		{/if}

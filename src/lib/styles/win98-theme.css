@@ -24,13 +24,13 @@
    CSS Variable Overrides
    ══════════════════════════════════════════ */
 .win98 {
-	/* Backgrounds — Win98 silver/teal */
-	--bg: #008080;
+	/* Backgrounds — Win98 Clouds sky blue */
+	--bg: #3a6ea5;
 	--bg-card: #c0c0c0;
 	--bg-card-hover: #d4d0c8;
 	--bg-code: #ffffff;
 	--background: #c0c0c0;
-	--background-inset: #008080;
+	--background-inset: #3a6ea5;
 	--background-muted: #d4d0c8;
 
 	/* Text — dark on light */
@@ -86,10 +86,10 @@
 	--scrollbar-track: #d4d0c8;
 
 	/* Globe */
-	--godrays-bg: #008080;
+	--godrays-bg: #3a6ea5;
 	--godrays-color: #000080;
 	--globe-land: #008000;
-	--globe-fresnel: #008080;
+	--globe-fresnel: #3a6ea5;
 	--globe-rim: #000080;
 	--globe-atmo: #000080;
 	--globe-pill-bg: rgba(192, 192, 192, 0.95);
@@ -115,15 +115,43 @@
 }
 
 /* ══════════════════════════════════════════
-   BODY / HTML — Teal desktop background
+   BODY / HTML — Win98 Clouds wallpaper
    ══════════════════════════════════════════ */
 html.win98,
 html.win98 body {
-	background-color: #008080 !important;
+	background-color: #3a6ea5 !important;
 	color: #000000 !important;
 	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', 'Microsoft Sans Serif', 'Segoe UI', Tahoma, sans-serif !important;
 	-webkit-font-smoothing: none !important;
 }
+
+/* Clouds wallpaper — CSS only, mimics the classic Win98 "Clouds" */
+html.win98 body {
+	background:
+		/* Large soft clouds */
+		radial-gradient(ellipse 600px 200px at 15% 20%, rgba(255,255,255,0.85) 0%, transparent 70%),
+		radial-gradient(ellipse 500px 180px at 70% 15%, rgba(255,255,255,0.80) 0%, transparent 70%),
+		radial-gradient(ellipse 700px 220px at 45% 35%, rgba(255,255,255,0.75) 0%, transparent 65%),
+		radial-gradient(ellipse 550px 160px at 85% 40%, rgba(255,255,255,0.70) 0%, transparent 70%),
+		radial-gradient(ellipse 450px 150px at 25% 50%, rgba(255,255,255,0.65) 0%, transparent 65%),
+		/* Mid clouds */
+		radial-gradient(ellipse 350px 120px at 55% 55%, rgba(255,255,255,0.60) 0%, transparent 70%),
+		radial-gradient(ellipse 400px 130px at 10% 65%, rgba(255,255,255,0.55) 0%, transparent 65%),
+		radial-gradient(ellipse 500px 170px at 80% 60%, rgba(255,255,255,0.50) 0%, transparent 70%),
+		radial-gradient(ellipse 300px 100px at 40% 75%, rgba(255,255,255,0.45) 0%, transparent 65%),
+		radial-gradient(ellipse 450px 140px at 65% 80%, rgba(255,255,255,0.40) 0%, transparent 70%),
+		/* Small wispy clouds */
+		radial-gradient(ellipse 250px 80px at 30% 30%, rgba(255,255,255,0.50) 0%, transparent 70%),
+		radial-gradient(ellipse 200px 70px at 90% 25%, rgba(255,255,255,0.45) 0%, transparent 70%),
+		radial-gradient(ellipse 280px 90px at 50% 45%, rgba(255,255,255,0.40) 0%, transparent 65%),
+		radial-gradient(ellipse 320px 100px at 20% 85%, rgba(255,255,255,0.35) 0%, transparent 70%),
+		/* Sky gradient — blue at top fading lighter toward bottom */
+		linear-gradient(180deg, #3a6ea5 0%, #5a8ec0 30%, #7bb0d8 55%, #a0cce8 75%, #c4e0f0 100%)
+		!important;
+	background-attachment: fixed !important;
+	background-size: cover !important;
+}
+
 
 /* ══════════════════════════════════════════
    HARDCODED INLINE STYLE OVERRIDES
@@ -508,6 +536,43 @@ html.win98 body {
 	text-decoration: none !important;
 }
 
+/* ALL inline-styled links that look like buttons */
+.win98 a[style*="background:"][class*="rounded"] {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	border-radius: 0 !important;
+	text-decoration: none !important;
+	box-shadow: none !important;
+}
+
+.win98 a[style*="background:"][class*="rounded"]:active {
+	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a !important;
+}
+
+/* Accent-colored badges/pills → Win98 flat */
+.win98 [style*="background: rgba(99,102,241"] {
+	background: #c0c0c0 !important;
+	border: 1px solid #808080 !important;
+}
+.win98 [style*="background: rgba(16,185,129"] {
+	background: #c0c0c0 !important;
+	border: 1px solid #808080 !important;
+}
+.win98 [style*="background: rgba(34,211,238"] {
+	background: #c0c0c0 !important;
+	border: 1px solid #808080 !important;
+}
+.win98 [style*="background: rgba(168,85,247"] {
+	background: #c0c0c0 !important;
+	border: 1px solid #808080 !important;
+}
+.win98 [style*="background: rgba(245,158,11"] {
+	background: #c0c0c0 !important;
+	border: 1px solid #808080 !important;
+}
+
 /* ══════════════════════════════════════════
    Scrollbar
    ══════════════════════════════════════════ */
@@ -548,6 +613,22 @@ html.win98 body {
 .win98 .rounded-md,
 .win98 .rounded-full:not(.animate-pulse):not(.animate-ping):not(.live-dot) {
 	border-radius: 0 !important;
+}
+
+/* ══════════════════════════════════════════
+   BACKGROUND — transparent so clouds show through
+   ══════════════════════════════════════════ */
+.win98 .min-h-screen {
+	background: transparent !important;
+}
+
+.win98 .relative.min-h-screen,
+.win98 main,
+.win98 main > div,
+.win98 main .relative.overflow-hidden,
+.win98 div[class*="min-h-screen"],
+.win98 [style*="background: var(--bg)"] {
+	background: transparent !important;
 }
 
 /* ══════════════════════════════════════════
@@ -645,7 +726,7 @@ html.win98 body {
    Globe container — teal bg for cube
    ══════════════════════════════════════════ */
 .win98 .globe-container {
-	background: #008080 !important;
+	background: transparent !important;
 	min-height: 200px !important;
 }
 
@@ -704,7 +785,74 @@ html.win98 body {
 }
 
 /* ══════════════════════════════════════════
-   WIN98 3D ROTATING CUBE (replaces globe)
+   WIN98 NETWORK VIZ (replaces globe)
+   — nodes with flying TX arcs
+   ══════════════════════════════════════════ */
+.win98-network {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* SVG arc layer */
+.win98-arcs {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 1;
+}
+
+.win98-arc {
+	fill: none;
+	stroke: #000080;
+	stroke-width: 1;
+	stroke-dasharray: 6 4;
+	opacity: 0.4;
+}
+
+.win98-arc.a1 { stroke-dashoffset: 0; animation: win98-dash 4s linear infinite; }
+.win98-arc.a2 { stroke-dashoffset: 5; animation: win98-dash 5s linear infinite; }
+.win98-arc.a3 { stroke-dashoffset: 10; animation: win98-dash 3.5s linear infinite; }
+.win98-arc.a4 { stroke-dashoffset: 15; animation: win98-dash 6s linear infinite; }
+.win98-arc.a5 { stroke-dashoffset: 3; animation: win98-dash 4.5s linear infinite; }
+.win98-arc.a6 { stroke: #808080; stroke-dashoffset: 8; animation: win98-dash 5.5s linear infinite; }
+.win98-arc.a7 { stroke: #808080; stroke-dashoffset: 12; animation: win98-dash 4s linear infinite; }
+.win98-arc.a8 { stroke: #808080; stroke-dashoffset: 0; animation: win98-dash 3s linear infinite; }
+
+@keyframes win98-dash {
+	to { stroke-dashoffset: -40; }
+}
+
+/* Chain node labels */
+.win98-node {
+	position: absolute;
+	z-index: 2;
+}
+
+.win98-node-box {
+	background: #c0c0c0;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	padding: 2px 6px;
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
+	font-size: 10px;
+	font-weight: bold;
+	color: #000080;
+	white-space: nowrap;
+	box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+
+.win98-node-center {
+	font-size: 13px;
+	padding: 4px 10px;
+	background: #000080;
+	color: #ffffff;
+	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a;
+}
+
+/* ══════════════════════════════════════════
+   WIN98 3D ROTATING CUBE (kept for bg accent)
    ══════════════════════════════════════════ */
 .win98-cube-scene {
 	width: 140px;
