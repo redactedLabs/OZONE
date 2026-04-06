@@ -224,7 +224,6 @@ html.win98 body {
 	box-shadow: none !important;
 	box-sizing: border-box !important;
 	min-width: 0 !important;
-	max-width: 100% !important;
 	overflow: visible !important;
 	word-break: break-word;
 }
@@ -275,7 +274,8 @@ html.win98 body {
 .win98 [data-slot="link-text"] span { color: #000000 !important; }
 .win98 [data-slot="link-underline"] { background: #000080 !important; }
 .win98 [data-slot="logo"] img {
-	filter: brightness(0) !important;
+	image-rendering: pixelated !important;
+	filter: grayscale(1) sepia(1) hue-rotate(190deg) saturate(5) brightness(0.4) !important;
 }
 
 .win98 [data-slot="primary-button"],
@@ -428,13 +428,14 @@ html.win98 body {
 	border-radius: 0 !important;
 }
 
-/* Chain select dropdown */
+/* Chain select dropdown — preserve left padding for icon overlay */
 .win98 .chain-select {
 	background: #ffffff !important;
 	border: 2px solid !important;
 	border-color: #808080 #dfdfdf #dfdfdf #808080 !important;
 	border-radius: 0 !important;
 	color: #000000 !important;
+	padding-left: 2rem !important;
 }
 
 /* Pagination buttons */
