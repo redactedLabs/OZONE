@@ -355,6 +355,7 @@
 			{#if primaryButton}
 				<a
 					href={primaryButton.href}
+					onclick={() => { if (isOpen) toggle(); }}
 					data-slot="primary-button"
 					class={cn(
 						"flex h-10 items-center justify-center rounded-sm bg-accent/10 px-4 text-sm font-medium text-accent transition-[background-color] duration-400 ease-[cubic-bezier(0.625,0.05,0,1)] hover:bg-accent/20",
@@ -407,6 +408,7 @@
 						{#each group.links as link, i (link.href + link.label)}
 							<a
 								href={link.href}
+								onclick={() => { if (isOpen) toggle(); }}
 								data-slot="link"
 								class={cn(
 									"group/link relative block w-fit text-2xl font-normal text-foreground-muted transition-colors duration-400 ease-[cubic-bezier(0.625,0.05,0,1)] hover:text-foreground",

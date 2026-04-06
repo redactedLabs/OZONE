@@ -225,14 +225,14 @@
 			<!-- Report options (always visible) -->
 			<div class="mt-4 pt-4 space-y-3" style="border-top: 1px solid var(--app-border-subtle);">
 				<!-- Date range -->
-				<div class="grid grid-cols-2 gap-3">
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div>
 						<label class="text-[10px] block mb-1" style="color: var(--text-faint);">From date</label>
-						<input type="date" bind:value={dateFrom} class="hist-input w-full rounded-lg px-3 py-2 text-xs" placeholder="All time" />
+						<input type="date" bind:value={dateFrom} class="hist-input w-full rounded-lg px-3 py-2 text-xs" />
 					</div>
 					<div>
 						<label class="text-[10px] block mb-1" style="color: var(--text-faint);">To date</label>
-						<input type="date" bind:value={dateTo} class="hist-input w-full rounded-lg px-3 py-2 text-xs" placeholder="Now" />
+						<input type="date" bind:value={dateTo} class="hist-input w-full rounded-lg px-3 py-2 text-xs" />
 					</div>
 				</div>
 				<p class="text-[9px]" style="color: var(--text-faint);">Leave empty for full history.</p>
