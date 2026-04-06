@@ -246,15 +246,16 @@ html.win98 body {
 }
 
 .win98 [data-win-title] > * {
-	padding-left: 6px;
-	padding-right: 6px;
+	margin-left: 8px;
+	margin-right: 8px;
 	min-width: 0;
+	box-sizing: border-box;
 }
 .win98 [data-win-title] > *:first-child {
-	padding-top: 6px;
+	margin-top: 6px;
 }
 .win98 [data-win-title] > *:last-child {
-	padding-bottom: 6px;
+	margin-bottom: 6px;
 }
 
 /* ══════════════════════════════════════════
