@@ -351,10 +351,10 @@
 				<div>
 					<div class="text-[10px] mb-1.5" style="color: var(--text-faint);">Update mode</div>
 					<div class="grid grid-cols-2 rounded-lg overflow-hidden" style="border: 1px solid var(--app-border);">
-						<button onclick={() => includeNew = false} class="px-3 py-2 text-[11px] font-medium transition-all" style="{!includeNew ? 'background: #22d3ee; color: #0f172a;' : 'color: var(--text-muted);'}">
+						<button onclick={() => includeNew = false} class="px-3 py-2 text-[11px] font-medium transition-all" style="{!includeNew ? 'background: var(--app-accent); color: white;' : 'color: var(--text-muted);'}">
 							Snapshot
 						</button>
-						<button onclick={() => includeNew = true} class="px-3 py-2 text-[11px] font-medium transition-all" style="{includeNew ? 'background: #22d3ee; color: #0f172a;' : 'color: var(--text-muted);'}">
+						<button onclick={() => includeNew = true} class="px-3 py-2 text-[11px] font-medium transition-all" style="{includeNew ? 'background: var(--app-accent); color: white;' : 'color: var(--text-muted);'}">
 							Live
 						</button>
 					</div>

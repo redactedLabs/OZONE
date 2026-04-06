@@ -233,6 +233,9 @@ html.win98 body {
 	padding-left: 4px;
 	padding-right: 4px;
 }
+.win98 [data-win-title] > *:first-child {
+	padding-top: 6px;
+}
 
 /* ══════════════════════════════════════════
    FloatingMenu (data-slot)
@@ -649,8 +652,7 @@ html.win98 body {
 	max-width: none !important;
 	min-width: auto !important;
 }
-.win98 .grid.grid-cols-2.rounded-lg button[style*="background: var(--app-accent)"],
-.win98 .grid.grid-cols-2.rounded-lg button[style*="background: #22d3ee"] {
+.win98 .grid.grid-cols-2.rounded-lg button[style*="background: var(--app-accent)"] {
 	background: #000080 !important;
 	color: #ffffff !important;
 }
