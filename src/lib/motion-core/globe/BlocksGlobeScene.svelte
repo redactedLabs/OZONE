@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { T } from "@threlte/core";
+	import { T, useThrelte } from "@threlte/core";
 	import { OrbitControls } from "@threlte/extras";
 	import * as THREE from "three";
 	import type { Snippet } from "svelte";
@@ -46,6 +46,10 @@
 	const landPolygons = parseLandPolygons(landGeoJsonRaw);
 
 	const initialCameraPosition = { x: 0, y: 0, z: 8 };
+
+	// Set scene background to Win98 silver
+	const { scene } = useThrelte();
+	scene.background = new THREE.Color("#c0c0c0");
 
 	// --- Voxel generation ---
 

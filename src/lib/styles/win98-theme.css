@@ -612,7 +612,6 @@ html.win98 body {
    ══════════════════════════════════════════ */
 .win98 .godrays-bg { display: none !important; }
 .win98 canvas { display: none !important; }
-.win98 .globe-container canvas { display: block !important; }
 
 /* Disable backdrop blur */
 .win98 [style*="backdrop-filter"] { backdrop-filter: none !important; }
@@ -739,7 +738,11 @@ html.win98 body {
    Globe container & bottom pill
    ══════════════════════════════════════════ */
 .win98 .globe-container {
-	background: transparent !important;
+	background: #c0c0c0 !important;
+}
+.win98 .globe-container canvas {
+	display: block !important;
+	background: #c0c0c0 !important;
 }
 /* Bottom status pill in cube/globe area */
 .win98 .globe-container .absolute.bottom-3 {
