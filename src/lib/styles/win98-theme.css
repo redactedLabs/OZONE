@@ -773,6 +773,8 @@ html.win98 body {
 }
 .win98 img.rounded-full:not(.live-dot) {
 	border-radius: 50% !important;
+	image-rendering: pixelated;
+	filter: grayscale(1) contrast(1.3) sepia(1) hue-rotate(190deg) saturate(6) brightness(0.35);
 }
 
 /* ══════════════════════════════════════════
