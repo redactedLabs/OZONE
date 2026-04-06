@@ -186,7 +186,7 @@
 </script>
 
 <svelte:head>
-	<title>Transaction History — Ozone</title>
+	<title>Wallet Explorer — Ozone</title>
 </svelte:head>
 
 <div class="mx-auto max-w-5xl px-4 pt-20 pb-16">
@@ -196,9 +196,9 @@
 			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
 				<span class="text-[10px] font-mono" style="color: var(--app-accent);">Private &middot; Shareable &middot; Exportable</span>
 			</div>
-			<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-3" style="color: var(--text);">Transaction History</h1>
+			<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-3" style="color: var(--text);">Wallet Explorer</h1>
 			<p class="text-sm max-w-lg mx-auto" style="color: var(--text-muted);">
-				Pull your full THORChain transaction history. Export as CSV for your tax consultant, or share via anonymous link — your address stays private.
+				Explore any THORChain wallet's full transaction history. Export for taxes (Koinly CSV), share via anonymous link, or view on-chain activity — no login required.
 			</p>
 		</div>
 

@@ -13,20 +13,20 @@
 
 	const menuGroups = $derived([
 		{
-			title: 'Compliance',
+			title: 'Public Tools',
 			variant: 'muted' as const,
 			links: [
-				{ label: 'Overview', href: '/' },
-				{ label: 'Addresses', href: '/addresses' },
-				{ label: 'Sanctioned', href: '/banned' },
+				{ label: 'Wallet Explorer', href: '/history' },
+				{ label: 'Proof of Innocence', href: '/certificate' },
+				{ label: 'Sanctioned List', href: '/banned' },
 			]
 		},
 		{
-			title: 'Services',
+			title: 'Compliance',
 			variant: 'default' as const,
 			links: [
-				{ label: 'Proof of Innocence', href: '/certificate' },
-				{ label: 'Transaction History', href: '/history' },
+				{ label: 'Overview', href: '/' },
+				{ label: 'Addresses', href: '/addresses' },
 				{ label: 'API', href: '/api-docs' },
 				{ label: 'Open Source', href: '/open-source' },
 			]
