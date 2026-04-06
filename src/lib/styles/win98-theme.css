@@ -273,24 +273,13 @@ html.win98 body {
 .win98 [data-slot="group-title"] { color: #000080 !important; font-weight: bold; }
 .win98 [data-slot="link-text"] span { color: #000000 !important; }
 .win98 [data-slot="link-underline"] { background: #000080 !important; }
-/* Nav logo — blue + pixelated: render SVG tiny, then scale up with nearest-neighbor */
-.win98 [data-slot="logo"] a {
-	width: 18px;
-	height: 22px;
-	position: relative !important;
-	display: block !important;
-	flex-shrink: 0 !important;
-}
+/* Nav logo — blue + pixelated: swap SVG for tiny PNG raster, scale up with nearest-neighbor */
 .win98 [data-slot="logo"] img {
-	filter: brightness(0) invert(10%) sepia(100%) saturate(10000%) hue-rotate(240deg) !important;
-	height: 6px !important;
+	content: url('/redacted-logo-tiny.png') !important;
+	height: 22px !important;
 	width: auto !important;
-	transform: scale(3.67) !important;
-	transform-origin: left top !important;
 	image-rendering: pixelated !important;
-	position: absolute !important;
-	top: 0;
-	left: 0;
+	filter: brightness(0) invert(10%) sepia(100%) saturate(10000%) hue-rotate(240deg) !important;
 }
 
 .win98 [data-slot="primary-button"],
@@ -618,6 +607,7 @@ html.win98 body {
    ══════════════════════════════════════════ */
 .win98 .godrays-bg { display: none !important; }
 .win98 canvas { display: none !important; }
+.win98 .globe-container canvas { display: block !important; }
 
 /* Disable backdrop blur */
 .win98 [style*="backdrop-filter"] { backdrop-filter: none !important; }

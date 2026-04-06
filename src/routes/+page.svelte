@@ -11,6 +11,7 @@
 	const isAdmin = $derived(!!data?.user);
 	let toast = $state({ visible: false, message: '', variant: 'info' as const });
 	let GlobeComponent: any = $state(null);
+	let BlocksGlobeComponent: any = $state(null);
 	let GodRaysComponent: any = $state(null);
 	let mounted = $state(false);
 	// Sync state
@@ -130,6 +131,7 @@
 
 		import('$lib/motion-core').then((mod) => {
 			GlobeComponent = mod.Globe;
+			BlocksGlobeComponent = mod.BlocksGlobe;
 			GodRaysComponent = mod.GodRays;
 			mounted = true;
 		}).catch(() => {
@@ -325,6 +327,13 @@
 		</div>
 	{/snippet}
 
+	{#snippet win98MarkerTooltip(ctx: any)}
+		<div class="win98-face-label pointer-events-none" style="opacity: {ctx.visibility};">
+			<div class="win98-label-titlebar">{ctx.marker.label || ''}</div>
+			<div class="win98-label-body">{NODES.find(n => n.name === ctx.marker.label)?.name || ''}</div>
+		</div>
+	{/snippet}
+
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
 		<!-- Live TX feed (order-2 on mobile so globe shows first) -->
 		<div class="dash-box rounded-xl overflow-hidden order-2 md:order-1" data-win-title="Live Transactions">
@@ -363,43 +372,19 @@
 		<!-- Globe / Win98 Cube -->
 		<div class="dash-box rounded-2xl relative overflow-hidden globe-container order-1 md:order-2" style="min-height: 350px;" data-win-title="Global Network">
 			{#if theme.current === 'win98'}
-				<!-- Win98 3D Cube — chain labels pinned ON faces like globe markers -->
-				<div class="win98-cube-wrapper">
-					<!-- TX drops (2D overlay, flow between projected positions) -->
-					<div class="win98-drop d1"></div>
-					<div class="win98-drop d2"></div>
-					<div class="win98-drop d3"></div>
-					<div class="win98-drop d4"></div>
-					<div class="win98-drop d5"></div>
-					<div class="win98-drop d6"></div>
-					<div class="win98-drop d7"></div>
-					<div class="win98-drop d8"></div>
-					<!-- 3D Rotating Cube with chain labels ON faces -->
-					<div class="win98-cube-scene">
-						<div class="win98-cube">
-							<div class="win98-cube-face front">
-								<div class="win98-face-label" style="top: 12px; left: 10px;"><div class="win98-label-titlebar">BTC</div><div class="win98-label-body">Bitcoin</div></div>
-								<div class="win98-face-label" style="bottom: 12px; right: 10px;"><div class="win98-label-titlebar">ETH</div><div class="win98-label-body">Ethereum</div></div>
-							</div>
-							<div class="win98-cube-face back">
-								<div class="win98-face-label" style="top: 12px; right: 10px;"><div class="win98-label-titlebar">RUNE</div><div class="win98-label-body">THORChain</div></div>
-								<div class="win98-face-label" style="bottom: 12px; left: 10px;"><div class="win98-label-titlebar">SOL</div><div class="win98-label-body">Solana</div></div>
-							</div>
-							<div class="win98-cube-face right">
-								<div class="win98-face-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-label-titlebar">AVAX</div><div class="win98-label-body">Avalanche</div></div>
-							</div>
-							<div class="win98-cube-face left">
-								<div class="win98-face-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-label-titlebar">USDT</div><div class="win98-label-body">Tether</div></div>
-							</div>
-							<div class="win98-cube-face top">
-								<div class="win98-face-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-label-titlebar">DOGE</div><div class="win98-label-body">Dogecoin</div></div>
-							</div>
-							<div class="win98-cube-face bottom">
-								<div class="win98-face-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="win98-label-titlebar">GAIA</div><div class="win98-label-body">Cosmos</div></div>
-							</div>
-						</div>
+				{#if mounted && BlocksGlobeComponent}
+					<svelte:component
+						this={BlocksGlobeComponent}
+						class="h-full w-full"
+						radius={3}
+						markers={globeMarkers}
+						markerTooltip={win98MarkerTooltip}
+					/>
+				{:else}
+					<div class="flex h-full items-center justify-center" style="min-height: 350px;">
+						Loading...
 					</div>
-				</div>
+				{/if}
 			{:else if mounted && GlobeComponent}
 				<svelte:component
 					this={GlobeComponent}
