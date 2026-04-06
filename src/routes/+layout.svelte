@@ -28,6 +28,12 @@
 				{ label: 'Overview', href: '/' },
 				{ label: 'Addresses', href: '/addresses' },
 				{ label: 'API', href: '/api-docs' },
+			]
+		},
+		{
+			title: 'Contributors',
+			variant: 'default' as const,
+			links: [
 				{ label: 'Open Source', href: '/open-source' },
 			]
 		},
@@ -39,16 +45,16 @@
 				{ label: 'Live Logs', href: '/admin/logs' },
 				{ label: 'Settings', href: '/admin/settings' },
 			]
+		}] : []),
+		...(isAdmin ? [{
+			title: 'Account',
+			variant: 'default' as const,
+			links: [{ label: 'Logout', href: '/login?logout=1' }]
 		}] : [{
 			title: 'Account',
 			variant: 'default' as const,
 			links: [{ label: 'Login', href: '/login' }]
 		}]),
-		...(isAdmin ? [{
-			title: 'Account',
-			variant: 'default' as const,
-			links: [{ label: 'Logout', href: '/login?logout=1' }]
-		}] : []),
 	]);
 
 	onMount(() => {
