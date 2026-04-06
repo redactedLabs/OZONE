@@ -321,7 +321,7 @@
 			</div>
 
 			<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-				Explore your {#key heroWordIndex}<span class="hero-word" class:hero-gradient={!heroWordColors[heroWords[heroWordIndex]]} style="{heroWordColors[heroWords[heroWordIndex]] ? `-webkit-text-fill-color: ${heroWordColors[heroWords[heroWordIndex]]};` : ''}">{heroWords[heroWordIndex]}</span>{/key} wallet history
+				Explore your<br class="sm:hidden" /> {#key heroWordIndex}<span class="hero-word" class:hero-gradient={!heroWordColors[heroWords[heroWordIndex]]} style="{heroWordColors[heroWords[heroWordIndex]] ? `-webkit-text-fill-color: ${heroWordColors[heroWords[heroWordIndex]]};` : ''}">{heroWords[heroWordIndex]}</span>{/key} wallet history
 			</h1>
 
 			<p class="text-base sm:text-lg max-w-2xl mx-auto" style="color: var(--text-muted);">

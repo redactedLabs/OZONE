@@ -220,6 +220,9 @@ html.win98 body {
 	border-radius: 0 !important;
 	backdrop-filter: none !important;
 	box-shadow: none !important;
+	overflow: hidden !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
 }
 
 .win98 [data-win-title]::before {
@@ -260,7 +263,10 @@ html.win98 body {
 .win98 [data-slot="group-title"] { color: #000080 !important; font-weight: bold; }
 .win98 [data-slot="link-text"] span { color: #000000 !important; }
 .win98 [data-slot="link-underline"] { background: #000080 !important; }
-.win98 [data-slot="logo"] img { filter: brightness(0) !important; }
+.win98 [data-slot="logo"] img {
+	image-rendering: pixelated;
+	filter: grayscale(1) contrast(1.3) sepia(1) hue-rotate(190deg) saturate(6) brightness(0.35) !important;
+}
 
 .win98 [data-slot="primary-button"],
 .win98 [data-slot="secondary-button"] {
