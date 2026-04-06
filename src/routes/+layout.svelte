@@ -18,7 +18,6 @@
 			links: [
 				{ label: 'Wallet Explorer', href: '/history' },
 				{ label: 'Proof of Innocence', href: '/certificate' },
-				{ label: 'Sanctioned List', href: '/banned' },
 			]
 		},
 		{
@@ -27,6 +26,7 @@
 			links: [
 				{ label: 'Overview', href: '/' },
 				{ label: 'Addresses', href: '/addresses' },
+				{ label: 'Sanctioned List', href: '/banned' },
 				{ label: 'API', href: '/api-docs' },
 			]
 		},
