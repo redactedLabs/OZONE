@@ -1,6 +1,11 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	let address = $state('');
 	let phase = $state<'idle' | 'scanning' | 'done'>('idle');
+	let heroVisible = $state(false);
+
+	onMount(() => { heroVisible = true; });
 	let scanStep = $state(0);
 	let l1Count = $state(0);
 	let result = $state<any>(null);
@@ -94,23 +99,41 @@
 
 <svelte:head>
 	<title>Proof of Innocence — Ozone</title>
+	<meta name="description" content="Screen any THORChain address against OFAC, EU sanctions, Chainalysis, and more. Get a verifiable compliance certificate — shareable and permanent." />
+	<meta property="og:title" content="Proof of Innocence — Ozone" />
+	<meta property="og:description" content="On-chain compliance certificate. Screen any address against 8+ databases." />
+	<meta property="og:type" content="website" />
+	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
-<div class="mx-auto max-w-3xl px-4 pt-20 pb-16">
+<div class="mx-auto px-4 pt-20 pb-16" class:max-w-5xl={phase === 'idle'} class:max-w-3xl={phase !== 'idle'}>
 
 	{#if phase === 'idle'}
-		<!-- Input Phase -->
-		<div class="text-center mb-10">
-			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
-				<span class="text-[10px] font-mono" style="color: #10b981;">Proof of Innocence</span>
+
+		<!-- Hero -->
+		<div class="hero-section text-center mb-12" class:hero-visible={heroVisible}>
+			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
+				<span class="relative flex h-2 w-2">
+					<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: #10b981;"></span>
+					<span class="relative inline-flex rounded-full h-2 w-2" style="background: #10b981;"></span>
+				</span>
+				<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Verifiable &middot; Shareable &middot; Permanent</span>
 			</div>
-			<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-3" style="color: var(--text);">Proof of Innocence</h1>
-			<p class="text-sm max-w-lg mx-auto" style="color: var(--text-muted);">
-				Screen any address against every compliance database. Get a verifiable certificate — shareable and permanently on record.
+
+			<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4">
+				<span class="hero-gradient">Proof of Innocence</span>
+			</h1>
+
+			<p class="text-base sm:text-lg max-w-2xl mx-auto mb-2" style="color: var(--text-muted);">
+				Screen any THORChain address against 8 compliance databases. Get a verifiable certificate you can share with anyone.
+			</p>
+			<p class="text-sm max-w-xl mx-auto" style="color: var(--text-faint);">
+				OFAC, EU Sanctions, Chainalysis, known hacks, and more. Permanent record with shareable link.
 			</p>
 		</div>
 
-		<div class="cert-card rounded-2xl p-6 sm:p-8">
+		<!-- Input card -->
+		<div class="cert-card rounded-2xl p-6 sm:p-8 max-w-xl mx-auto mb-16">
 			<div class="flex gap-3">
 				<input
 					type="text"
@@ -131,6 +154,138 @@
 			<p class="text-[10px] mt-3 text-center" style="color: var(--text-faint);">
 				Screens against OFAC, EU sanctions, Tether blacklist, known hacks, ScamSniffer, Chainalysis, and more.
 			</p>
+		</div>
+
+		<!-- How it works — Architecture -->
+		<div class="mb-16">
+			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">How it works</h2>
+			<div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+				{#each [
+					{ num: '01', title: 'Enter Address', desc: 'Paste any thor1... address. We resolve it and discover all linked deposit addresses via Midgard.' },
+					{ num: '02', title: 'Screen', desc: 'Every address is checked against 8 compliance databases — OFAC, EU sanctions, Chainalysis, known hacks, and more.' },
+					{ num: '03', title: 'Issue Certificate', desc: 'If clear, a permanent certificate is issued with a unique ID. If flagged, you see exactly which database matched.' },
+					{ num: '04', title: 'Share', desc: 'Every certificate gets a permanent link you can share with anyone — tax advisor, lawyer, counterparty, or regulator.' },
+				] as step}
+					<div class="cert-card rounded-xl p-5">
+						<div class="text-2xl font-bold font-mono mb-3" style="color: #10b981; opacity: 0.5;">{step.num}</div>
+						<div class="text-sm font-semibold mb-1" style="color: var(--text);">{step.title}</div>
+						<p class="text-xs leading-relaxed" style="color: var(--text-muted);">{step.desc}</p>
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<!-- What's in a certificate -->
+		<div class="cert-card rounded-2xl p-6 sm:p-8 mb-16">
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+				<div>
+					<div class="text-[10px] font-mono uppercase tracking-wider mb-2" style="color: #10b981;">Certificate Contents</div>
+					<h2 class="text-xl font-bold mb-4" style="color: var(--text);">What you get</h2>
+					<div class="space-y-2.5 mb-5">
+						{#each [
+							'Unique certificate ID (OZ-XXXXXXXX)',
+							'Address screened + issue date',
+							'All 8 databases verified with status',
+							'CLEAR or FLAGGED result with details',
+							'Permanent shareable link',
+						] as item}
+							<div class="flex items-center gap-2">
+								<span class="shrink-0 text-xs leading-none" style="color: #10b981;">&#10003;</span>
+								<span class="text-xs leading-none" style="color: var(--text-muted);">{item}</span>
+							</div>
+						{/each}
+					</div>
+				</div>
+				<div class="rounded-xl overflow-hidden" style="background: rgba(15,23,42,0.5); border: 1px solid var(--app-border-subtle);">
+					<div class="p-1" style="background: linear-gradient(90deg, #10b981, #6366f1, #10b981);"></div>
+					<div class="p-5">
+						<div class="flex items-center justify-center gap-2 mb-3">
+							<img src="/redacted-logo.svg" alt="Redacted" style="height: 14px; opacity: 0.5;" />
+							<span class="text-[9px] font-mono" style="color: var(--text-faint);">REDACTED\OZONE</span>
+						</div>
+						<div class="text-center mb-4">
+							<div class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-2" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
+								<span class="inline-block h-1.5 w-1.5 rounded-full" style="background: #10b981;"></span>
+								<span class="text-[9px] font-semibold" style="color: #10b981;">Proof of Innocence</span>
+							</div>
+							<div class="text-sm font-bold" style="color: var(--text);">Ozone Certificate</div>
+						</div>
+						<div class="rounded-lg p-3 mb-3" style="background: rgba(16,185,129,0.03); border: 1px solid rgba(16,185,129,0.1);">
+							<div class="text-center">
+								<div class="text-lg mb-1" style="color: #10b981;">&#10003;</div>
+								<div class="text-[9px]" style="color: var(--text-muted);">thor1abc...xyz</div>
+								<div class="text-[9px] font-semibold mt-0.5" style="color: #10b981;">No matches found</div>
+							</div>
+						</div>
+						<div class="grid grid-cols-2 gap-2">
+							<div class="rounded-md p-2" style="background: rgba(255,255,255,0.02); border: 1px solid var(--app-border-subtle);">
+								<div class="text-[8px]" style="color: var(--text-faint);">Certificate ID</div>
+								<div class="text-[9px] font-mono" style="color: var(--text);">OZ-A1B2C3D4</div>
+							</div>
+							<div class="rounded-md p-2" style="background: rgba(255,255,255,0.02); border: 1px solid var(--app-border-subtle);">
+								<div class="text-[8px]" style="color: var(--text-faint);">Sources</div>
+								<div class="text-[9px] font-mono" style="color: var(--text);">8 verified</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Databases -->
+		<div class="mb-16">
+			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">Databases screened</h2>
+			<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+				{#each [
+					{ name: 'OFAC SDN', org: 'US Treasury', color: '#ef4444' },
+					{ name: 'EU Sanctions', org: 'European Union', color: '#3b82f6' },
+					{ name: 'Known Hacks', org: 'Curated list', color: '#f59e0b' },
+					{ name: 'Tether Frozen', org: 'On-chain', color: '#10b981' },
+					{ name: 'ScamSniffer', org: 'Community', color: '#6366f1' },
+					{ name: 'Eth Labels', org: '170k+ addresses', color: '#a855f7' },
+					{ name: 'Chainalysis', org: 'Oracle API', color: '#ec4899' },
+					{ name: 'Manual Flags', org: 'Redacted team', color: '#22d3ee' },
+				] as db}
+					<div class="cert-card rounded-xl p-4 text-center">
+						<div class="text-xs font-semibold mb-0.5" style="color: var(--text);">{db.name}</div>
+						<div class="text-[9px]" style="color: var(--text-faint);">{db.org}</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<!-- Use cases -->
+		<div class="mb-16">
+			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">Who uses this?</h2>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div class="cert-card rounded-xl p-5">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+						</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text);">DeFi Users</h3>
+					</div>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Prove your address is clean before interacting with protocols, OTC desks, or counterparties that require compliance checks.</p>
+				</div>
+				<div class="cert-card rounded-xl p-5">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+						</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text);">Tax & Legal</h3>
+					</div>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Share the certificate link with your tax advisor or lawyer as evidence that your wallet has no sanctions or compliance flags.</p>
+				</div>
+				<div class="cert-card rounded-xl p-5">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+						</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text);">Projects & DAOs</h3>
+					</div>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Require contributors or treasury signers to provide a Proof of Innocence certificate before interacting with project funds.</p>
+				</div>
+			</div>
 		</div>
 
 	{:else if phase === 'scanning'}
@@ -328,5 +483,53 @@
 	}
 	@keyframes spin {
 		to { transform: rotate(360deg); }
+	}
+
+	/* Hero animations */
+	.hero-section {
+		opacity: 0;
+		transform: translateY(12px);
+		transition: opacity 0.6s ease, transform 0.6s ease;
+	}
+	.hero-section.hero-visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	.hero-title {
+		color: var(--text);
+		opacity: 0;
+		transform: translateY(12px);
+		transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;
+	}
+	.hero-visible .hero-title {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	.hero-badge {
+		background: rgba(16,185,129,0.08);
+		border: 1px solid rgba(16,185,129,0.15);
+		opacity: 0;
+		transform: translateY(8px);
+		transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
+	}
+	.hero-visible .hero-badge {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	.hero-gradient {
+		background: linear-gradient(135deg, #10b981, #6366f1, #a78bfa);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	@keyframes ping {
+		75%, 100% {
+			transform: scale(2);
+			opacity: 0;
+		}
+	}
+	.animate-ping {
+		animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 	}
 </style>
