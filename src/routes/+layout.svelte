@@ -65,14 +65,15 @@
 
 {#snippet logo()}
 	<div class="flex items-center gap-2">
-		<a href="/" style="display: flex; align-items: center; text-decoration: none;">
+		<a href="/" class="logo-link" style="display: flex; align-items: center; text-decoration: none; gap: 0;">
 			<img src="/redacted-logo.svg" alt="Redacted" style="height: 22px; width: auto; opacity: 0.9;" />
+			<span class="logo-ozone" style="font-weight: bold; font-size: 14px; color: var(--text-muted); margin-left: 1px;">\OZONE</span>
 		</a>
 		{#if isAdmin && data?.user?.email}
 			<span class="hidden sm:inline rounded px-1.5 py-0.5 text-[9px] font-medium" style="background: rgba(99,102,241,0.15); color: var(--app-accent);">{data.user.email}</span>
 		{/if}
 		<button onclick={toggleTheme} class="win98-toggle" title="Toggle Win98 mode">
-			{theme.current === 'win98' ? 'Dark' : '98'}
+			{theme.current === 'win98' ? 'Modern' : 'Win98'}
 		</button>
 	</div>
 {/snippet}

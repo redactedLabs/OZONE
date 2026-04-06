@@ -227,13 +227,20 @@ html.win98 body {
 	overflow: visible !important;
 	word-break: break-word;
 }
-/* Override Tailwind overflow-hidden that clips the 3D border — except globe */
-.win98 [data-win-title].overflow-hidden:not(.globe-container),
-.win98 [data-win-title].overflow-x-auto {
+/* Override Tailwind overflow-hidden that clips the 3D border — except containers that need scroll/clip */
+.win98 [data-win-title].overflow-hidden:not(.globe-container) {
 	overflow: visible !important;
 }
 .win98 .globe-container {
 	overflow: hidden !important;
+}
+/* Tables: allow horizontal scroll inside win98 windows */
+.win98 [data-win-title].overflow-x-auto {
+	overflow-x: auto !important;
+	overflow-y: visible !important;
+}
+.win98 [data-win-title] table {
+	min-width: 600px;
 }
 
 .win98 [data-win-title]::before {
@@ -276,21 +283,15 @@ html.win98 body {
 .win98 [data-slot="group-title"] { color: #000080 !important; font-weight: bold; }
 .win98 [data-slot="link-text"] span { color: #000000 !important; }
 .win98 [data-slot="link-underline"] { background: #000080 !important; }
-/* Nav logo — keep SVG, add \OZONE text, make blue */
+/* Nav logo — make SVG blue, style \OZONE text */
 .win98 [data-slot="logo"] img {
 	height: 20px !important;
 	width: auto !important;
 	filter: brightness(0) saturate(100%) invert(9%) sepia(95%) saturate(7404%) hue-rotate(243deg) brightness(70%) !important;
 }
-.win98 [data-slot="logo"]::after {
-	content: '\\OZONE';
-	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif !important;
-	font-weight: bold;
-	font-size: 14px;
+.win98 .logo-ozone {
 	color: #000080 !important;
-	letter-spacing: 0.5px;
-	white-space: nowrap;
-	margin-left: 1px;
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif !important;
 }
 
 .win98 [data-slot="primary-button"],
