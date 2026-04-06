@@ -3,10 +3,11 @@ import type { RequestHandler } from './$types';
 import { syncOFAC } from '$lib/server/compliance/ofac';
 import { syncEU } from '$lib/server/compliance/eu';
 import { syncHackList } from '$lib/server/compliance/hacks';
+import { syncTether } from '$lib/server/compliance/tether';
 import { screenAllUsers } from '$lib/server/compliance/screener';
 
 /**
- * Runs compliance list sync (OFAC + EU + Hacks) then screens all users.
+ * Runs compliance list sync (OFAC + EU + Hacks + Tether) then screens all users.
  */
 export const POST: RequestHandler = async () => {
 	const start = Date.now();
@@ -32,6 +33,13 @@ export const POST: RequestHandler = async () => {
 	} catch (e) {
 		errors.push(`Hacks: ${e}`);
 		results.hacks = { error: String(e) };
+	}
+
+	try {
+		results.tether = await syncTether();
+	} catch (e) {
+		errors.push(`Tether: ${e}`);
+		results.tether = { error: String(e) };
 	}
 
 	try {

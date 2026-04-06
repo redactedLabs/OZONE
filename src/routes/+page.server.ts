@@ -28,6 +28,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.from(complianceEntries)
 		.where(eq(complianceEntries.source, 'HACK'));
 
+	const [tetherResult] = await db
+		.select({ count: count() })
+		.from(complianceEntries)
+		.where(eq(complianceEntries.source, 'TETHER'));
+
 	const [totalListResult] = await db
 		.select({ count: count() })
 		.from(complianceEntries);
@@ -99,6 +104,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			ofacEntries: ofacResult.count,
 			euEntries: euResult.count,
 			hackEntries: hackResult.count,
+			tetherEntries: tetherResult.count,
 			totalListEntries: totalListResult.count,
 			totalL1: Number(totalL1Result.count),
 			newUsersDay: Number(newUsersDay.count),
