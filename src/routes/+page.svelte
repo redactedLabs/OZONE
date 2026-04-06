@@ -28,16 +28,16 @@
 	});
 
 	// Fixed locations like COBE CDN — pinned markers with labels + arcs between them
-	const NODES: Array<{ name: string; loc: [number, number]; color: string }> = [
-		{ name: 'BTC', loc: [-15.78, -47.93], color: '#f7931a' },     // Brasilia
-		{ name: 'ETH', loc: [51.51, -0.13], color: '#627eea' },       // London
-		{ name: 'RUNE', loc: [35.68, 139.65], color: '#2ecc71' },     // Tokyo
-		{ name: 'SOL', loc: [19.43, -99.13], color: '#9945ff' },      // Mexico City
-		{ name: 'USDT', loc: [1.35, 103.82], color: '#26a17b' },      // Singapore
-		{ name: 'AVAX', loc: [-1.29, 36.82], color: '#e84142' },      // Nairobi
-		{ name: 'DOGE', loc: [-33.87, 151.21], color: '#c4a430' },    // Sydney
-		{ name: 'GAIA', loc: [45.42, -75.69], color: '#6d75f2' },      // Ottawa
-		{ name: 'TRX', loc: [25.20, 55.27], color: '#ff0013' },       // Dubai
+	const NODES: Array<{ name: string; fullName: string; loc: [number, number]; color: string }> = [
+		{ name: 'BTC', fullName: 'Bitcoin', loc: [-15.78, -47.93], color: '#f7931a' },     // Brasilia
+		{ name: 'ETH', fullName: 'Ethereum', loc: [51.51, -0.13], color: '#627eea' },       // London
+		{ name: 'RUNE', fullName: 'THORChain', loc: [35.68, 139.65], color: '#2ecc71' },     // Tokyo
+		{ name: 'SOL', fullName: 'Solana', loc: [19.43, -99.13], color: '#9945ff' },      // Mexico City
+		{ name: 'USDT', fullName: 'Tether', loc: [1.35, 103.82], color: '#26a17b' },      // Singapore
+		{ name: 'AVAX', fullName: 'Avalanche', loc: [-1.29, 36.82], color: '#e84142' },      // Nairobi
+		{ name: 'DOGE', fullName: 'Dogecoin', loc: [-33.87, 151.21], color: '#c4a430' },    // Sydney
+		{ name: 'GAIA', fullName: 'Cosmos', loc: [45.42, -75.69], color: '#6d75f2' },      // Ottawa
+		{ name: 'TRX', fullName: 'TRON', loc: [25.20, 55.27], color: '#ff0013' },       // Dubai
 	];
 
 	// Generate persistent arcs between nodes (like CDN routes)
@@ -330,7 +330,7 @@
 	{#snippet win98MarkerTooltip(ctx: any)}
 		<div class="win98-face-label pointer-events-none" style="opacity: {ctx.visibility};">
 			<div class="win98-label-titlebar">{ctx.marker.label || ''}</div>
-			<div class="win98-label-body">{NODES.find(n => n.name === ctx.marker.label)?.name || ''}</div>
+			<div class="win98-label-body">{NODES.find(n => n.name === ctx.marker.label)?.fullName || ''}</div>
 		</div>
 	{/snippet}
 
@@ -346,7 +346,7 @@
 					{@const typeColor = tx.type === 'STREAM' ? '#a78bfa' : tx.type === 'SWAP' ? '#818cf8' : tx.type === 'ADD' ? '#10b981' : tx.type === 'WD' ? '#f59e0b' : tx.type === 'SEND' ? '#22d3ee' : tx.type === 'REFUND' ? '#ef4444' : '#64748b'}
 					<div class="tx-row px-3 py-1.5 text-[11px]" style="border-bottom: 1px solid var(--app-border-subtle);">
 						<div class="flex items-center gap-1.5 w-full">
-							<span class="shrink-0 w-11 text-center rounded px-1 py-0.5 text-[8px] font-bold" style="background: {typeColor}15; color: {typeColor};">{tx.type}</span>
+							<span class="shrink-0 w-14 text-center rounded px-1 py-0.5 text-[8px] font-bold" style="background: {typeColor}15; color: {typeColor};">{tx.type}</span>
 							<span class="font-mono flex-1 min-w-0" style="color: var(--text-secondary);">
 								<span class="tx-addr">{tx.from}</span>
 								<span style="color: #334155; margin: 0 2px;">→</span>
@@ -379,6 +379,7 @@
 						radius={3}
 						markers={globeMarkers}
 						markerTooltip={win98MarkerTooltip}
+						arcs={globeArcs}
 					/>
 				{:else}
 					<div class="flex h-full items-center justify-center" style="min-height: 350px;">

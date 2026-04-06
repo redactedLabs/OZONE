@@ -11,6 +11,7 @@
 		radius?: number;
 		markers?: GlobeMarker[];
 		markerTooltip?: Snippet<[GlobeMarkerTooltipContext]>;
+		arcs?: Array<{ from: [number, number]; to: [number, number]; color?: string; speed?: number; transient?: boolean; onfinish?: () => void; _key?: string }>;
 		[key: string]: unknown;
 	}
 
@@ -19,6 +20,7 @@
 		radius = 3,
 		markers = [],
 		markerTooltip,
+		arcs = [],
 		...rest
 	}: Props = $props();
 
@@ -32,6 +34,7 @@
 				{radius}
 				{markers}
 				{markerTooltip}
+				{arcs}
 			/>
 		</Canvas>
 	</div>

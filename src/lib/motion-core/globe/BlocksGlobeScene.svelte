@@ -6,17 +6,20 @@
 	import landGeoJsonRaw from "../assets/ne_110m_land.geojson?raw";
 	import type { GlobeMarker, GlobeMarkerTooltipContext } from "./types";
 	import GlobeMarkerItem from "./GlobeMarkerItem.svelte";
+	import GlobeArc from "./GlobeArc.svelte";
 
 	interface Props {
 		radius?: number;
 		markers?: GlobeMarker[];
 		markerTooltip?: Snippet<[GlobeMarkerTooltipContext]>;
+		arcs?: Array<{ from: [number, number]; to: [number, number]; color?: string; speed?: number; transient?: boolean; onfinish?: () => void; _key?: string }>;
 	}
 
 	let {
 		radius = 3,
 		markers = [],
 		markerTooltip,
+		arcs = [],
 	}: Props = $props();
 
 	// --- GeoJSON types & parsing (same as GlobeScene) ---
@@ -46,7 +49,7 @@
 
 	// --- Voxel generation ---
 
-	const GRID_RADIUS = 12;
+	const GRID_RADIUS = 20;
 	const cubeSize = radius / GRID_RADIUS;
 
 	interface VoxelData {
@@ -62,7 +65,7 @@
 
 	const landColor = new THREE.Color("#008000");
 	const oceanColor = new THREE.Color("#000080");
-	const boxGeometry = new THREE.BoxGeometry(cubeSize * 0.92, cubeSize * 0.92, cubeSize * 0.92);
+	const boxGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
 	const landMaterial = new THREE.MeshBasicMaterial({ color: landColor });
 	const oceanMaterial = new THREE.MeshBasicMaterial({ color: oceanColor });
 
@@ -287,6 +290,18 @@
 			index={i}
 			position={[pos.x, pos.y, pos.z]}
 			tooltip={markerTooltip}
+		/>
+	{/each}
+
+	{#each arcs as arc, i (arc._key || i)}
+		<GlobeArc
+			from={arc.from}
+			to={arc.to}
+			{radius}
+			color={arc.color || "#000080"}
+			speed={arc.speed || 1.0}
+			transient={arc.transient || false}
+			onfinish={arc.onfinish}
 		/>
 	{/each}
 </T.Group>

@@ -273,13 +273,18 @@ html.win98 body {
 .win98 [data-slot="group-title"] { color: #000080 !important; font-weight: bold; }
 .win98 [data-slot="link-text"] span { color: #000000 !important; }
 .win98 [data-slot="link-underline"] { background: #000080 !important; }
-/* Nav logo — blue + pixelated: swap SVG for tiny PNG raster, scale up with nearest-neighbor */
+/* Nav logo — replace SVG with pixelated text */
 .win98 [data-slot="logo"] img {
-	content: url('/redacted-logo-tiny.png') !important;
-	height: 22px !important;
-	width: auto !important;
-	image-rendering: pixelated !important;
-	filter: brightness(0) invert(10%) sepia(100%) saturate(10000%) hue-rotate(240deg) !important;
+	display: none !important;
+}
+.win98 [data-slot="logo"]::after {
+	content: 'Redacted\\OZONE';
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif !important;
+	font-weight: bold;
+	font-size: 14px;
+	color: #000080 !important;
+	letter-spacing: 0.5px;
+	white-space: nowrap;
 }
 
 .win98 [data-slot="primary-button"],
