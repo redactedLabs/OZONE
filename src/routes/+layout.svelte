@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { authClient } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import { theme } from '$lib/stores/theme.svelte';
 
 	let { children, data } = $props();
 
@@ -10,6 +11,7 @@
 	let mounted = $state(false);
 
 	const isAdmin = $derived(!!data?.user);
+	const toggleTheme = () => theme.toggle();
 
 	const menuGroups = $derived([
 		{
@@ -53,7 +55,7 @@
 	]);
 
 	onMount(() => {
-		document.documentElement.className = 'dark';
+		theme.apply();
 
 		import('$lib/motion-core').then((mod) => {
 			FloatingMenuComponent = mod.FloatingMenu;
@@ -68,6 +70,9 @@
 		{#if isAdmin && data?.user?.email}
 			<span class="hidden sm:inline rounded px-1.5 py-0.5 text-[9px] font-medium" style="background: rgba(99,102,241,0.15); color: var(--app-accent);">{data.user.email}</span>
 		{/if}
+		<button onclick={toggleTheme} class="win98-toggle" title="Toggle Win98 mode">
+			{theme.current === 'win98' ? '🌙' : '98'}
+		</button>
 	</div>
 {/snippet}
 
@@ -92,4 +97,15 @@
 		color: var(--text) !important;
 	}
 
+	.win98-toggle {
+		font-size: 10px;
+		padding: 1px 6px;
+		border: 1px solid var(--app-border);
+		border-radius: 3px;
+		background: transparent;
+		color: var(--text-muted);
+		cursor: pointer;
+		font-weight: bold;
+		min-width: auto !important;
+	}
 </style>

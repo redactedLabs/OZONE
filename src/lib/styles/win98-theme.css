@@ -1,0 +1,440 @@
+/* ══════════════════════════════════════════
+   Win98 Light Theme — scoped under .win98
+   ══════════════════════════════════════════ */
+
+/* MS Sans Serif font from 98.css package */
+@font-face {
+	font-family: 'Pixelated MS Sans Serif';
+	font-style: normal;
+	font-weight: 400;
+	src: url('98.css/dist/ms_sans_serif.woff2') format('woff2'),
+	     url('98.css/dist/ms_sans_serif.woff') format('woff');
+}
+
+@font-face {
+	font-family: 'Pixelated MS Sans Serif';
+	font-style: normal;
+	font-weight: 700;
+	src: url('98.css/dist/ms_sans_serif_bold.woff2') format('woff2'),
+	     url('98.css/dist/ms_sans_serif_bold.woff') format('woff');
+}
+
+.win98 {
+	/* Backgrounds — Win98 silver/teal */
+	--bg: #008080;
+	--bg-card: #c0c0c0;
+	--bg-card-hover: #d4d0c8;
+	--bg-code: #ffffff;
+	--background: #c0c0c0;
+	--background-inset: #008080;
+	--background-muted: #d4d0c8;
+
+	/* Text — dark on light */
+	--text: #000000;
+	--text-secondary: #333333;
+	--text-muted: #555555;
+	--text-faint: #777777;
+	--text-ghost: #999999;
+	--foreground: #000000;
+	--foreground-muted: #555555;
+
+	/* Accent — Win98 navy blue */
+	--accent: #000080;
+	--accent-secondary: #1084d0;
+	--app-accent: #000080;
+	--accent-glow: #1084d0;
+
+	/* Borders — classic 3D bevels */
+	--border: #808080;
+	--app-border: #808080;
+	--app-border-subtle: #a0a0a0;
+	--card-border: #808080;
+
+	/* Cards */
+	--card-bg: #c0c0c0;
+	--card-glow: none;
+
+	/* Inputs */
+	--input-bg: #ffffff;
+	--input-border: #808080;
+	--input-border-focus: #000080;
+	--input-placeholder: #808080;
+
+	/* Status colors */
+	--danger: #ff0000;
+	--warning: #808000;
+	--success: #008000;
+
+	/* Hero */
+	--hero-title: #000000;
+	--hero-slash: #808080;
+	--hero-sub: #555555;
+
+	/* Stats */
+	--stat-indigo: #000080;
+
+	/* Tooltips */
+	--tooltip-bg: #ffffe1;
+	--tooltip-border: #000000;
+
+	/* Scrollbar */
+	--scrollbar-thumb: #c0c0c0;
+	--scrollbar-track: #d4d0c8;
+
+	/* Globe */
+	--godrays-bg: #008080;
+	--godrays-color: #000080;
+	--globe-land: #008000;
+	--globe-fresnel: #008080;
+	--globe-rim: #000080;
+	--globe-atmo: #000080;
+	--globe-pill-bg: rgba(192, 192, 192, 0.95);
+
+	/* Fixed */
+	--fixed-light: #000000;
+	--fixed-dark: #c0c0c0;
+
+	/* Shadows — Win98 3D bevel effect */
+	--shadow-xs: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf;
+	--shadow-sm: inset -1px -1px #0a0a0a, inset 1px 1px #fff;
+	--shadow-md: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf;
+	--shadow-lg: none;
+	--shadow-xl: none;
+	--shadow-2xl: none;
+
+	/* Radius — Win98 has no border radius */
+	--radius-base: 0px;
+
+	/* Font — MS Sans Serif */
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', 'Microsoft Sans Serif', 'Segoe UI', Tahoma, sans-serif;
+	-webkit-font-smoothing: none;
+}
+
+/* ── Window chrome for cards ── */
+.win98 [data-win-title] {
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	background: #c0c0c0;
+	padding: 0;
+	border-radius: 0 !important;
+	position: relative;
+	backdrop-filter: none !important;
+	box-shadow: none !important;
+}
+
+.win98 [data-win-title]::before {
+	content: attr(data-win-title);
+	display: block;
+	background: linear-gradient(90deg, #000080, #1084d0);
+	color: #ffffff;
+	font-weight: bold;
+	font-size: 11px;
+	padding: 2px 4px;
+	font-family: 'MS Sans Serif', Tahoma, sans-serif;
+}
+
+.win98 [data-win-title] > * {
+	padding-left: 4px;
+	padding-right: 4px;
+}
+
+/* ── FloatingMenu overrides ── */
+.win98 [data-slot="root"] {
+	background: #c0c0c0 !important;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	border-radius: 0 !important;
+	backdrop-filter: none !important;
+}
+
+.win98 [data-slot="header"] {
+	background: #c0c0c0 !important;
+	border-bottom: 1px solid #808080;
+}
+
+.win98 [data-slot="toggle-line"] {
+	background: #000000 !important;
+}
+
+.win98 [data-slot="menu-wrapper"] {
+	background: #c0c0c0 !important;
+}
+
+.win98 [data-slot="group-title"] {
+	color: #000080 !important;
+	font-weight: bold;
+}
+
+.win98 [data-slot="link-text"] span {
+	color: #000000 !important;
+}
+
+.win98 [data-slot="link-underline"] {
+	background: #000080 !important;
+}
+
+.win98 [data-slot="primary-button"],
+.win98 [data-slot="secondary-button"] {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	border-radius: 0 !important;
+	text-shadow: none !important;
+}
+
+.win98 [data-slot="primary-button"]:active,
+.win98 [data-slot="secondary-button"]:active {
+	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a;
+}
+
+/* ── Form elements ── */
+.win98 input[type="text"],
+.win98 input[type="email"],
+.win98 input[type="password"],
+.win98 input[type="search"],
+.win98 input[type="date"],
+.win98 textarea,
+.win98 select {
+	background: #ffffff !important;
+	color: #000000 !important;
+	border: 2px solid;
+	border-color: #808080 #dfdfdf #dfdfdf #808080 !important;
+	border-radius: 0 !important;
+	font-family: 'MS Sans Serif', Tahoma, sans-serif;
+	padding: 2px 4px;
+}
+
+.win98 button:not([data-slot]):not(.win98-toggle) {
+	background: #c0c0c0;
+	color: #000000;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	border-radius: 0 !important;
+	font-family: 'MS Sans Serif', Tahoma, sans-serif;
+	padding: 2px 8px;
+	min-width: 75px;
+	box-shadow: none !important;
+	text-shadow: none !important;
+}
+
+.win98 button:not([data-slot]):not(.win98-toggle):active {
+	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a;
+}
+
+/* ── Hero gradient override ── */
+.win98 .hero-gradient {
+	background: none !important;
+	-webkit-background-clip: unset !important;
+	-webkit-text-fill-color: #000080 !important;
+	color: #000080 !important;
+}
+
+.win98 .hero-badge {
+	background: #c0c0c0 !important;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	color: #000000 !important;
+}
+
+/* ── Tailwind color class overrides ── */
+.win98 .bg-background { background: #c0c0c0 !important; }
+.win98 .text-foreground { color: #000000 !important; }
+.win98 .text-foreground-muted { color: #555555 !important; }
+.win98 .bg-background-muted { background: #d4d0c8 !important; }
+
+/* ── Table overrides ── */
+.win98 table {
+	background: #ffffff;
+	color: #000000;
+}
+
+.win98 thead tr {
+	background: #c0c0c0;
+}
+
+.win98 tbody tr {
+	border-color: #808080 !important;
+}
+
+.win98 tbody tr:hover {
+	background: #000080 !important;
+	color: #ffffff !important;
+}
+
+.win98 tbody tr:hover td {
+	color: #ffffff !important;
+}
+
+.win98 tbody tr:hover span,
+.win98 tbody tr:hover a,
+.win98 tbody tr:hover button {
+	color: #ffffff !important;
+}
+
+/* ── Link styling ── */
+.win98 a {
+	color: #000080;
+}
+
+.win98 a:visited {
+	color: #800080;
+}
+
+/* ── Scrollbar ── */
+.win98 * {
+	scrollbar-color: #c0c0c0 #d4d0c8;
+}
+
+/* ── Code blocks ── */
+.win98 pre,
+.win98 code {
+	background: #ffffff !important;
+	color: #000000 !important;
+	border: 2px solid;
+	border-color: #808080 #dfdfdf #dfdfdf #808080;
+	border-radius: 0 !important;
+}
+
+.win98 pre code {
+	border: none;
+}
+
+/* ── Rounded override — flatten everything ── */
+.win98 .rounded-xl,
+.win98 .rounded-2xl,
+.win98 .rounded-3xl,
+.win98 .rounded-lg,
+.win98 .rounded-md,
+.win98 .rounded-full:not(.animate-pulse):not(.animate-ping) {
+	border-radius: 0 !important;
+}
+
+/* ── GodRays / 3D background hide in win98 ── */
+.win98 .godrays-bg {
+	display: none !important;
+}
+
+.win98 canvas {
+	display: none !important;
+}
+
+/* ── Misc overrides ── */
+.win98 .backdrop-blur-sm,
+.win98 .backdrop-blur-md,
+.win98 .backdrop-blur-lg,
+.win98 .backdrop-blur-xl {
+	backdrop-filter: none !important;
+}
+
+/* ── Stat hover tooltip in win98 ── */
+.win98 .stat-tip {
+	background: #ffffe1 !important;
+	border: 1px solid #000000 !important;
+	color: #000000 !important;
+	border-radius: 0 !important;
+	box-shadow: 2px 2px 0 #808080 !important;
+}
+
+/* ── Animations — disable fancy ones ── */
+.win98 .hero-section,
+.win98 .hero-title,
+.win98 .hero-badge {
+	opacity: 1 !important;
+	transform: none !important;
+	transition: none !important;
+}
+
+/* ── Specific card class overrides ── */
+.win98 .dash-box,
+.win98 .hist-card,
+.win98 .cert-card,
+.win98 .api-card,
+.win98 .oss-card,
+.win98 .report-card {
+	background: #c0c0c0 !important;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	backdrop-filter: none !important;
+	box-shadow: none !important;
+	border-radius: 0 !important;
+}
+
+/* ── Sync/CTA buttons ── */
+.win98 .sync-btn,
+.win98 .hero-cta-primary,
+.win98 .login-btn,
+.win98 .report-btn-primary {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	box-shadow: none !important;
+	border-radius: 0 !important;
+	text-shadow: none !important;
+}
+
+.win98 .hero-cta-secondary,
+.win98 .report-btn-secondary {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	border-radius: 0 !important;
+}
+
+/* ── Source tab overrides ── */
+.win98 .source-tab {
+	background: #c0c0c0 !important;
+	color: #000000 !important;
+	border: 2px solid;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+	border-radius: 0 !important;
+}
+
+.win98 .source-tab.active {
+	background: #000080 !important;
+	color: #ffffff !important;
+	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a;
+}
+
+/* ── Globe container — show placeholder in win98 ── */
+.win98 .globe-container {
+	background: #008080 !important;
+	min-height: 200px !important;
+}
+
+/* ── Live dot ── */
+.win98 .live-dot {
+	box-shadow: none !important;
+}
+
+/* ── Stat inset ── */
+.win98 .stat-inset {
+	background: #c0c0c0 !important;
+	border: 1px solid #808080 !important;
+	border-radius: 0 !important;
+}
+
+/* ── Body/html background ── */
+html.win98,
+html.win98 body {
+	background-color: #008080 !important;
+	color: #000000 !important;
+}
+
+/* ── Info chips ── */
+.win98 .info-chip {
+	background: #c0c0c0 !important;
+	border: 1px solid #808080 !important;
+	border-radius: 0 !important;
+}
+
+/* ── Animated gradient bars — flatten ── */
+.win98 .cert-glow {
+	box-shadow: none !important;
+}
+
+.win98 .report-glow {
+	display: none !important;
+}

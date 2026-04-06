@@ -86,7 +86,7 @@
 	</div>
 
 	<!-- Results Table -->
-	<div class="overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--bg-card)]">
+	<div class="overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--bg-card)]" data-win-title="Screening Results">
 		{#if data.results.length === 0}
 			<div class="p-12 text-center text-[var(--text-muted)]">
 				{#if data.totalUsers === 0}

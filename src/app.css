@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './lib/styles/win98-theme.css';
 
 @variant dark (&:where(.dark, .dark *));
 

@@ -30,6 +30,7 @@
     "vite": "^6.4.1"
   },
   "dependencies": {
+    "98.css": "^0.1.21",
     "@threlte/core": "^8.3.1",
     "@threlte/extras": "^9.7.1",
     "better-auth": "^1.5.6",

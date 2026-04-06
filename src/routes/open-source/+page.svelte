@@ -65,7 +65,7 @@
 	</div>
 
 	<!-- Report Address CTA -->
-	<div class="report-card rounded-2xl p-8 sm:p-10 mb-16 relative overflow-hidden">
+	<div class="report-card rounded-2xl p-8 sm:p-10 mb-16 relative overflow-hidden" data-win-title="Report a Wallet">
 		<div class="report-glow"></div>
 		<div class="relative z-10">
 			<div class="flex items-center gap-3 mb-2">
@@ -153,7 +153,7 @@
 	</div>
 
 	<!-- Contribute -->
-	<div class="oss-card rounded-2xl p-6 sm:p-8 mb-10">
+	<div class="oss-card rounded-2xl p-6 sm:p-8 mb-10" data-win-title="Contribute">
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 			<div>
 				<h2 class="text-lg font-bold mb-2" style="color: var(--text);">Contribute</h2>

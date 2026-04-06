@@ -232,7 +232,7 @@
 		</div>
 
 		<!-- Input card -->
-		<div class="hist-card rounded-2xl p-6 sm:p-8 max-w-xl mx-auto mb-16">
+		<div class="hist-card rounded-2xl p-6 sm:p-8 max-w-xl mx-auto mb-16" data-win-title="Wallet Explorer">
 			<div class="flex gap-3">
 				<input
 					type="text"
@@ -302,7 +302,7 @@
 
 		<!-- B. Value Proposition Cards -->
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
-			<div class="hist-card rounded-xl p-5">
+			<div class="hist-card rounded-xl p-5" data-win-title="CSV Export">
 				<div class="flex items-center gap-2 mb-3">
 					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -318,7 +318,7 @@
 				</div>
 			</div>
 
-			<div class="hist-card rounded-xl p-5">
+			<div class="hist-card rounded-xl p-5" data-win-title="Anonymous Sharing">
 				<div class="flex items-center gap-2 mb-3">
 					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -334,7 +334,7 @@
 				</div>
 			</div>
 
-			<div class="hist-card rounded-xl p-5">
+			<div class="hist-card rounded-xl p-5" data-win-title="Tax Season Ready">
 				<div class="flex items-center gap-2 mb-3">
 					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -352,7 +352,7 @@
 		</div>
 
 		<!-- C. Tax Export Showcase -->
-		<div class="hist-card rounded-2xl p-6 sm:p-8 mb-16">
+		<div class="hist-card rounded-2xl p-6 sm:p-8 mb-16" data-win-title="Export Format">
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 				<div>
 					<div class="text-[10px] font-mono uppercase tracking-wider mb-2" style="color: #22d3ee;">Export Format</div>

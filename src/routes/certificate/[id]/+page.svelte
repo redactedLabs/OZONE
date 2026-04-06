@@ -17,7 +17,7 @@
 <div class="mx-auto max-w-3xl px-4 pt-20 pb-16">
 	{#if data.flagged}
 		<!-- Flagged cert view -->
-		<div class="cert-card rounded-2xl overflow-hidden" style="border-color: rgba(239,68,68,0.3);">
+		<div class="cert-card rounded-2xl overflow-hidden" style="border-color: rgba(239,68,68,0.3);" data-win-title="Certificate — Flagged">
 			<div class="p-1" style="background: linear-gradient(90deg, #ef4444, #dc2626);"></div>
 			<div class="p-6 sm:p-8 text-center">
 				<div class="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3);">
@@ -33,7 +33,7 @@
 		</div>
 	{:else}
 		<!-- Clean cert view -->
-		<div class="cert-card cert-glow rounded-2xl overflow-hidden">
+		<div class="cert-card cert-glow rounded-2xl overflow-hidden" data-win-title="Ozone Certificate">
 			<div class="p-1" style="background: linear-gradient(90deg, #10b981, #6366f1, #10b981);"></div>
 			<div class="p-6 sm:p-10">
 				<!-- Verified badge -->

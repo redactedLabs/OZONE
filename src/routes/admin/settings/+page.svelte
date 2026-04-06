@@ -89,7 +89,7 @@
 	</p>
 
 	<!-- Invite -->
-	<div class="rounded-xl p-6 mb-8" style="background: #0d0d1f; border: 1px solid #1e293b;">
+	<div class="rounded-xl p-6 mb-8" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="Invite Collaborator">
 		<h2 class="text-lg font-semibold mb-1" style="color: #f1f5f9;">Invite Collaborator</h2>
 		<p class="text-xs mb-4" style="color: #64748b;">A random password is generated. Share it securely — shown only once.</p>
 
@@ -124,7 +124,7 @@
 	</div>
 
 	<!-- Users -->
-	<div class="rounded-xl p-6 mb-8" style="background: #0d0d1f; border: 1px solid #1e293b;">
+	<div class="rounded-xl p-6 mb-8" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="Team">
 		<h2 class="text-lg font-semibold mb-4" style="color: #f1f5f9;">Team ({data.adminUsers.length})</h2>
 		<div class="space-y-2">
 			{#each data.adminUsers as u}
@@ -145,7 +145,7 @@
 	</div>
 
 	<!-- Compliance Lists Status -->
-	<div class="rounded-xl p-6" style="background: #0d0d1f; border: 1px solid #1e293b;">
+	<div class="rounded-xl p-6" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="Compliance Lists">
 		<h2 class="text-lg font-semibold mb-4" style="color: #f1f5f9;">Compliance Lists</h2>
 		<div class="space-y-2">
 			{#each data.syncStats as stat}

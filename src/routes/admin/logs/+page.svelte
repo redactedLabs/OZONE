@@ -76,7 +76,7 @@
 
 	<div class="grid gap-6 lg:grid-cols-3">
 		<!-- Live TX Feed (2/3 width) -->
-		<div class="lg:col-span-2 rounded-xl overflow-hidden" style="background: #0d0d1f; border: 1px solid #1e293b;">
+		<div class="lg:col-span-2 rounded-xl overflow-hidden" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="WebSocket TX Feed">
 			<div class="px-4 py-3 flex items-center justify-between" style="border-bottom: 1px solid #1e293b;">
 				<h2 class="text-sm font-semibold" style="color: #f1f5f9;">WebSocket TX Feed</h2>
 				<span class="text-xs" style="color: #64748b;">Last 50 transactions</span>
@@ -111,7 +111,7 @@
 		</div>
 
 		<!-- Sync Logs (1/3 width) -->
-		<div class="rounded-xl overflow-hidden" style="background: #0d0d1f; border: 1px solid #1e293b;">
+		<div class="rounded-xl overflow-hidden" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="Sync History">
 			<div class="px-4 py-3" style="border-bottom: 1px solid #1e293b;">
 				<h2 class="text-sm font-semibold" style="color: #f1f5f9;">Sync History</h2>
 			</div>

@@ -83,7 +83,7 @@ if data["flagged"]:
 	</div>
 
 	<!-- Endpoint Card -->
-	<div class="api-card rounded-2xl p-6 mb-6">
+	<div class="api-card rounded-2xl p-6 mb-6" data-win-title="API Endpoint">
 		<div class="flex items-center gap-3 mb-4">
 			<span class="rounded-md px-2.5 py-1 text-xs font-bold" style="background: rgba(16,185,129,0.15); color: #10b981;">GET</span>
 			<code class="text-sm font-mono flex-1" style="color: var(--text);">/api/screen</code>
@@ -133,7 +133,7 @@ if data["flagged"]:
 	</div>
 
 	<!-- Code Examples -->
-	<div class="api-card rounded-2xl p-6 mb-6">
+	<div class="api-card rounded-2xl p-6 mb-6" data-win-title="Integration Examples">
 		<h3 class="text-sm font-semibold mb-4" style="color: var(--text);">Integration Examples</h3>
 		<div class="space-y-4">
 			<div>
@@ -161,7 +161,7 @@ if data["flagged"]:
 	</div>
 
 	<!-- Live Test -->
-	<div class="api-card rounded-2xl p-6 mb-6">
+	<div class="api-card rounded-2xl p-6 mb-6" data-win-title="Try It Live">
 		<h3 class="text-sm font-semibold mb-1" style="color: var(--text);">Try it live</h3>
 		<p class="text-xs mb-4" style="color: var(--text-muted);">Test any address against all compliance lists in real-time.</p>
 		<div class="flex gap-2 mb-4">
@@ -213,7 +213,7 @@ if data["flagged"]:
 	</div>
 
 	<!-- Data Sources -->
-	<div class="api-card rounded-2xl p-6">
+	<div class="api-card rounded-2xl p-6" data-win-title="Data Sources">
 		<h3 class="text-sm font-semibold mb-4" style="color: var(--text);">Data Sources</h3>
 		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
 			{#each [

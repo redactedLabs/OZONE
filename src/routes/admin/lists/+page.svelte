@@ -153,7 +153,7 @@
 	</div>
 
 	<!-- Entries Table -->
-	<div class="overflow-x-auto rounded-xl" style="background: #0d0d1f; border: 1px solid #1e293b;">
+	<div class="overflow-x-auto rounded-xl" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="Compliance Lists">
 		<table class="w-full text-left text-sm">
 			<thead>
 				<tr style="border-bottom: 1px solid #1e293b;">

@@ -261,7 +261,7 @@
 	</div>
 
 	<!-- Line 1: Stats boxes -->
-	<div class="relative z-20 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+	<div class="relative z-20 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3" data-win-title="Overview">
 		<div class="dash-box stat-hover rounded-xl p-4 relative group">
 			<div class="flex items-baseline gap-2">
 				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: var(--stat-indigo);">{data.stats.totalUsers.toLocaleString('en-US')}</div>
@@ -327,7 +327,7 @@
 
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
 		<!-- Live TX feed (order-2 on mobile so globe shows first) -->
-		<div class="dash-box rounded-xl overflow-hidden order-2 md:order-1">
+		<div class="dash-box rounded-xl overflow-hidden order-2 md:order-1" data-win-title="Live Transactions">
 			<div class="px-4 py-2.5 flex items-center gap-2" style="border-bottom: 1px solid var(--app-border);">
 				<span class="live-dot"></span>
 				<span class="text-xs font-semibold" style="color: var(--text);">Live</span>
@@ -361,7 +361,7 @@
 		</div>
 
 		<!-- Globe -->
-		<div class="dash-box rounded-2xl relative overflow-hidden globe-container order-1 md:order-2" style="min-height: 350px;">
+		<div class="dash-box rounded-2xl relative overflow-hidden globe-container order-1 md:order-2" style="min-height: 350px;" data-win-title="Global Network">
 			{#if mounted && GlobeComponent}
 				<svelte:component
 					this={GlobeComponent}
@@ -395,7 +395,7 @@
 	</div>
 
 	<!-- Sync status bar -->
-	<div class="dash-box rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+	<div class="dash-box rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3" data-win-title="Sync Status">
 		<p class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-secondary);">
 			Every address screened against OFAC, EU sanctions, known hacks, Tether frozen wallets, and 5,000+ flagged entities.
 			<a href="https://docs.redacted.money/using-redacted/compliance" target="_blank" rel="noopener" style="color: var(--app-accent); text-decoration: none;"> Learn more &#8599;</a>
@@ -414,7 +414,7 @@
 	</div>
 
 	<!-- PoI Feature -->
-	<div class="dash-box rounded-xl overflow-hidden mb-3">
+	<div class="dash-box rounded-xl overflow-hidden mb-3" data-win-title="Proof of Innocence">
 		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="p-5 sm:p-6 flex flex-col justify-center">
 				<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
@@ -452,7 +452,7 @@
 	</div>
 
 	<!-- Transaction History Feature (reversed layout) -->
-	<div class="dash-box rounded-xl overflow-hidden mb-3">
+	<div class="dash-box rounded-xl overflow-hidden mb-3" data-win-title="Transaction History">
 		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="p-4 sm:p-5 flex items-center justify-center md:order-1 order-2">
 				<div class="w-full max-w-xs">
@@ -492,7 +492,7 @@
 	</div>
 
 	<!-- API Teaser -->
-	<div class="dash-box rounded-xl overflow-hidden mb-3">
+	<div class="dash-box rounded-xl overflow-hidden mb-3" data-win-title="Ozone API">
 		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="p-5 sm:p-6 flex flex-col justify-center">
 				<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
@@ -514,7 +514,7 @@
 	</div>
 
 	<!-- Open Source (reversed layout) -->
-	<div class="dash-box rounded-xl overflow-hidden mb-3">
+	<div class="dash-box rounded-xl overflow-hidden mb-3" data-win-title="Open Source">
 		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="p-4 sm:p-5 flex items-center justify-center md:order-1 order-2">
 				<div class="w-full max-w-xs">

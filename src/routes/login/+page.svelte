@@ -74,7 +74,7 @@
 		<div class="absolute inset-0" style="background: var(--bg);"></div>
 	{/if}
 
-	<div class="relative z-10 w-full max-w-md rounded-2xl p-8 shadow-2xl" style="background: var(--card-bg); border: 1px solid var(--card-border); backdrop-filter: blur(20px);">
+	<div class="relative z-10 w-full max-w-md rounded-2xl p-8 shadow-2xl" style="background: var(--card-bg); border: 1px solid var(--card-border); backdrop-filter: blur(20px);" data-win-title="Login">
 		<div class="mb-8 text-center">
 			<h1 class="text-2xl font-bold tracking-tight mb-2" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; letter-spacing: -0.03em;"><span style="color: var(--text);">Redacted</span><span style="color: var(--text-ghost);">\</span><span style="color: var(--text-faint);">Ozone</span></h1>
 			<p class="text-sm" style="color: var(--text-muted);">Admin Login</p>

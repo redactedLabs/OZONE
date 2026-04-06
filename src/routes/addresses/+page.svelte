@@ -224,7 +224,7 @@
 	</div>
 
 	<!-- Table -->
-	<div class="overflow-x-auto rounded-xl" style="background: var(--bg-card); border: 1px solid var(--app-border);">
+	<div class="overflow-x-auto rounded-xl" style="background: var(--bg-card); border: 1px solid var(--app-border);" data-win-title="Address Lookup">
 		<table class="w-full text-left text-sm">
 			<thead>
 				<tr style="border-bottom: 1px solid var(--app-border);">

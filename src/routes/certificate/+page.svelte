@@ -133,7 +133,7 @@
 		</div>
 
 		<!-- Input card -->
-		<div class="cert-card rounded-2xl p-6 sm:p-8 max-w-xl mx-auto mb-16">
+		<div class="cert-card rounded-2xl p-6 sm:p-8 max-w-xl mx-auto mb-16" data-win-title="Screen Address">
 			<div class="flex gap-3">
 				<input
 					type="text"
@@ -176,7 +176,7 @@
 		</div>
 
 		<!-- What's in a certificate -->
-		<div class="cert-card rounded-2xl p-6 sm:p-8 mb-16">
+		<div class="cert-card rounded-2xl p-6 sm:p-8 mb-16" data-win-title="Certificate Contents">
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 				<div>
 					<div class="text-[10px] font-mono uppercase tracking-wider mb-2" style="color: #10b981;">Certificate Contents</div>
@@ -295,7 +295,7 @@
 			<p class="text-xs font-mono" style="color: var(--text-muted);">{truncAddr(address)}</p>
 		</div>
 
-		<div class="cert-card rounded-2xl p-6 sm:p-8">
+		<div class="cert-card rounded-2xl p-6 sm:p-8" data-win-title="Screening Progress">
 			<div class="space-y-0">
 				{#each SCAN_STEPS as step, i}
 					<div class="flex items-center gap-3 py-3" style="border-bottom: 1px solid var(--app-border-subtle); opacity: {i <= scanStep ? 1 : 0.25}; transition: opacity 0.4s;">
@@ -361,7 +361,7 @@
 			</div>
 		{:else}
 			<!-- CLEAN — Certificate -->
-			<div class="cert-card cert-glow rounded-2xl overflow-hidden" id="certificate">
+			<div class="cert-card cert-glow rounded-2xl overflow-hidden" id="certificate" data-win-title="Ozone Certificate">
 				<div class="p-1" style="background: linear-gradient(90deg, #10b981, #6366f1, #10b981);"></div>
 				<div class="p-6 sm:p-10">
 					<!-- Header -->
