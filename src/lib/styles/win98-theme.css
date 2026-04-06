@@ -225,7 +225,7 @@ html.win98 body {
 	box-sizing: border-box !important;
 	min-width: 0 !important;
 	overflow: visible !important;
-	word-break: break-word;
+	word-break: normal;
 }
 /* Override Tailwind overflow-hidden that clips the 3D border — except containers that need scroll/clip */
 .win98 [data-win-title].overflow-hidden:not(.globe-container) {
@@ -240,7 +240,19 @@ html.win98 body {
 	overflow-y: visible !important;
 }
 .win98 [data-win-title] table {
-	min-width: 600px;
+	min-width: 700px;
+}
+.win98 [data-win-title] table th,
+.win98 [data-win-title] table td {
+	white-space: nowrap !important;
+	word-break: normal !important;
+	overflow-wrap: normal !important;
+}
+/* Titlebar stays full-width when table scrolls */
+.win98 [data-win-title].overflow-x-auto::before {
+	position: sticky;
+	left: 0;
+	z-index: 2;
 }
 
 .win98 [data-win-title]::before {
