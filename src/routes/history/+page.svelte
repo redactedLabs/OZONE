@@ -10,6 +10,8 @@
 	let copied = $state(false);
 	let poolAssets = $state<string[]>([]);
 	let heroVisible = $state(false);
+	const heroWords = ['THORChain', 'Rujira'];
+	let heroWordIndex = $state(0);
 
 	// Share options
 	let dateFrom = $state('');
@@ -21,7 +23,13 @@
 	// Load pool assets on mount for dynamic logo resolution
 	fetchPoolAssets().then((assets) => { poolAssets = assets; });
 
-	onMount(() => { heroVisible = true; });
+	onMount(() => {
+		heroVisible = true;
+		const interval = setInterval(() => {
+			heroWordIndex = (heroWordIndex + 1) % heroWords.length;
+		}, 3000);
+		return () => clearInterval(interval);
+	});
 
 	function logo(symbol: string): string | undefined {
 		return getTokenLogoSync(symbol, poolAssets);
@@ -212,7 +220,7 @@
 			</div>
 
 			<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-				Explore your <span class="hero-gradient">THORChain wallet</span> history
+				Explore your {#key heroWordIndex}<span class="hero-gradient hero-word">{heroWords[heroWordIndex]}</span>{/key} wallet history
 			</h1>
 
 			<p class="text-base sm:text-lg max-w-2xl mx-auto mb-2" style="color: var(--text-muted);">
@@ -356,9 +364,9 @@
 							'Fee amounts in native currency',
 							'ISO 8601 date format',
 						] as item}
-							<div class="flex items-start gap-2">
-								<span class="shrink-0 mt-0.5" style="color: #10b981;">&#10003;</span>
-								<span class="text-xs" style="color: var(--text-muted);">{item}</span>
+							<div class="flex items-center gap-2">
+								<span class="shrink-0 text-xs leading-none" style="color: #10b981;">&#10003;</span>
+								<span class="text-xs leading-none" style="color: var(--text-muted);">{item}</span>
 							</div>
 						{/each}
 					</div>
@@ -404,9 +412,9 @@
 							'Share privately with tax advisor, lawyer, or anyone',
 							'Address hidden by default for privacy',
 						] as item}
-							<li class="flex items-start gap-2 text-xs" style="color: var(--text-muted);">
-								<span style="color: #6366f1;" class="shrink-0 mt-0.5">+</span>
-								{item}
+							<li class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
+								<span class="shrink-0 text-xs leading-none" style="color: #6366f1;">+</span>
+								<span class="leading-none">{item}</span>
 							</li>
 						{/each}
 					</ul>
@@ -420,14 +428,14 @@
 					</div>
 					<ul class="space-y-2">
 						{#each [
-							'Private accounts with linked L1 wallets',
-							'Share trade history with externals securely',
-							'Unified compliance across all chains',
+							'Private accounts with full trade history',
+							'Share reports with externals securely',
+							'Compliance-ready transaction records',
 							'Batch export coming soon',
 						] as item}
-							<li class="flex items-start gap-2 text-xs" style="color: var(--text-muted);">
-								<span style="color: #a855f7;" class="shrink-0 mt-0.5">+</span>
-								{item}
+							<li class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
+								<span class="shrink-0 text-xs leading-none" style="color: #a855f7;">+</span>
+								<span class="leading-none">{item}</span>
 							</li>
 						{/each}
 					</ul>
@@ -728,6 +736,14 @@
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
+	}
+	.hero-word {
+		display: inline-block;
+		animation: heroFade 0.4s ease;
+	}
+	@keyframes heroFade {
+		0% { opacity: 0; transform: translateY(4px); }
+		100% { opacity: 1; transform: translateY(0); }
 	}
 
 	@keyframes ping {
