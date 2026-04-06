@@ -45,6 +45,57 @@
 	const txWithdraws = $derived(data.transactions?.filter((t: any) => t.type === 'withdraw').length || 0);
 	const txSends = $derived(data.transactions?.filter((t: any) => t.type === 'send').length || 0);
 
+	// Group transactions by txID — sibling contract events collapse under one row
+	const GROUP_PRIORITY: Record<string, number> = {
+		'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
+		'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
+		'calc-create': 20, 'calc-update': 21, 'calc-withdraw': 22,
+		'fin-order': 23, 'fin-order-wd': 24, 'fin-range': 25,
+		'ghost-lend': 26, 'ghost-withdraw': 27,
+		'tc-swap': 30, 'bow-swap': 31, 'fin-trade': 32,
+		'auto-workflow': 40,
+		'calc-process': 50, 'calc-init': 51, 'calc-internal': 52,
+		'ghost-borrow': 60, 'ghost-repay': 61,
+		'fin-arb': 70, 'fin-range-fee': 71,
+		'contract': 100, 'unknown': 999,
+	};
+
+	function groupByTxID(txs: any[]): Array<{ primary: any; siblings: any[]; txID: string }> {
+		const groups: Array<{ primary: any; siblings: any[]; txID: string }> = [];
+		const idxMap = new Map<string, number>();
+		for (const tx of txs) {
+			if (!tx.txID) {
+				groups.push({ primary: tx, siblings: [], txID: '' });
+				continue;
+			}
+			const idx = idxMap.get(tx.txID);
+			if (idx !== undefined) {
+				const g = groups[idx];
+				const newPri = GROUP_PRIORITY[tx.type] ?? 500;
+				const curPri = GROUP_PRIORITY[g.primary.type] ?? 500;
+				if (newPri < curPri) {
+					g.siblings.push(g.primary);
+					g.primary = tx;
+				} else {
+					g.siblings.push(tx);
+				}
+			} else {
+				idxMap.set(tx.txID, groups.length);
+				groups.push({ primary: tx, siblings: [], txID: tx.txID });
+			}
+		}
+		return groups;
+	}
+
+	let expandedGroups = $state<Set<string>>(new Set());
+	function toggleGroup(txID: string) {
+		const next = new Set(expandedGroups);
+		if (next.has(txID)) next.delete(txID); else next.add(txID);
+		expandedGroups = next;
+	}
+
+	const groupedTxs = $derived(groupByTxID(data.transactions || []));
+
 	function exportCSV() {
 		if (!data.transactions) return;
 		const headers = ['Date', 'Type', 'Asset In', 'Amount In', 'Asset Out', 'Amount Out', 'Fee Amount', 'Fee Currency', 'From', 'To', 'TxID', 'Status'];
@@ -265,7 +316,8 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.transactions as tx}
+				{#each groupedTxs as group}
+					{@const tx = group.primary}
 					<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 						<td class="px-4 py-2.5 text-xs" style="color: var(--text-muted);">
 							{tx.date ? new Date(tx.date).toLocaleDateString() : '--'}
@@ -274,11 +326,15 @@
 							<span class="text-[10px] font-bold px-2 py-0.5 rounded" style="background: {typeColors[tx.type] || 'var(--text-ghost)'}15; color: {typeColors[tx.type] || 'var(--text-ghost)'};">
 								{typeLabels[tx.type] || tx.type}
 							</span>
+							{#if group.siblings.length > 0}
+								<button onclick={() => toggleGroup(group.txID)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(99,102,241,0.1); color: var(--app-accent); border: 1px solid rgba(99,102,241,0.2);">
+									{expandedGroups.has(group.txID) ? 'hide' : `+${group.siblings.length}`}
+								</button>
+							{/if}
 						</td>
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 							{#if tx.amountIn !== '0'}
 								<span class="inline-flex items-center gap-1.5">
-									
 									{#if logo(tx.assetIn)}
 										<img src={logo(tx.assetIn)} alt={tx.assetIn} class="w-4 h-4 rounded-full" />
 									{/if}
@@ -289,7 +345,6 @@
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 							{#if tx.amountOut !== '0'}
 								<span class="inline-flex items-center gap-1.5">
-									
 									{#if logo(tx.assetOut)}
 										<img src={logo(tx.assetOut)} alt={tx.assetOut} class="w-4 h-4 rounded-full" />
 									{/if}
@@ -310,8 +365,51 @@
 							</td>
 						{/if}
 					</tr>
+					{#if group.siblings.length > 0 && expandedGroups.has(group.txID)}
+						{#each group.siblings as sib}
+							<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.6;">
+								<td class="px-4 py-2 text-xs" style="color: var(--text-muted);">
+									<span class="pl-3" style="color: var(--text-ghost);">&#8627;</span>
+									{sib.date ? new Date(sib.date).toLocaleDateString() : '--'}
+								</td>
+								<td class="px-4 py-2">
+									<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background: {typeColors[sib.type] || 'var(--text-ghost)'}15; color: {typeColors[sib.type] || 'var(--text-ghost)'};">
+										{typeLabels[sib.type] || sib.type}
+									</span>
+								</td>
+								<td class="px-4 py-2 text-xs font-mono" style="color: var(--text);">
+									{#if sib.amountIn !== '0'}
+										<span class="inline-flex items-center gap-1.5">
+											{#if logo(sib.assetIn)}
+												<img src={logo(sib.assetIn)} alt={sib.assetIn} class="w-3.5 h-3.5 rounded-full" />
+											{/if}
+											{sib.amountIn} <span style="color: var(--text-faint);">{sib.assetIn}</span>
+										</span>
+									{:else}--{/if}
+								</td>
+								<td class="px-4 py-2 text-xs font-mono" style="color: var(--text);">
+									{#if sib.amountOut !== '0'}
+										<span class="inline-flex items-center gap-1.5">
+											{#if logo(sib.assetOut)}
+												<img src={logo(sib.assetOut)} alt={sib.assetOut} class="w-3.5 h-3.5 rounded-full" />
+											{/if}
+											{sib.amountOut} <span style="color: var(--text-faint);">{sib.assetOut}</span>
+										</span>
+									{:else}--{/if}
+								</td>
+								<td class="px-4 py-2">
+									<span class="text-[9px]" style="color: {sib.status === 'success' ? '#10b981' : '#f59e0b'};">
+										{sib.status}
+									</span>
+								</td>
+								{#if data.revealWallet}
+									<td class="px-4 py-2"></td>
+								{/if}
+							</tr>
+						{/each}
+					{/if}
 				{/each}
-				{#if data.transactions.length === 0}
+				{#if groupedTxs.length === 0}
 					<tr>
 						<td colspan={data.revealWallet ? 6 : 5} class="px-4 py-12 text-center text-sm" style="color: var(--text-muted);">
 							No transactions found.

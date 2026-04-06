@@ -10,7 +10,8 @@
 	let copied = $state(false);
 	let poolAssets = $state<string[]>([]);
 	let heroVisible = $state(false);
-	const heroWords = ['THORChain', 'Rujira'];
+	const heroWords = ['THORChain', 'Rujira'] as const;
+	const heroWordColors: Record<string, string> = { 'Rujira': '#a855f7' };
 	let heroWordIndex = $state(0);
 
 	// Share options
@@ -245,27 +246,56 @@
 	const txGhost = $derived(report?.transactions?.filter((t: any) => ghostTypes.includes(t.type)).length || 0);
 	const txDCA = $derived(report?.transactions?.filter((t: any) => calcTypes.includes(t.type)).length || 0);
 
-	// DCA step grouping — group calc-internal/calc-update under their parent DCA tx
-	let expandedDCA = $state<Set<number>>(new Set());
-	const dcaInternalTypes = ['calc-internal', 'calc-update'];
-	const dcaParentTypes = ['calc-process', 'calc-create', 'calc-init', 'calc-withdraw'];
+	// Group transactions by txID — sibling contract events collapse under one row
+	const GROUP_PRIORITY: Record<string, number> = {
+		'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
+		'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
+		'calc-create': 20, 'calc-update': 21, 'calc-withdraw': 22,
+		'fin-order': 23, 'fin-order-wd': 24, 'fin-range': 25,
+		'ghost-lend': 26, 'ghost-withdraw': 27,
+		'tc-swap': 30, 'bow-swap': 31, 'fin-trade': 32,
+		'auto-workflow': 40,
+		'calc-process': 50, 'calc-init': 51, 'calc-internal': 52,
+		'ghost-borrow': 60, 'ghost-repay': 61,
+		'fin-arb': 70, 'fin-range-fee': 71,
+		'contract': 100, 'unknown': 999,
+	};
 
-	function isDCAParent(type: string) { return dcaParentTypes.includes(type); }
-	function isDCAChild(type: string) { return dcaInternalTypes.includes(type); }
-	function toggleDCA(idx: number) {
-		const next = new Set(expandedDCA);
-		if (next.has(idx)) next.delete(idx); else next.add(idx);
-		expandedDCA = next;
-	}
-	// Count child steps after a DCA parent
-	function countDCAChildren(txs: any[], parentIdx: number): number {
-		let count = 0;
-		for (let i = parentIdx + 1; i < txs.length; i++) {
-			if (isDCAChild(txs[i].type)) count++;
-			else break;
+	function groupByTxID(txs: any[]): Array<{ primary: any; siblings: any[]; txID: string }> {
+		const groups: Array<{ primary: any; siblings: any[]; txID: string }> = [];
+		const idxMap = new Map<string, number>();
+		for (const tx of txs) {
+			if (!tx.txID) {
+				groups.push({ primary: tx, siblings: [], txID: '' });
+				continue;
+			}
+			const idx = idxMap.get(tx.txID);
+			if (idx !== undefined) {
+				const g = groups[idx];
+				const newPri = GROUP_PRIORITY[tx.type] ?? 500;
+				const curPri = GROUP_PRIORITY[g.primary.type] ?? 500;
+				if (newPri < curPri) {
+					g.siblings.push(g.primary);
+					g.primary = tx;
+				} else {
+					g.siblings.push(tx);
+				}
+			} else {
+				idxMap.set(tx.txID, groups.length);
+				groups.push({ primary: tx, siblings: [], txID: tx.txID });
+			}
 		}
-		return count;
+		return groups;
 	}
+
+	let expandedGroups = $state<Set<string>>(new Set());
+	function toggleGroup(txID: string) {
+		const next = new Set(expandedGroups);
+		if (next.has(txID)) next.delete(txID); else next.add(txID);
+		expandedGroups = next;
+	}
+
+	const groupedTxs = $derived(groupByTxID(filteredTxs));
 </script>
 
 <svelte:head>
@@ -291,14 +321,11 @@
 			</div>
 
 			<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-				Explore your {#key heroWordIndex}<span class="hero-gradient hero-word">{heroWords[heroWordIndex]}</span>{/key} wallet history
+				Explore your {#key heroWordIndex}<span class="hero-word" class:hero-gradient={!heroWordColors[heroWords[heroWordIndex]]} style="{heroWordColors[heroWords[heroWordIndex]] ? `-webkit-text-fill-color: ${heroWordColors[heroWords[heroWordIndex]]};` : ''}">{heroWords[heroWordIndex]}</span>{/key} wallet history
 			</h1>
 
-			<p class="text-base sm:text-lg max-w-2xl mx-auto mb-2" style="color: var(--text-muted);">
+			<p class="text-base sm:text-lg max-w-2xl mx-auto" style="color: var(--text-muted);">
 				Full transaction history for any THORChain address. Export as CSV, share privately with your tax advisor, lawyer, or anyone.
-			</p>
-			<p class="text-sm max-w-xl mx-auto" style="color: var(--text-faint);">
-				No account needed. Wallet address hidden by default. Powered by Midgard.
 			</p>
 		</div>
 
@@ -373,7 +400,7 @@
 
 		<!-- B. Value Proposition Cards -->
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
-			<div class="hist-card rounded-xl p-5" data-win-title="CSV Export">
+			<div class="hist-card rounded-xl p-5 flex flex-col" data-win-title="CSV Export">
 				<div class="flex items-center gap-2 mb-3">
 					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -389,7 +416,7 @@
 				</div>
 			</div>
 
-			<div class="hist-card rounded-xl p-5" data-win-title="Anonymous Sharing">
+			<div class="hist-card rounded-xl p-5 flex flex-col" data-win-title="Anonymous Sharing">
 				<div class="flex items-center gap-2 mb-3">
 					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -405,7 +432,7 @@
 				</div>
 			</div>
 
-			<div class="hist-card rounded-xl p-5" data-win-title="Tax Season Ready">
+			<div class="hist-card rounded-xl p-5 flex flex-col" data-win-title="Tax Season Ready">
 				<div class="flex items-center gap-2 mb-3">
 					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -413,7 +440,7 @@
 					<h3 class="text-sm font-semibold" style="color: var(--text);">Tax Season Ready</h3>
 				</div>
 				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
-					Swaps, LP adds, withdrawals, and sends — all categorized and labeled. Filter by date range to match your tax year. Share the report with your accountant.
+					Swaps, LP adds, withdrawals, and sends — all categorized and labeled. Filter by date range to match your tax year.
 				</p>
 				<div class="flex flex-wrap gap-1.5">
 					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Date filtering</span>
@@ -628,43 +655,43 @@
 		{/if}
 
 		<!-- Stats row (clickable filters) -->
-		<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-			<button onclick={() => (activeFilter = activeFilter === 'swap' ? null : 'swap')} class="hist-card rounded-xl p-4 text-left transition-all" style="{activeFilter === 'swap' ? 'border-color: var(--app-accent); box-shadow: 0 0 12px rgba(99,102,241,0.15);' : ''} cursor: pointer;">
-				<div class="text-xl font-bold font-mono" style="color: var(--app-accent);">{txSwaps}</div>
+		<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+			<button onclick={() => (activeFilter = activeFilter === 'swap' ? null : 'swap')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'swap' ? 'border-color: var(--app-accent); box-shadow: 0 0 12px rgba(99,102,241,0.15);' : ''} cursor: pointer;">
+				<div class="text-lg font-bold font-mono" style="color: var(--app-accent);">{txSwaps}</div>
 				<div class="text-[10px]" style="color: var(--text-muted);">Swaps</div>
 			</button>
-			<button onclick={() => (activeFilter = activeFilter === 'addLiquidity' ? null : 'addLiquidity')} class="hist-card rounded-xl p-4 text-left transition-all" style="{activeFilter === 'addLiquidity' ? 'border-color: #10b981; box-shadow: 0 0 12px rgba(16,185,129,0.15);' : ''} cursor: pointer;">
-				<div class="text-xl font-bold font-mono" style="color: #10b981;">{txAdds}</div>
+			<button onclick={() => (activeFilter = activeFilter === 'addLiquidity' ? null : 'addLiquidity')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'addLiquidity' ? 'border-color: #10b981; box-shadow: 0 0 12px rgba(16,185,129,0.15);' : ''} cursor: pointer;">
+				<div class="text-lg font-bold font-mono" style="color: #10b981;">{txAdds}</div>
 				<div class="text-[10px]" style="color: var(--text-muted);">LP Adds</div>
 			</button>
-			<button onclick={() => (activeFilter = activeFilter === 'withdraw' ? null : 'withdraw')} class="hist-card rounded-xl p-4 text-left transition-all" style="{activeFilter === 'withdraw' ? 'border-color: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.15);' : ''} cursor: pointer;">
-				<div class="text-xl font-bold font-mono" style="color: #f59e0b;">{txWithdraws}</div>
+			<button onclick={() => (activeFilter = activeFilter === 'withdraw' ? null : 'withdraw')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'withdraw' ? 'border-color: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.15);' : ''} cursor: pointer;">
+				<div class="text-lg font-bold font-mono" style="color: #f59e0b;">{txWithdraws}</div>
 				<div class="text-[10px]" style="color: var(--text-muted);">Withdrawals</div>
 			</button>
-			<button onclick={() => (activeFilter = activeFilter === 'send' ? null : 'send')} class="hist-card rounded-xl p-4 text-left transition-all" style="{activeFilter === 'send' ? 'border-color: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.15);' : ''} cursor: pointer;">
-				<div class="text-xl font-bold font-mono" style="color: #22d3ee;">{txSends}</div>
+			<button onclick={() => (activeFilter = activeFilter === 'send' ? null : 'send')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'send' ? 'border-color: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.15);' : ''} cursor: pointer;">
+				<div class="text-lg font-bold font-mono" style="color: #22d3ee;">{txSends}</div>
 				<div class="text-[10px]" style="color: var(--text-muted);">Sends</div>
 			</button>
 		</div>
 
 		<!-- Rujira stats row (only shows if there are Rujira interactions) -->
 		{#if txRujiraTrades > 0 || txGhost > 0 || txDCA > 0}
-			<div class="flex flex-wrap gap-3 mb-4">
+			<div class="flex flex-wrap gap-2 mb-3">
 				{#if txRujiraTrades > 0}
-					<button onclick={() => { activeFilter = activeFilter === '_rujira' ? null : '_rujira'; }} class="hist-card rounded-xl px-4 py-3 text-left transition-all flex items-center gap-3" style="{activeFilter === '_rujira' ? 'border-color: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.15);' : ''} cursor: pointer;">
-						<div class="text-lg font-bold font-mono" style="color: #f59e0b;">{txRujiraTrades}</div>
+					<button onclick={() => { activeFilter = activeFilter === '_rujira' ? null : '_rujira'; }} class="hist-card rounded-lg px-3 py-2 text-left transition-all flex items-center gap-2" style="{activeFilter === '_rujira' ? 'border-color: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.15);' : ''} cursor: pointer;">
+						<div class="text-base font-bold font-mono" style="color: #f59e0b;">{txRujiraTrades}</div>
 						<div class="text-[10px]" style="color: var(--text-muted);">Rujira Trades</div>
 					</button>
 				{/if}
 				{#if txGhost > 0}
-					<button onclick={() => { activeFilter = activeFilter === '_ghost' ? null : '_ghost'; }} class="hist-card rounded-xl px-4 py-3 text-left transition-all flex items-center gap-3" style="{activeFilter === '_ghost' ? 'border-color: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,0.15);' : ''} cursor: pointer;">
-						<div class="text-lg font-bold font-mono" style="color: #ef4444;">{txGhost}</div>
+					<button onclick={() => { activeFilter = activeFilter === '_ghost' ? null : '_ghost'; }} class="hist-card rounded-lg px-3 py-2 text-left transition-all flex items-center gap-2" style="{activeFilter === '_ghost' ? 'border-color: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,0.15);' : ''} cursor: pointer;">
+						<div class="text-base font-bold font-mono" style="color: #ef4444;">{txGhost}</div>
 						<div class="text-[10px]" style="color: var(--text-muted);">Lend/Borrow</div>
 					</button>
 				{/if}
 				{#if txDCA > 0}
-					<button onclick={() => { activeFilter = activeFilter === '_dca' ? null : '_dca'; }} class="hist-card rounded-xl px-4 py-3 text-left transition-all flex items-center gap-3" style="{activeFilter === '_dca' ? 'border-color: #a78bfa; box-shadow: 0 0 12px rgba(167,139,250,0.15);' : ''} cursor: pointer;">
-						<div class="text-lg font-bold font-mono" style="color: #a78bfa;">{txDCA}</div>
+					<button onclick={() => { activeFilter = activeFilter === '_dca' ? null : '_dca'; }} class="hist-card rounded-lg px-3 py-2 text-left transition-all flex items-center gap-2" style="{activeFilter === '_dca' ? 'border-color: #a78bfa; box-shadow: 0 0 12px rgba(167,139,250,0.15);' : ''} cursor: pointer;">
+						<div class="text-base font-bold font-mono" style="color: #a78bfa;">{txDCA}</div>
 						<div class="text-[10px]" style="color: var(--text-muted);">DCA Orders</div>
 					</button>
 				{/if}
@@ -672,31 +699,33 @@
 		{/if}
 
 		<!-- Filter pills -->
-		<div class="flex flex-wrap items-center gap-2 mb-6">
-			<button
-				onclick={() => (activeFilter = null)}
-				class="text-[10px] font-medium px-3 py-1 rounded-full transition-all"
-				style="{activeFilter === null ? 'background: var(--app-accent); color: white;' : 'background: var(--card-bg); border: 1px solid var(--app-border); color: var(--text-muted);'}"
-			>
-				All ({report.totalTransactions})
-			</button>
-			{#each getAllTypes() as t}
-				{@const color = typeColors[t] || 'var(--text-ghost)'}
-				{#if !['swap', 'addLiquidity', 'withdraw', 'send'].includes(t)}
-					<button
-						onclick={() => (activeFilter = activeFilter === t ? null : t)}
-						class="text-[10px] font-medium px-3 py-1 rounded-full transition-all"
-						style="{activeFilter === t ? `background: ${color}; color: white;` : `background: ${color}10; border: 1px solid ${color}30; color: ${color};`}"
-					>
-						{typeLabels[t] || t} ({report.transactions.filter((tx: any) => tx.type === t).length})
-					</button>
+		<div class="filter-scroll overflow-x-auto -mx-4 px-4 pb-2 mb-4">
+			<div class="flex items-center gap-1.5 min-w-max">
+				<button
+					onclick={() => (activeFilter = null)}
+					class="text-[10px] font-medium px-2.5 py-1 rounded-full transition-all whitespace-nowrap"
+					style="{activeFilter === null ? 'background: var(--app-accent); color: white;' : 'background: var(--card-bg); border: 1px solid var(--app-border); color: var(--text-muted);'}"
+				>
+					All ({report.totalTransactions})
+				</button>
+				{#each getAllTypes() as t}
+					{@const color = typeColors[t] || 'var(--text-ghost)'}
+					{#if !['swap', 'addLiquidity', 'withdraw', 'send'].includes(t)}
+						<button
+							onclick={() => (activeFilter = activeFilter === t ? null : t)}
+							class="text-[10px] font-medium px-2.5 py-1 rounded-full transition-all whitespace-nowrap"
+							style="{activeFilter === t ? `background: ${color}; color: white;` : `background: ${color}10; border: 1px solid ${color}30; color: ${color};`}"
+						>
+							{typeLabels[t] || t} ({report.transactions.filter((tx: any) => tx.type === t).length})
+						</button>
+					{/if}
+				{/each}
+				{#if activeFilter}
+					<span class="text-[10px] whitespace-nowrap" style="color: var(--text-faint);">
+						Showing {filteredTxs.length} of {report.totalTransactions}
+					</span>
 				{/if}
-			{/each}
-			{#if activeFilter}
-				<span class="text-[10px]" style="color: var(--text-faint);">
-					Showing {filteredTxs.length} of {report.totalTransactions}
-				</span>
-			{/if}
+			</div>
 		</div>
 
 		<!-- Transaction Table -->
@@ -713,24 +742,19 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each filteredTxs as tx, i}
-						{@const childCount = isDCAParent(tx.type) ? countDCAChildren(filteredTxs, i) : 0}
-						{@const isChild = isDCAChild(tx.type)}
-						{@const parentIdx = (() => { if (!isChild) return -1; for (let j = i - 1; j >= 0; j--) { if (isDCAParent(filteredTxs[j].type)) return j; if (!isDCAChild(filteredTxs[j].type)) break; } return -1; })()}
-						{@const hidden = isChild && parentIdx >= 0 && !expandedDCA.has(parentIdx)}
-						{#if !hidden}
-						<tr style="border-bottom: 1px solid var(--app-border-subtle);{isChild ? ' opacity: 0.7;' : ''}">
+					{#each groupedTxs as group}
+						{@const tx = group.primary}
+						<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 							<td class="px-4 py-2.5 text-xs" style="color: var(--text-muted);">
-								{#if isChild}<span class="pl-3" style="color: var(--text-ghost);">&#8627;</span>{/if}
 								{tx.date ? new Date(tx.date).toLocaleDateString() : '--'}
 							</td>
 							<td class="px-4 py-2.5">
 								<span class="text-[10px] font-bold px-2 py-0.5 rounded" style="background: {typeColors[tx.type] || 'var(--text-ghost)'}15; color: {typeColors[tx.type] || 'var(--text-ghost)'};">
 									{typeLabels[tx.type] || tx.type}
 								</span>
-								{#if childCount > 0}
-									<button onclick={() => toggleDCA(i)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(167,139,250,0.1); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2);">
-										{expandedDCA.has(i) ? 'hide' : `+${childCount} steps`}
+								{#if group.siblings.length > 0}
+									<button onclick={() => toggleGroup(group.txID)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(99,102,241,0.1); color: var(--app-accent); border: 1px solid rgba(99,102,241,0.2);">
+										{expandedGroups.has(group.txID) ? 'hide' : `+${group.siblings.length}`}
 									</button>
 								{/if}
 							</td>
@@ -765,9 +789,49 @@
 								{/if}
 							</td>
 						</tr>
+						{#if group.siblings.length > 0 && expandedGroups.has(group.txID)}
+							{#each group.siblings as sib}
+								<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.6;">
+									<td class="px-4 py-2 text-xs" style="color: var(--text-muted);">
+										<span class="pl-3" style="color: var(--text-ghost);">&#8627;</span>
+										{sib.date ? new Date(sib.date).toLocaleDateString() : '--'}
+									</td>
+									<td class="px-4 py-2">
+										<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background: {typeColors[sib.type] || 'var(--text-ghost)'}15; color: {typeColors[sib.type] || 'var(--text-ghost)'};">
+											{typeLabels[sib.type] || sib.type}
+										</span>
+									</td>
+									<td class="px-4 py-2 text-xs font-mono" style="color: var(--text);">
+										{#if sib.amountIn !== '0'}
+											<span class="inline-flex items-center gap-1.5">
+												{#if logo(sib.assetIn)}
+													<img src={logo(sib.assetIn)} alt={sib.assetIn} class="w-3.5 h-3.5 rounded-full" />
+												{/if}
+												{sib.amountIn} <span style="color: var(--text-faint);">{sib.assetIn}</span>
+											</span>
+										{:else}--{/if}
+									</td>
+									<td class="px-4 py-2 text-xs font-mono" style="color: var(--text);">
+										{#if sib.amountOut !== '0'}
+											<span class="inline-flex items-center gap-1.5">
+												{#if logo(sib.assetOut)}
+													<img src={logo(sib.assetOut)} alt={sib.assetOut} class="w-3.5 h-3.5 rounded-full" />
+												{/if}
+												{sib.amountOut} <span style="color: var(--text-faint);">{sib.assetOut}</span>
+											</span>
+										{:else}--{/if}
+									</td>
+									<td class="px-4 py-2">
+										<span class="text-[9px]" style="color: {sib.status === 'success' ? '#10b981' : '#f59e0b'};">
+											{sib.status}
+										</span>
+									</td>
+									<td class="px-4 py-2"></td>
+								</tr>
+							{/each}
 						{/if}
 					{/each}
-					{#if filteredTxs.length === 0}
+					{#if groupedTxs.length === 0}
 						<tr>
 							<td colspan="6" class="px-4 py-12 text-center text-sm" style="color: var(--text-muted);">
 								{activeFilter ? 'No transactions match this filter.' : 'No transactions found for this address.'}
@@ -804,6 +868,8 @@
 		animation: spin 0.7s linear infinite;
 	}
 	@keyframes spin { to { transform: rotate(360deg); } }
+	.filter-scroll::-webkit-scrollbar { display: none; }
+	.filter-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
 	/* Hero animations */
 	.hero-section {

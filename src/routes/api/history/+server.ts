@@ -345,29 +345,7 @@ async function fetchMidgardActions(address: string): Promise<any[]> {
 		}
 	}
 
-	// 3rd pass: dedup by txID — keep only the best representative per group
-	const seen = new Map<string, number>();
-	const deduped: any[] = [];
-	for (const tx of all) {
-		if (!tx.txID) {
-			deduped.push(tx);
-			continue;
-		}
-		const existingIdx = seen.get(tx.txID);
-		if (existingIdx === undefined) {
-			seen.set(tx.txID, deduped.length);
-			deduped.push(tx);
-		} else {
-			const existing = deduped[existingIdx];
-			const existPri = DEDUP_PRIORITY[existing.type] ?? 500;
-			const newPri = DEDUP_PRIORITY[tx.type] ?? 500;
-			if (newPri < existPri) {
-				deduped[existingIdx] = tx;
-			}
-		}
-	}
-
-	return deduped;
+	return all;
 }
 
 async function fetchBalances(address: string): Promise<Array<{ asset: string; amount: string }>> {
