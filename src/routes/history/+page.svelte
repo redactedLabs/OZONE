@@ -190,10 +190,10 @@
 </script>
 
 <svelte:head>
-	<title>THORChain Tax Report & Wallet History — Ozone</title>
-	<meta name="description" content="Export THORChain wallet history for taxes. Koinly CSV format. Swaps, LP, withdrawals. Anonymous sharing. Free tool by Redacted." />
-	<meta property="og:title" content="THORChain Tax Report & Wallet History — Ozone" />
-	<meta property="og:description" content="Export THORChain wallet history. Koinly CSV. Anonymous sharing." />
+	<title>THORChain Wallet Explorer & History Export — Ozone</title>
+	<meta name="description" content="Explore any THORChain wallet. Export history as Koinly CSV. Share privately with your tax advisor, lawyer, or anyone — no account needed. Free tool by Redacted." />
+	<meta property="og:title" content="THORChain Wallet Explorer & History Export — Ozone" />
+	<meta property="og:description" content="Explore THORChain wallets. Export history. Share privately with anyone." />
 	<meta property="og:type" content="website" />
 	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
@@ -208,213 +208,23 @@
 					<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: #22d3ee;"></span>
 					<span class="relative inline-flex rounded-full h-2 w-2" style="background: #22d3ee;"></span>
 				</span>
-				<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Tax Ready &middot; Privacy First &middot; Chain Agnostic</span>
+				<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Exportable &middot; Shareable &middot; Private</span>
 			</div>
 
 			<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-				Export your <span class="hero-gradient">THORChain taxes</span> in seconds
+				Explore your <span class="hero-gradient">THORChain wallet</span> history
 			</h1>
 
 			<p class="text-base sm:text-lg max-w-2xl mx-auto mb-2" style="color: var(--text-muted);">
-				Koinly-ready CSV export for all your swaps, LP events, and withdrawals.
+				Full transaction history for any THORChain address. Export as CSV, share privately with your tax advisor, lawyer, or anyone.
 			</p>
 			<p class="text-sm max-w-xl mx-auto" style="color: var(--text-faint);">
-				Share via anonymous link. No account needed. Powered by Midgard.
+				No account needed. Wallet address hidden by default. Powered by Midgard.
 			</p>
 		</div>
 
-		<!-- B. Value Proposition Cards -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
-			<div class="hist-card rounded-xl p-5">
-				<div class="flex items-center gap-2 mb-3">
-					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-					</div>
-					<h3 class="text-sm font-semibold" style="color: var(--text);">Tax-Ready Export</h3>
-				</div>
-				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
-					One-click Koinly CSV with labeled swaps, LP events, fees, and ISO timestamps. Compatible with all major tax platforms.
-				</p>
-				<div class="flex flex-wrap gap-1.5">
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(34,211,238,0.08); color: #22d3ee; border: 1px solid rgba(34,211,238,0.15);">Koinly</span>
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(34,211,238,0.08); color: #22d3ee; border: 1px solid rgba(34,211,238,0.15);">CoinTracker</span>
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(34,211,238,0.08); color: #22d3ee; border: 1px solid rgba(34,211,238,0.15);">CSV</span>
-				</div>
-			</div>
-
-			<div class="hist-card rounded-xl p-5">
-				<div class="flex items-center gap-2 mb-3">
-					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-					</div>
-					<h3 class="text-sm font-semibold" style="color: var(--text);">Anonymous Sharing</h3>
-				</div>
-				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
-					Share your report via a unique link with your wallet address hidden. No login or account required. Full privacy by default.
-				</p>
-				<div class="flex flex-wrap gap-1.5">
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(168,85,247,0.08); color: #a855f7; border: 1px solid rgba(168,85,247,0.15);">Private links</span>
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(168,85,247,0.08); color: #a855f7; border: 1px solid rgba(168,85,247,0.15);">No login</span>
-				</div>
-			</div>
-
-			<div class="hist-card rounded-xl p-5">
-				<div class="flex items-center gap-2 mb-3">
-					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-					</div>
-					<h3 class="text-sm font-semibold" style="color: var(--text);">20+ Chains Tracked</h3>
-				</div>
-				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
-					BTC, ETH, SOL, AVAX, ATOM, and more. Powered by Midgard indexer with automatic chain discovery as THORChain adds new assets.
-				</p>
-				<div class="flex flex-wrap gap-1.5">
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Midgard</span>
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Auto-discovers</span>
-				</div>
-			</div>
-		</div>
-
-		<!-- C. Tax Export Showcase -->
-		<div class="hist-card rounded-2xl p-6 sm:p-8 mb-16">
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-				<div>
-					<div class="text-[10px] font-mono uppercase tracking-wider mb-2" style="color: #22d3ee;">Export Format</div>
-					<h2 class="text-xl font-bold mb-4" style="color: var(--text);">Koinly CSV Export</h2>
-					<div class="space-y-2.5 mb-5">
-						{#each [
-							'Swaps labeled with route details',
-							'LP add/withdraw events separated',
-							'Fee amounts in native currency',
-							'ISO 8601 date format',
-						] as item}
-							<div class="flex items-start gap-2">
-								<span class="shrink-0 mt-0.5" style="color: #10b981;">&#10003;</span>
-								<span class="text-xs" style="color: var(--text-muted);">{item}</span>
-							</div>
-						{/each}
-					</div>
-					<div class="flex flex-wrap gap-2">
-						<span class="text-[10px] font-medium px-2.5 py-1 rounded-lg" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle); color: var(--text-muted);">Koinly</span>
-						<span class="text-[10px] font-medium px-2.5 py-1 rounded-lg" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle); color: var(--text-muted);">CoinTracker</span>
-						<span class="text-[10px] font-medium px-2.5 py-1 rounded-lg" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle); color: var(--text-muted);">CryptoTaxCalculator</span>
-					</div>
-				</div>
-				<div class="rounded-xl overflow-hidden" style="background: rgba(15,23,42,0.5); border: 1px solid var(--app-border-subtle);">
-					<div class="flex items-center gap-2 px-4 py-2.5" style="background: rgba(15,23,42,0.8); border-bottom: 1px solid var(--app-border-subtle);">
-						<span class="w-2.5 h-2.5 rounded-full" style="background: #ef4444;"></span>
-						<span class="w-2.5 h-2.5 rounded-full" style="background: #f59e0b;"></span>
-						<span class="w-2.5 h-2.5 rounded-full" style="background: #10b981;"></span>
-						<span class="text-[10px] font-mono ml-2" style="color: var(--text-faint);">koinly-export.csv</span>
-					</div>
-					<div class="p-4 font-mono text-[10px] leading-relaxed overflow-x-auto">
-						<div style="color: var(--text-faint);">Date,Sent Amount,Sent Currency,Received Amount,Received Currency,Label</div>
-						<div><span style="color: #22d3ee;">2024-03-15T14:23:00Z</span>,<span style="color: #f59e0b;">1.5</span>,<span style="color: var(--text-muted);">ETH.ETH</span>,<span style="color: #10b981;">52847.32</span>,<span style="color: var(--text-muted);">THOR.RUNE</span>,</div>
-						<div><span style="color: #22d3ee;">2024-03-14T09:11:00Z</span>,<span style="color: #f59e0b;">10000</span>,<span style="color: var(--text-muted);">THOR.RUNE</span>,,,<span style="color: #a855f7;">liquidity_in</span></div>
-						<div><span style="color: #22d3ee;">2024-03-13T18:45:00Z</span>,,,<span style="color: #10b981;">0.8</span>,<span style="color: var(--text-muted);">BTC.BTC</span>,<span style="color: #a855f7;">liquidity_out</span></div>
-						<div><span style="color: #22d3ee;">2024-03-12T22:07:00Z</span>,<span style="color: #f59e0b;">500</span>,<span style="color: var(--text-muted);">THOR.RUNE</span>,<span style="color: #10b981;">2.41</span>,<span style="color: var(--text-muted);">AVAX.AVAX</span>,</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- D. Audience Segments -->
-		<div class="mb-16">
-			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">Who is this for?</h2>
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<div class="hist-card rounded-xl p-6" style="border-color: rgba(99,102,241,0.15);">
-					<div class="flex items-center gap-2 mb-3">
-						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-						</div>
-						<h3 class="text-sm font-semibold" style="color: var(--text);">For Everyone</h3>
-					</div>
-					<ul class="space-y-2">
-						{#each [
-							'Paste any thor1... address — no account needed',
-							'Export CSV for tax software instantly',
-							'Share a private link with your accountant',
-							'Address hidden by default for privacy',
-						] as item}
-							<li class="flex items-start gap-2 text-xs" style="color: var(--text-muted);">
-								<span style="color: #6366f1;" class="shrink-0 mt-0.5">+</span>
-								{item}
-							</li>
-						{/each}
-					</ul>
-				</div>
-				<div class="hist-card rounded-xl p-6" style="border-color: rgba(168,85,247,0.15);">
-					<div class="flex items-center gap-2 mb-3">
-						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-						</div>
-						<h3 class="text-sm font-semibold" style="color: var(--text);">For Redacted Members</h3>
-					</div>
-					<ul class="space-y-2">
-						{#each [
-							'Private accounts with linked L1 wallets',
-							'Unified compliance across all chains',
-							'Batch export coming soon',
-							'Priority support and extended history',
-						] as item}
-							<li class="flex items-start gap-2 text-xs" style="color: var(--text-muted);">
-								<span style="color: #a855f7;" class="shrink-0 mt-0.5">+</span>
-								{item}
-							</li>
-						{/each}
-					</ul>
-				</div>
-			</div>
-		</div>
-
-		<!-- E. Supported Chains -->
-		<div class="mb-16 text-center">
-			<h2 class="text-lg font-bold mb-6" style="color: var(--text);">Supported Chains</h2>
-			<div class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 max-w-3xl mx-auto mb-3">
-				{#each ['BTC.BTC', 'ETH.ETH', 'BNB.BNB', 'AVAX.AVAX', 'GAIA.ATOM', 'DOGE.DOGE', 'LTC.LTC', 'BCH.BCH', 'BSC.BNB', 'ETH.USDC', 'ETH.USDT', 'ETH.DAI', 'AVAX.USDC', 'ETH.WBTC', 'THOR.RUNE', 'BASE.ETH'] as chain}
-					{@const sym = chain}
-					<div class="flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all" style="background: var(--card-bg); border: 1px solid var(--card-border);">
-						{#if logo(sym)}
-							<img src={logo(sym)} alt={sym} class="w-6 h-6 rounded-full" />
-						{:else}
-							<div class="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold" style="background: var(--app-border); color: var(--text-faint);">{sym.split('.')[1]?.slice(0, 2)}</div>
-						{/if}
-						<span class="text-[8px] font-mono" style="color: var(--text-faint);">{sym.split('.')[1]}</span>
-					</div>
-				{/each}
-			</div>
-			<p class="text-[10px]" style="color: var(--text-faint);">Auto-discovers new chains as THORChain adds support</p>
-		</div>
-
-		<!-- F. How It Works -->
-		<div class="mb-16">
-			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">How it works</h2>
-			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-				<div class="hist-card rounded-xl p-5">
-					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">01</div>
-					<div class="text-sm font-semibold mb-1" style="color: var(--text);">Enter Address</div>
-					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Paste your <code class="text-[10px] px-1 py-0.5 rounded" style="background: var(--bg-code);">thor1...</code> address. We query Midgard directly — no data is stored on our servers.</p>
-				</div>
-				<div class="hist-card rounded-xl p-5">
-					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">02</div>
-					<div class="text-sm font-semibold mb-1" style="color: var(--text);">Review History</div>
-					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">See all swaps, LP events, withdrawals, and sends. Filter by date range and transaction type.</p>
-				</div>
-				<div class="hist-card rounded-xl p-5">
-					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">03</div>
-					<div class="text-sm font-semibold mb-1" style="color: var(--text);">Export or Share</div>
-					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Download Koinly CSV for tax software, or share via anonymous link. Choose public or private mode.</p>
-				</div>
-			</div>
-		</div>
-
-		<!-- G. Try it now + Input card -->
-		<div class="text-center mb-6">
-			<h2 class="text-lg font-bold" style="color: var(--text);">Try it now</h2>
-			<p class="text-xs mt-1" style="color: var(--text-muted);">Paste a THORChain address to generate your report</p>
-		</div>
-
-		<div class="hist-card rounded-2xl p-6 sm:p-8 max-w-xl mx-auto mb-4">
+		<!-- Input card -->
+		<div class="hist-card rounded-2xl p-6 sm:p-8 max-w-xl mx-auto mb-16">
 			<div class="flex gap-3">
 				<input
 					type="text"
@@ -482,18 +292,186 @@
 			{/if}
 		</div>
 
-		<!-- H. Static vs Live explanation -->
-		<div class="max-w-xl mx-auto mt-6 mb-4">
-			<div class="hist-card rounded-xl p-5 flex items-start gap-4">
-				<div class="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+		<!-- B. Value Proposition Cards -->
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
+			<div class="hist-card rounded-xl p-5">
+				<div class="flex items-center gap-2 mb-3">
+					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+					</div>
+					<h3 class="text-sm font-semibold" style="color: var(--text);">CSV Export</h3>
 				</div>
+				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
+					One-click Koinly CSV with labeled swaps, LP events, fees, and ISO timestamps. Or export raw CSV for any spreadsheet or tax tool.
+				</p>
+				<div class="flex flex-wrap gap-1.5">
+					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(34,211,238,0.08); color: #22d3ee; border: 1px solid rgba(34,211,238,0.15);">Koinly</span>
+					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(34,211,238,0.08); color: #22d3ee; border: 1px solid rgba(34,211,238,0.15);">Raw CSV</span>
+				</div>
+			</div>
+
+			<div class="hist-card rounded-xl p-5">
+				<div class="flex items-center gap-2 mb-3">
+					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+					</div>
+					<h3 class="text-sm font-semibold" style="color: var(--text);">Anonymous Sharing</h3>
+				</div>
+				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
+					Share reports with your tax advisor, lawyer, or anyone via a unique link. Wallet address hidden by default. No login required.
+				</p>
+				<div class="flex flex-wrap gap-1.5">
+					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(168,85,247,0.08); color: #a855f7; border: 1px solid rgba(168,85,247,0.15);">Private links</span>
+					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(168,85,247,0.08); color: #a855f7; border: 1px solid rgba(168,85,247,0.15);">No login</span>
+				</div>
+			</div>
+
+			<div class="hist-card rounded-xl p-5">
+				<div class="flex items-center gap-2 mb-3">
+					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+					</div>
+					<h3 class="text-sm font-semibold" style="color: var(--text);">All THORChain L1s</h3>
+				</div>
+				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
+					Every L1 chain supported by THORChain — BTC, ETH, BNB, AVAX, ATOM, DOGE, LTC, BCH, BASE, BSC, and all pool assets. Powered by Midgard.
+				</p>
+				<div class="flex flex-wrap gap-1.5">
+					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Midgard</span>
+					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">All pool assets</span>
+				</div>
+			</div>
+		</div>
+
+		<!-- C. Tax Export Showcase -->
+		<div class="hist-card rounded-2xl p-6 sm:p-8 mb-16">
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 				<div>
-					<h3 class="text-xs font-semibold mb-1" style="color: var(--text);">Static vs Live reports</h3>
-					<p class="text-[11px] leading-relaxed" style="color: var(--text-muted);">
-						<strong style="color: var(--text);">Snapshot</strong> — Report is frozen at creation time, perfect for tax filing a specific period.
-						<strong style="color: var(--text);">Live</strong> — Report auto-updates with new transactions, useful for ongoing monitoring or sharing with someone who needs up-to-date data.
-					</p>
+					<div class="text-[10px] font-mono uppercase tracking-wider mb-2" style="color: #22d3ee;">Export Format</div>
+					<h2 class="text-xl font-bold mb-4" style="color: var(--text);">CSV Export</h2>
+					<div class="space-y-2.5 mb-5">
+						{#each [
+							'Swaps labeled with route details',
+							'LP add/withdraw events separated',
+							'Fee amounts in native currency',
+							'ISO 8601 date format',
+						] as item}
+							<div class="flex items-start gap-2">
+								<span class="shrink-0 mt-0.5" style="color: #10b981;">&#10003;</span>
+								<span class="text-xs" style="color: var(--text-muted);">{item}</span>
+							</div>
+						{/each}
+					</div>
+					<div class="flex flex-wrap gap-2">
+						<span class="text-[10px] font-medium px-2.5 py-1 rounded-lg" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle); color: var(--text-muted);">Koinly</span>
+						<span class="text-[10px] font-medium px-2.5 py-1 rounded-lg" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle); color: var(--text-muted);">CoinTracker</span>
+						<span class="text-[10px] font-medium px-2.5 py-1 rounded-lg" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle); color: var(--text-muted);">CryptoTaxCalculator</span>
+					</div>
+				</div>
+				<div class="rounded-xl overflow-hidden" style="background: rgba(15,23,42,0.5); border: 1px solid var(--app-border-subtle);">
+					<div class="flex items-center gap-2 px-4 py-2.5" style="background: rgba(15,23,42,0.8); border-bottom: 1px solid var(--app-border-subtle);">
+						<span class="w-2.5 h-2.5 rounded-full" style="background: #ef4444;"></span>
+						<span class="w-2.5 h-2.5 rounded-full" style="background: #f59e0b;"></span>
+						<span class="w-2.5 h-2.5 rounded-full" style="background: #10b981;"></span>
+						<span class="text-[10px] font-mono ml-2" style="color: var(--text-faint);">koinly-export.csv</span>
+					</div>
+					<div class="p-4 font-mono text-[10px] leading-relaxed overflow-x-auto">
+						<div style="color: var(--text-faint);">Date,Sent Amount,Sent Currency,Received Amount,Received Currency,Label</div>
+						<div><span style="color: #22d3ee;">2024-03-15T14:23:00Z</span>,<span style="color: #f59e0b;">1.5</span>,<span style="color: var(--text-muted);">ETH.ETH</span>,<span style="color: #10b981;">52847.32</span>,<span style="color: var(--text-muted);">THOR.RUNE</span>,</div>
+						<div><span style="color: #22d3ee;">2024-03-14T09:11:00Z</span>,<span style="color: #f59e0b;">10000</span>,<span style="color: var(--text-muted);">THOR.RUNE</span>,,,<span style="color: #a855f7;">liquidity_in</span></div>
+						<div><span style="color: #22d3ee;">2024-03-13T18:45:00Z</span>,,,<span style="color: #10b981;">0.8</span>,<span style="color: var(--text-muted);">BTC.BTC</span>,<span style="color: #a855f7;">liquidity_out</span></div>
+						<div><span style="color: #22d3ee;">2024-03-12T22:07:00Z</span>,<span style="color: #f59e0b;">500</span>,<span style="color: var(--text-muted);">THOR.RUNE</span>,<span style="color: #10b981;">2.41</span>,<span style="color: var(--text-muted);">AVAX.AVAX</span>,</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- D. Audience Segments -->
+		<div class="mb-16">
+			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">Who is this for?</h2>
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div class="hist-card rounded-xl p-6" style="border-color: rgba(99,102,241,0.15);">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+						</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text);">For Everyone</h3>
+					</div>
+					<ul class="space-y-2">
+						{#each [
+							'Paste any thor1... address — no account needed',
+							'Export CSV for tax tools or spreadsheets',
+							'Share privately with tax advisor, lawyer, or anyone',
+							'Address hidden by default for privacy',
+						] as item}
+							<li class="flex items-start gap-2 text-xs" style="color: var(--text-muted);">
+								<span style="color: #6366f1;" class="shrink-0 mt-0.5">+</span>
+								{item}
+							</li>
+						{/each}
+					</ul>
+				</div>
+				<div class="hist-card rounded-xl p-6" style="border-color: rgba(168,85,247,0.15);">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+						</div>
+						<h3 class="text-sm font-semibold" style="color: var(--text);">For Redacted Members</h3>
+					</div>
+					<ul class="space-y-2">
+						{#each [
+							'Private accounts with linked L1 wallets',
+							'Share trade history with externals securely',
+							'Unified compliance across all chains',
+							'Batch export coming soon',
+						] as item}
+							<li class="flex items-start gap-2 text-xs" style="color: var(--text-muted);">
+								<span style="color: #a855f7;" class="shrink-0 mt-0.5">+</span>
+								{item}
+							</li>
+						{/each}
+					</ul>
+				</div>
+			</div>
+		</div>
+
+		<!-- E. Supported Chains -->
+		<div class="mb-16 text-center">
+			<h2 class="text-lg font-bold mb-6" style="color: var(--text);">Supported Chains</h2>
+			<div class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 max-w-3xl mx-auto mb-3">
+				{#each ['BTC.BTC', 'ETH.ETH', 'BNB.BNB', 'AVAX.AVAX', 'GAIA.ATOM', 'DOGE.DOGE', 'LTC.LTC', 'BCH.BCH', 'BSC.BNB', 'ETH.USDC', 'ETH.USDT', 'ETH.DAI', 'AVAX.USDC', 'ETH.WBTC', 'THOR.RUNE', 'BASE.ETH'] as chain}
+					{@const sym = chain}
+					<div class="flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all" style="background: var(--card-bg); border: 1px solid var(--card-border);">
+						{#if logo(sym)}
+							<img src={logo(sym)} alt={sym} class="w-6 h-6 rounded-full" />
+						{:else}
+							<div class="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold" style="background: var(--app-border); color: var(--text-faint);">{sym.split('.')[1]?.slice(0, 2)}</div>
+						{/if}
+						<span class="text-[8px] font-mono" style="color: var(--text-faint);">{sym.split('.')[1]}</span>
+					</div>
+				{/each}
+			</div>
+			<p class="text-[10px]" style="color: var(--text-faint);">Auto-discovers new chains as THORChain adds support</p>
+		</div>
+
+		<!-- F. How It Works -->
+		<div class="mb-16">
+			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">How it works</h2>
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+				<div class="hist-card rounded-xl p-5">
+					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">01</div>
+					<div class="text-sm font-semibold mb-1" style="color: var(--text);">Enter Address</div>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Paste your <code class="text-[10px] px-1 py-0.5 rounded" style="background: var(--bg-code);">thor1...</code> address. We query Midgard directly — no data is stored on our servers.</p>
+				</div>
+				<div class="hist-card rounded-xl p-5">
+					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">02</div>
+					<div class="text-sm font-semibold mb-1" style="color: var(--text);">Review History</div>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">See all swaps, LP events, withdrawals, and sends. Filter by date range and transaction type.</p>
+				</div>
+				<div class="hist-card rounded-xl p-5">
+					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">03</div>
+					<div class="text-sm font-semibold mb-1" style="color: var(--text);">Export or Share</div>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Download CSV for tax tools, or share via private link with your advisor, lawyer, or team. Choose public or private mode.</p>
 				</div>
 			</div>
 		</div>
