@@ -71,7 +71,7 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 	'wasm-rujira-bow/deposit':            { type: 'bow-deposit',     label: 'AMM Deposit' },
 	'wasm-rujira-bow/withdraw':           { type: 'bow-withdraw',    label: 'AMM Withdraw' },
 	// TC Swap — THORChain Base Layer
-	'wasm-rujira-thorchain-swap/swap':    { type: 'tc-swap',         label: 'Swap (TC)' },
+	'wasm-rujira-thorchain-swap/swap':    { type: 'tc-swap',         label: 'Market Order' },
 	// GHOST Vault — Lending
 	'wasm-rujira-ghost-vault/borrow':     { type: 'ghost-borrow',    label: 'Borrow' },
 	'wasm-rujira-ghost-vault/repay':      { type: 'ghost-repay',     label: 'Repay' },

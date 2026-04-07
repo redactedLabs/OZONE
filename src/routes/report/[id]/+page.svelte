@@ -27,7 +27,7 @@
 		// BOW — AMM
 		'bow-swap': 'AMM Swap', 'bow-deposit': 'AMM Deposit', 'bow-withdraw': 'AMM Withdraw',
 		// TC Swap
-		'tc-swap': 'Swap (TC)',
+		'tc-swap': 'Market Order',
 		// Ghost Vault — Lending
 		'ghost-borrow': 'Borrow', 'ghost-repay': 'Repay',
 		'ghost-lend': 'Lend', 'ghost-withdraw': 'Withdraw Lend',
@@ -171,6 +171,18 @@
 			}
 		}
 		return groups;
+	}
+
+	// Internal mechanics — hidden as siblings, summarized as count
+	const INTERNAL_TYPES = new Set([
+		'fin-trade', 'fin-arb', 'fin-range-fee', 'fin-mm-fee',
+		'ghost-borrow', 'ghost-repay',
+		'crank-fee', 'deferred-exec', 'revenue-run', 'contract',
+	]);
+
+	function splitSiblings(siblings: any[]): { visible: any[]; hiddenCount: number } {
+		const visible = siblings.filter((s: any) => !INTERNAL_TYPES.has(s.type));
+		return { visible, hiddenCount: siblings.length - visible.length };
 	}
 
 	let expandedGroups = $state<Set<string>>(new Set());
@@ -407,6 +419,7 @@
 			<tbody>
 				{#each groupedTxs as group}
 					{@const tx = group.primary}
+					{@const split = splitSiblings(group.siblings)}
 					<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 						<td class="px-4 py-2.5 text-xs" style="color: var(--text-muted);">
 							{tx.date ? new Date(tx.date).toLocaleDateString() : '--'}
@@ -415,9 +428,9 @@
 							<span class="text-[10px] font-bold px-2 py-0.5 rounded" style="background: {typeColors[tx.type] || 'var(--text-ghost)'}15; color: {typeColors[tx.type] || 'var(--text-ghost)'};">
 								{typeLabels[tx.type] || tx.type}
 							</span>
-							{#if group.siblings.length > 0}
+							{#if split.visible.length > 0}
 								<button onclick={() => toggleGroup(group.txID)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(99,102,241,0.1); color: var(--app-accent); border: 1px solid rgba(99,102,241,0.2);">
-									{expandedGroups.has(group.txID) ? 'hide' : `+${group.siblings.length}`}
+									{expandedGroups.has(group.txID) ? 'hide' : `+${split.visible.length}`}
 								</button>
 							{/if}
 							{#if tx.fromLabel || tx.toLabel}
@@ -459,8 +472,8 @@
 							</td>
 						{/if}
 					</tr>
-					{#if group.siblings.length > 0 && expandedGroups.has(group.txID)}
-						{#each group.siblings.slice(0, 50) as sib}
+					{#if split.visible.length > 0 && expandedGroups.has(group.txID)}
+						{#each split.visible as sib}
 							<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.6;">
 								<td class="px-4 py-2 text-xs" style="color: var(--text-muted);">
 									<span class="pl-3" style="color: var(--text-ghost);">&#8627;</span>
@@ -506,13 +519,7 @@
 								{/if}
 							</tr>
 						{/each}
-						{#if group.siblings.length > 50}
-							<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.4;">
-								<td colspan={data.revealWallet ? 6 : 5} class="px-4 py-2 text-center text-[10px]" style="color: var(--text-faint);">
-									... and {group.siblings.length - 50} more sub-transactions
-								</td>
-							</tr>
-						{/if}
+
 					{/if}
 				{/each}
 				{#if groupedTxs.length === 0}
