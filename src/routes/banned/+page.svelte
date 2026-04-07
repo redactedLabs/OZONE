@@ -59,9 +59,9 @@
 
 <svelte:head>
 	<title>Sanctioned Addresses — OFAC, EU, Tether Frozen List | Ozone</title>
-	<meta name="description" content="Browse 5,000+ sanctioned and blacklisted crypto addresses. OFAC SDN, EU sanctions, Tether frozen, known hacks, ScamSniffer. Updated every 30 minutes. Free compliance database for THORChain & Rujira." />
+	<meta name="description" content="Browse thousands of sanctioned and blacklisted crypto addresses. OFAC SDN, EU sanctions, Tether frozen, known hacks, ScamSniffer. Updated every 30 minutes. Free compliance database for THORChain & Rujira." />
 	<meta property="og:title" content="Sanctioned Crypto Addresses — Ozone" />
-	<meta property="og:description" content="5,000+ sanctioned addresses from OFAC, EU, Tether, hack databases. Free & updated every 30 min." />
+	<meta property="og:description" content="thousands of sanctioned addresses from OFAC, EU, Tether, hack databases. Free & updated every 30 min." />
 	<meta property="og:url" content="https://ozone.redacted.gg/banned" />
 </svelte:head>
 

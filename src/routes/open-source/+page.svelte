@@ -120,7 +120,7 @@
 	<!-- Data Sources -->
 	<h2 class="text-lg font-bold mb-2" style="color: var(--text);">Data Sources</h2>
 	<p class="text-sm mb-6" style="color: var(--text-muted);">
-		Every address screened by Ozone is checked against these sources. Government sanctions lists, on-chain blacklists, and community-curated databases — covering 5,000+ flagged entities.
+		Every address screened by Ozone is checked against these sources. Government sanctions lists, on-chain blacklists, and community-curated databases — covering thousands of flagged entities.
 	</p>
 
 	<div class="space-y-3 mb-16">

@@ -438,7 +438,7 @@
 	<!-- Sync status bar -->
 	<div class="dash-box rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3" data-win-title="Sync Status">
 		<p class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-secondary);">
-			Every address screened against OFAC, EU sanctions, known hacks, Tether frozen wallets, and 5,000+ flagged entities.
+			Every address screened against OFAC, EU sanctions, known hacks, Tether frozen wallets, and thousands of flagged entities.
 			<a href="https://docs.redacted.money/using-redacted/compliance" target="_blank" rel="noopener" style="color: var(--app-accent); text-decoration: none;"> Learn more &#8599;</a>
 		</p>
 		<div class="flex items-center gap-3 shrink-0">

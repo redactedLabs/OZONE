@@ -82,7 +82,7 @@ if data["flagged"]:
 		</div>
 		<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-3" style="color: var(--text);">Ozone Screening API</h1>
 		<p class="text-sm sm:text-base max-w-2xl mx-auto" style="color: var(--text-muted);">
-			One endpoint. Every sanctions list. Screen any address against OFAC, EU sanctions, known hacks, Tether frozen wallets, and 5,000+ flagged entities — zero auth required.
+			One endpoint. Every sanctions list. Screen any address against OFAC, EU sanctions, known hacks, Tether frozen wallets, and thousands of flagged entities — zero auth required.
 		</p>
 	</div>
 
