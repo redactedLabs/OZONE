@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { rujiraUsers, l1Addresses, syncLog } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import pLimit from 'p-limit';
 import { bech32 } from 'bech32';
@@ -236,6 +236,10 @@ export async function syncAllMembers(): Promise<{
 
 		// Update lastSeen for all
 		await db.update(rujiraUsers).set({ lastSeen: new Date() });
+
+		// Defensive cleanup: remove any non-thor addresses from rujira_users
+		await db.delete(rujiraUsers)
+			.where(sql`thor_address NOT LIKE 'thor%'`);
 
 		const duration = Date.now() - start;
 		await db.insert(syncLog).values({

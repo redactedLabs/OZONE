@@ -48,6 +48,7 @@
 			links: [
 				{ label: 'Compliance Lists', href: '/admin/lists' },
 				{ label: 'Live Logs', href: '/admin/logs' },
+				{ label: 'Sync', href: '/admin/sync' },
 				{ label: 'Settings', href: '/admin/settings' },
 			]
 		}] : []),
