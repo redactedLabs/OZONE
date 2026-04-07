@@ -76,6 +76,8 @@
 		'calc-internal': 'DCA (step)', 'calc-update': 'DCA Update',
 		// AutoRujira
 		'auto-workflow': 'Auto Workflow', 'auto-cancel': 'Cancel Workflow',
+		'auto-config': 'Auto Config', 'auto-fee-wd': 'Auto Fee WD',
+		'deferred-exec': 'Deferred Exec', 'crank-fee': 'Crank Fee',
 		// Staking
 		'ruji-stake': 'RUJI Stake', 'ruji-unstake': 'RUJI Unstake', 'ruji-claim': 'RUJI Claim',
 		// Pilot — Liquidations
@@ -121,6 +123,8 @@
 		'calc-internal': '#94a3b8', 'calc-update': '#94a3b8',
 		// Auto
 		'auto-workflow': '#94a3b8', 'auto-cancel': '#94a3b8',
+		'auto-config': '#94a3b8', 'auto-fee-wd': '#94a3b8',
+		'deferred-exec': '#64748b', 'crank-fee': '#64748b',
 		// Staking
 		'ruji-stake': '#10b981', 'ruji-unstake': '#f59e0b', 'ruji-claim': '#10b981',
 		// Pilot

@@ -14,49 +14,135 @@
 	const typeLabels: Record<string, string> = {
 		swap: 'Swap', addLiquidity: 'Add LP', withdraw: 'Withdraw', send: 'Send', refund: 'Refund',
 		switch: 'Switch', contract: 'Contract', donate: 'Donate',
-		'fin-trade': 'Trade', 'fin-arb': 'Arb', 'fin-range': 'Range LP',
-		'fin-range-fee': 'Range Fee', 'ghost-borrow': 'Borrow', 'ghost-repay': 'Repay',
+		// FIN — Orderbook
+		'fin-trade': 'Trade', 'fin-arb': 'Arb',
+		'fin-order': 'Limit Order', 'fin-order-wd': 'Cancel Order',
+		'fin-order-inc': 'Increase Order', 'fin-order-dec': 'Retract Order',
+		'fin-mm-fee': 'MM Fee',
+		// FIN Range — Concentrated Liquidity
+		'fin-range': 'Range Create', 'fin-range-dep': 'Range Deposit',
+		'fin-range-wd': 'Range Withdraw', 'fin-range-claim': 'Range Claim',
+		'fin-range-close': 'Range Close', 'fin-range-xfer': 'Range Transfer',
+		'fin-range-fee': 'Range Fee',
+		// BOW — AMM
+		'bow-swap': 'AMM Swap', 'bow-deposit': 'AMM Deposit', 'bow-withdraw': 'AMM Withdraw',
+		// TC Swap
+		'tc-swap': 'Swap (TC)',
+		// Ghost Vault — Lending
+		'ghost-borrow': 'Borrow', 'ghost-repay': 'Repay',
 		'ghost-lend': 'Lend', 'ghost-withdraw': 'Withdraw Lend',
-		'bow-swap': 'AMM Swap', 'tc-swap': 'Swap (TC)',
+		// Ghost Credit — Credit Accounts
+		'ghost-credit-create': 'Credit Account', 'ghost-credit-action': 'Credit Action',
+		'ghost-credit-borrow': 'Credit Borrow', 'ghost-credit-repay': 'Credit Repay',
+		'ghost-credit-send': 'Credit Send', 'ghost-credit-exec': 'Credit Execute',
+		'ghost-liquidation': 'Liquidation',
+		// CALC — DCA
 		'calc-init': 'DCA Create', 'calc-process': 'DCA Execute',
 		'calc-withdraw': 'DCA Withdraw', 'calc-create': 'DCA Strategy',
 		'calc-internal': 'DCA (step)', 'calc-update': 'DCA Update',
-		'fin-order': 'Limit Order', 'fin-order-wd': 'Cancel Order',
-		'auto-workflow': 'Auto Workflow',
+		// AutoRujira
+		'auto-workflow': 'Auto Workflow', 'auto-cancel': 'Cancel Workflow',
+		'auto-config': 'Auto Config', 'auto-fee-wd': 'Auto Fee WD',
+		// System
+		'deferred-exec': 'Deferred Exec', 'crank-fee': 'Crank Fee',
+		// Staking
+		'ruji-stake': 'RUJI Stake', 'ruji-unstake': 'RUJI Unstake', 'ruji-claim': 'RUJI Claim',
+		// Pilot — Liquidations
+		'pilot-swap': 'Liquidation Swap', 'pilot-order': 'Liquidation Bid',
+		// Liquidy
+		'liquidy-swap': 'Liquidy Swap', 'liquidy-exec': 'Liquidy Execute',
+		// BRUNE
+		'brune-swap': 'BRUNE Swap', 'brune-mint': 'BRUNE Mint', 'brune-burn': 'BRUNE Burn',
+		'brune-bond': 'BRUNE Bond', 'brune-fee': 'BRUNE Fee',
+		// Nami Index
+		'nami-deposit': 'Index Deposit', 'nami-withdraw': 'Index Withdraw',
+		// Other
+		'revenue-run': 'Revenue Dist', 'merge-deposit': 'Merge', 'merge-withdraw': 'Merge Out',
 		'secure': 'Secure', 'tcy_stake': 'TCY Stake', 'tcy_unstake': 'TCY Unstake',
 	};
 	const typeColors: Record<string, string> = {
 		swap: 'var(--app-accent)', addLiquidity: '#10b981', withdraw: '#f59e0b', send: '#22d3ee', refund: '#ef4444',
 		switch: '#a78bfa', contract: '#64748b', donate: '#f472b6',
-		'fin-trade': '#f59e0b', 'fin-arb': '#f97316', 'fin-range': '#10b981',
-		'fin-range-fee': '#10b981', 'ghost-borrow': '#ef4444', 'ghost-repay': '#22c55e',
+		'fin-trade': '#f59e0b', 'fin-arb': '#f97316',
+		'fin-order': '#f59e0b', 'fin-order-wd': '#f59e0b',
+		'fin-order-inc': '#f59e0b', 'fin-order-dec': '#f59e0b',
+		'fin-mm-fee': '#f97316',
+		'fin-range': '#10b981', 'fin-range-dep': '#10b981',
+		'fin-range-wd': '#10b981', 'fin-range-claim': '#10b981',
+		'fin-range-close': '#10b981', 'fin-range-xfer': '#10b981',
+		'fin-range-fee': '#10b981',
+		'bow-swap': '#6366f1', 'bow-deposit': '#6366f1', 'bow-withdraw': '#6366f1',
+		'tc-swap': '#6366f1',
+		'ghost-borrow': '#ef4444', 'ghost-repay': '#22c55e',
 		'ghost-lend': '#6366f1', 'ghost-withdraw': '#a78bfa',
-		'bow-swap': '#6366f1', 'tc-swap': '#6366f1',
+		'ghost-credit-create': '#8b5cf6', 'ghost-credit-action': '#8b5cf6',
+		'ghost-credit-borrow': '#ef4444', 'ghost-credit-repay': '#22c55e',
+		'ghost-credit-send': '#8b5cf6', 'ghost-credit-exec': '#8b5cf6',
+		'ghost-liquidation': '#ef4444',
 		'calc-init': '#a78bfa', 'calc-process': '#a78bfa',
 		'calc-withdraw': '#a78bfa', 'calc-create': '#a78bfa',
 		'calc-internal': '#94a3b8', 'calc-update': '#94a3b8',
-		'fin-order': '#f59e0b', 'fin-order-wd': '#f59e0b',
-		'auto-workflow': '#94a3b8',
+		'auto-workflow': '#94a3b8', 'auto-cancel': '#94a3b8',
+		'auto-config': '#94a3b8', 'auto-fee-wd': '#94a3b8',
+		'deferred-exec': '#64748b', 'crank-fee': '#64748b',
+		'ruji-stake': '#10b981', 'ruji-unstake': '#f59e0b', 'ruji-claim': '#10b981',
+		'pilot-swap': '#ef4444', 'pilot-order': '#ef4444',
+		'liquidy-swap': '#22d3ee', 'liquidy-exec': '#22d3ee',
+		'brune-swap': '#f97316', 'brune-mint': '#f97316', 'brune-burn': '#f97316',
+		'brune-bond': '#f97316', 'brune-fee': '#94a3b8',
+		'nami-deposit': '#3b82f6', 'nami-withdraw': '#3b82f6',
+		'revenue-run': '#94a3b8', 'merge-deposit': '#94a3b8', 'merge-withdraw': '#94a3b8',
 		'secure': '#3b82f6', 'tcy_stake': '#10b981', 'tcy_unstake': '#f59e0b',
 	};
 
-	const txSwaps = $derived(data.transactions?.filter((t: any) => t.type === 'swap').length || 0);
-	const txAdds = $derived(data.transactions?.filter((t: any) => t.type === 'addLiquidity').length || 0);
-	const txWithdraws = $derived(data.transactions?.filter((t: any) => t.type === 'withdraw').length || 0);
-	const txSends = $derived(data.transactions?.filter((t: any) => t.type === 'send').length || 0);
+	// Filter state
+	let activeFilter = $state('');
+
+	// Count transactions by type (across all txs, not just groups)
+	const typeCounts = $derived(() => {
+		const counts: Record<string, number> = {};
+		for (const tx of (data.transactions || [])) {
+			counts[tx.type] = (counts[tx.type] || 0) + 1;
+		}
+		return counts;
+	});
+
+	// Filtered transactions
+	const filteredTxs = $derived(() => {
+		const txs = data.transactions || [];
+		if (!activeFilter) return txs;
+		return txs.filter((tx: any) => tx.type === activeFilter);
+	});
 
 	// Group transactions by txID — sibling contract events collapse under one row
 	const GROUP_PRIORITY: Record<string, number> = {
 		'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
 		'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
-		'calc-create': 20, 'calc-update': 21, 'calc-withdraw': 22,
-		'fin-order': 23, 'fin-order-wd': 24, 'fin-range': 25,
-		'ghost-lend': 26, 'ghost-withdraw': 27,
-		'tc-swap': 30, 'bow-swap': 31, 'fin-trade': 32,
-		'auto-workflow': 40,
-		'calc-process': 50, 'calc-init': 51, 'calc-internal': 52,
-		'ghost-borrow': 60, 'ghost-repay': 61,
-		'fin-arb': 70, 'fin-range-fee': 71,
+		'calc-create': 15, 'calc-update': 16, 'calc-withdraw': 17,
+		'fin-order': 18, 'fin-order-wd': 19, 'fin-order-inc': 18, 'fin-order-dec': 19,
+		'fin-range': 20, 'fin-range-dep': 20, 'fin-range-wd': 20,
+		'fin-range-claim': 20, 'fin-range-close': 20, 'fin-range-xfer': 20,
+		'ghost-lend': 21, 'ghost-withdraw': 22,
+		'ghost-credit-create': 23, 'ghost-credit-borrow': 24, 'ghost-credit-repay': 25,
+		'ghost-credit-send': 26, 'ghost-credit-exec': 27, 'ghost-credit-action': 28,
+		'ghost-liquidation': 24,
+		'liquidy-swap': 29,
+		'bow-deposit': 30, 'bow-withdraw': 30,
+		'auto-workflow': 31, 'auto-cancel': 32,
+		'auto-config': 40, 'auto-fee-wd': 40,
+		'ruji-stake': 33, 'ruji-unstake': 33, 'ruji-claim': 33,
+		'pilot-swap': 34, 'pilot-order': 34,
+		'brune-swap': 35, 'brune-mint': 35, 'brune-burn': 35,
+		'nami-deposit': 36, 'nami-withdraw': 36,
+		'merge-deposit': 37, 'merge-withdraw': 37,
+		'tc-swap': 50, 'bow-swap': 51, 'fin-trade': 52,
+		'calc-process': 55, 'calc-init': 56, 'calc-internal': 57,
+		'liquidy-exec': 58,
+		'ghost-borrow': 70, 'ghost-repay': 71,
+		'fin-arb': 80, 'fin-range-fee': 81, 'fin-mm-fee': 82,
+		'brune-bond': 80, 'brune-fee': 82,
+		'deferred-exec': 85, 'crank-fee': 86,
+		'revenue-run': 90,
 		'contract': 100, 'unknown': 999,
 	};
 
@@ -94,7 +180,7 @@
 		expandedGroups = next;
 	}
 
-	const groupedTxs = $derived(groupByTxID(data.transactions || []));
+	const groupedTxs = $derived(groupByTxID(filteredTxs()));
 
 	function exportCSV() {
 		if (!data.transactions) return;
@@ -250,7 +336,7 @@
 				<div class="text-[10px] mt-4 mb-2" style="color: var(--text-faint);">BALANCES AT TIME OF REPORT</div>
 				<div class="flex flex-wrap gap-2">
 					{#each data.balances as bal}
-						
+
 						<span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle);">
 							{#if logo(bal.asset.toUpperCase())}
 								<img src={logo(bal.asset.toUpperCase())} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
@@ -267,7 +353,7 @@
 			<div class="text-[10px] mb-2" style="color: var(--text-faint);">BALANCES AT TIME OF REPORT</div>
 			<div class="flex flex-wrap gap-2">
 				{#each data.balances as bal}
-					
+
 					<span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono" style="background: rgba(99,102,241,0.06); border: 1px solid var(--app-border-subtle);">
 						{#if logo(bal.asset.toUpperCase())}
 							<img src={logo(bal.asset.toUpperCase())} alt={bal.asset} class="w-3.5 h-3.5 rounded-full" />
@@ -280,24 +366,25 @@
 		</div>
 	{/if}
 
-	<!-- Stats row -->
-	<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-		<div class="rpt-card rounded-xl p-4">
-			<div class="text-xl font-bold font-mono" style="color: var(--app-accent);">{txSwaps}</div>
-			<div class="text-[10px]" style="color: var(--text-muted);">Swaps</div>
-		</div>
-		<div class="rpt-card rounded-xl p-4">
-			<div class="text-xl font-bold font-mono" style="color: #10b981;">{txAdds}</div>
-			<div class="text-[10px]" style="color: var(--text-muted);">LP Adds</div>
-		</div>
-		<div class="rpt-card rounded-xl p-4">
-			<div class="text-xl font-bold font-mono" style="color: #f59e0b;">{txWithdraws}</div>
-			<div class="text-[10px]" style="color: var(--text-muted);">Withdrawals</div>
-		</div>
-		<div class="rpt-card rounded-xl p-4">
-			<div class="text-xl font-bold font-mono" style="color: #22d3ee;">{txSends}</div>
-			<div class="text-[10px]" style="color: var(--text-muted);">Sends</div>
-		</div>
+	<!-- Filter chips -->
+	<div class="flex flex-wrap gap-1.5 mb-4 overflow-x-auto pb-1">
+		<button
+			onclick={() => activeFilter = ''}
+			class="filter-chip"
+			class:active={!activeFilter}
+		>
+			All ({data.transactions?.length || 0})
+		</button>
+		{#each Object.entries(typeCounts()).sort(([, a], [, b]) => b - a) as [type, count]}
+			<button
+				onclick={() => activeFilter = activeFilter === type ? '' : type}
+				class="filter-chip"
+				class:active={activeFilter === type}
+				style={activeFilter === type ? `background: ${typeColors[type] || '#64748b'}22; border-color: ${typeColors[type] || '#64748b'}66; color: ${typeColors[type] || '#64748b'};` : ''}
+			>
+				{typeLabels[type] || type} ({count})
+			</button>
+		{/each}
 	</div>
 
 	<!-- Transaction Table -->
@@ -452,5 +539,26 @@
 	@keyframes live-pulse {
 		0%, 100% { opacity: 1; box-shadow: 0 0 6px #22d3ee; }
 		50% { opacity: 0.5; box-shadow: 0 0 12px #22d3ee; }
+	}
+	.filter-chip {
+		padding: 3px 10px;
+		border-radius: 6px;
+		font-size: 11px;
+		font-weight: 500;
+		background: transparent;
+		border: 1px solid var(--app-border);
+		color: var(--text-muted);
+		cursor: pointer;
+		white-space: nowrap;
+		transition: all 0.15s;
+	}
+	.filter-chip:hover {
+		border-color: var(--text-ghost);
+		color: var(--text);
+	}
+	.filter-chip.active {
+		background: rgba(99,102,241,0.1);
+		border-color: rgba(99,102,241,0.3);
+		color: var(--app-accent);
 	}
 </style>

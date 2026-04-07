@@ -99,6 +99,11 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 	// Auto Workflow (AutoRujira)
 	'wasm-autorujira-workflow-manager/execute_instance': { type: 'auto-workflow',    label: 'Auto Workflow' },
 	'wasm-autorujira-workflow-manager/cancel_instance':  { type: 'auto-cancel',      label: 'Cancel Workflow' },
+	'wasm-autorujira-workflow-manager/set_user_payment_config': { type: 'auto-config', label: 'Auto Config' },
+	'wasm-autorujira-fee-manager/withdraw':              { type: 'auto-fee-wd',     label: 'Auto Fee Withdraw' },
+	// System / Crank
+	'wasm-deferred-exec-queued':                         { type: 'deferred-exec',   label: 'Deferred Exec' },
+	'wasm-crank-fee':                                    { type: 'crank-fee',       label: 'Crank Fee' },
 	// Staking (RUJI/sTCY)
 	'wasm-rujira-staking/liquid.bond':    { type: 'ruji-stake',      label: 'RUJI Stake' },
 	'wasm-rujira-staking/liquid.unbond':  { type: 'ruji-unstake',    label: 'RUJI Unstake' },
@@ -155,6 +160,8 @@ const DEDUP_PRIORITY: Record<string, number> = {
 	'ghost-borrow': 60, 'ghost-repay': 61,
 	'fin-arb': 70, 'fin-range-fee': 71, 'fin-mm-fee': 72,
 	'revenue-run': 80, 'merge-deposit': 81, 'merge-withdraw': 81,
+	'auto-config': 40, 'auto-fee-wd': 40,
+	'deferred-exec': 85, 'crank-fee': 86,
 	'contract': 100, 'unknown': 999,
 };
 
@@ -417,6 +424,10 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 		}
 		case 'auto-workflow':
 		case 'auto-cancel':
+		case 'auto-config':
+		case 'auto-fee-wd':
+		case 'deferred-exec':
+		case 'crank-fee':
 		case 'revenue-run':
 		case 'merge-deposit':
 		case 'merge-withdraw': {
