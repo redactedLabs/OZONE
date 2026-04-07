@@ -300,9 +300,10 @@ html.win98 body {
 	height: 20px !important;
 	width: auto !important;
 }
-/* ALL ghost logos → swap to purple gradient version */
+/* ALL ghost logos → swap to pixelated purple ghost */
 .win98 img[src*="redacted-logo"] {
-	content: url('/redacted-logo-purple.svg') !important;
+	content: url('/redacted-logo-purple.png') !important;
+	image-rendering: pixelated !important;
 	filter: none !important;
 	opacity: 1 !important;
 }
