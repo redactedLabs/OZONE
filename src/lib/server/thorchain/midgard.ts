@@ -31,7 +31,8 @@ function toThorAddress(address: string): string | null {
 }
 
 /**
- * Detect chain from address prefix. Returns null for ambiguous cases (e.g. 0x).
+ * Detect chain from address prefix. For 0x addresses returns 'ETH' as default
+ * (compliance still matches regardless of EVM chain).
  */
 function chainFromAddress(address: string): string | null {
 	if (!address) return null;
@@ -40,7 +41,11 @@ function chainFromAddress(address: string): string | null {
 	if (address.startsWith('bc1') || /^[13][a-km-zA-HJ-NP-Z1-9]{25,}$/.test(address)) return 'BTC';
 	if (address.startsWith('ltc1') || /^[LM][a-km-zA-HJ-NP-Z1-9]{25,}$/.test(address)) return 'LTC';
 	if (address.startsWith('bnb')) return 'BNB';
-	// 0x is ambiguous (ETH/BSC/AVAX/BASE) — fall back to asset-based detection
+	if (address.startsWith('0x') && address.length === 42) return 'ETH';
+	if (address.startsWith('r') && address.length >= 25 && address.length <= 35) return 'XRP';
+	if (address.startsWith('D') && address.length === 34) return 'DOGE';
+	if (address.startsWith('bitcoincash:') || (address.startsWith('q') && address.length >= 42)) return 'BCH';
+	if (address.startsWith('T') && address.length === 34) return 'TRX';
 	return null;
 }
 
