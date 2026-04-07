@@ -322,16 +322,15 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 					const addr = io.address;
 					if (!addr || addr.startsWith('thor')) continue;
 					const asset = io.coins?.[0]?.asset || '';
-					if (!asset) continue;
 					// Prefer address-based chain detection, fall back to asset-based
-					const chain = chainFromAddress(addr) || chainFromAsset(asset);
-					if (chain === 'UNKNOWN') continue;
+					const chain = chainFromAddress(addr) || (asset ? chainFromAsset(asset) : null);
+					if (!chain || chain === 'UNKNOWN') continue;
 
 					await db.insert(l1Addresses).values({
 						thorAddress,
 						l1Address: addr,
 						chain,
-						pool: asset
+						pool: asset || `${chain}.unknown`
 					}).onConflictDoNothing();
 					found++;
 				}

@@ -6,6 +6,8 @@ import { rujiraUsers, l1Addresses } from '$lib/server/db/schema';
 import { eq, isNull, sql } from 'drizzle-orm';
 import pLimit from 'p-limit';
 
+export const config = { maxDuration: 300 };
+
 /**
  * Fetches L1 addresses in batches that fit within Vercel's timeout.
  * Call repeatedly until done=true.
