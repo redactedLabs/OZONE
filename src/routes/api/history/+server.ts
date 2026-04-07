@@ -54,9 +54,9 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 	'wasm-rujira-fin/trade':              { type: 'fin-trade',       label: 'Trade (Orderbook)' },
 	'wasm-rujira-fin/arb':                { type: 'fin-arb',         label: 'Arb' },
 	'wasm-rujira-fin/order.create':       { type: 'fin-order',       label: 'Limit Order' },
-	'wasm-rujira-fin/order.withdraw':     { type: 'fin-order-wd',    label: 'Cancel Order' },
+	'wasm-rujira-fin/order.withdraw':     { type: 'fin-order-wd',    label: 'Claim Order' },
 	'wasm-rujira-fin/order.increase':     { type: 'fin-order-inc',   label: 'Increase Order' },
-	'wasm-rujira-fin/order.retract':      { type: 'fin-order-dec',   label: 'Retract Order' },
+	'wasm-rujira-fin/order.retract':      { type: 'fin-order-dec',   label: 'Cancel Order' },
 	'wasm-rujira-fin/market-maker.fee':   { type: 'fin-mm-fee',      label: 'MM Fee' },
 	// FIN Range — Concentrated Liquidity
 	'wasm-rujira-fin/range.create':       { type: 'fin-range',       label: 'Range Create' },

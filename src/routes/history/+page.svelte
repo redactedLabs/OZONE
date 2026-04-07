@@ -50,8 +50,8 @@
 		switch: 'Switch', contract: 'Contract', donate: 'Donate',
 		// FIN — Orderbook
 		'fin-trade': 'Trade', 'fin-arb': 'Arb',
-		'fin-order': 'Limit Order', 'fin-order-wd': 'Cancel Order',
-		'fin-order-inc': 'Increase Order', 'fin-order-dec': 'Retract Order',
+		'fin-order': 'Limit Order', 'fin-order-wd': 'Claim Order',
+		'fin-order-inc': 'Increase Order', 'fin-order-dec': 'Cancel Order',
 		'fin-mm-fee': 'MM Fee',
 		// FIN Range — Concentrated Liquidity
 		'fin-range': 'Range Create', 'fin-range-dep': 'Range Deposit',
@@ -904,7 +904,7 @@
 							</td>
 						</tr>
 						{#if group.siblings.length > 0 && expandedGroups.has(group.txID)}
-							{#each group.siblings as sib}
+							{#each group.siblings.slice(0, 50) as sib}
 								<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.6;">
 									<td class="px-4 py-2 text-xs" style="color: var(--text-muted);">
 										<span class="pl-3" style="color: var(--text-ghost);">&#8627;</span>
@@ -948,6 +948,13 @@
 									<td class="px-4 py-2"></td>
 								</tr>
 							{/each}
+							{#if group.siblings.length > 50}
+								<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.4;">
+									<td colspan="6" class="px-4 py-2 text-center text-[10px]" style="color: var(--text-faint);">
+										... and {group.siblings.length - 50} more sub-transactions
+									</td>
+								</tr>
+							{/if}
 						{/if}
 					{/each}
 					{#if groupedTxs.length === 0}
