@@ -48,31 +48,90 @@
 	const typeLabels: Record<string, string> = {
 		swap: 'Swap', addLiquidity: 'Add LP', withdraw: 'Withdraw', send: 'Send', refund: 'Refund',
 		switch: 'Switch', contract: 'Contract', donate: 'Donate',
-		// Rujira decoded types
-		'fin-trade': 'Trade', 'fin-arb': 'Arb', 'fin-range': 'Range LP',
-		'fin-range-fee': 'Range Fee', 'ghost-borrow': 'Borrow', 'ghost-repay': 'Repay',
+		// FIN — Orderbook
+		'fin-trade': 'Trade', 'fin-arb': 'Arb',
+		'fin-order': 'Limit Order', 'fin-order-wd': 'Cancel Order',
+		'fin-order-inc': 'Increase Order', 'fin-order-dec': 'Retract Order',
+		'fin-mm-fee': 'MM Fee',
+		// FIN Range — Concentrated Liquidity
+		'fin-range': 'Range Create', 'fin-range-dep': 'Range Deposit',
+		'fin-range-wd': 'Range Withdraw', 'fin-range-claim': 'Range Claim',
+		'fin-range-close': 'Range Close', 'fin-range-xfer': 'Range Transfer',
+		'fin-range-fee': 'Range Fee',
+		// BOW — AMM
+		'bow-swap': 'AMM Swap', 'bow-deposit': 'AMM Deposit', 'bow-withdraw': 'AMM Withdraw',
+		// TC Swap
+		'tc-swap': 'Swap (TC)',
+		// Ghost Vault — Lending
+		'ghost-borrow': 'Borrow', 'ghost-repay': 'Repay',
 		'ghost-lend': 'Lend', 'ghost-withdraw': 'Withdraw Lend',
-		'bow-swap': 'AMM Swap', 'tc-swap': 'Swap (TC)',
+		// Ghost Credit — Credit Accounts
+		'ghost-credit-create': 'Credit Account', 'ghost-credit-action': 'Credit Action',
+		'ghost-credit-borrow': 'Credit Borrow', 'ghost-credit-repay': 'Credit Repay',
+		'ghost-credit-send': 'Credit Send', 'ghost-credit-exec': 'Credit Execute',
+		'ghost-liquidation': 'Liquidation',
+		// CALC — DCA
 		'calc-init': 'DCA Create', 'calc-process': 'DCA Execute',
 		'calc-withdraw': 'DCA Withdraw', 'calc-create': 'DCA Strategy',
 		'calc-internal': 'DCA (step)', 'calc-update': 'DCA Update',
-		'fin-order': 'Limit Order', 'fin-order-wd': 'Cancel Order',
-		'auto-workflow': 'Auto Workflow',
+		// AutoRujira
+		'auto-workflow': 'Auto Workflow', 'auto-cancel': 'Cancel Workflow',
+		// Staking
+		'ruji-stake': 'RUJI Stake', 'ruji-unstake': 'RUJI Unstake', 'ruji-claim': 'RUJI Claim',
+		// Pilot — Liquidations
+		'pilot-swap': 'Liquidation Swap', 'pilot-order': 'Liquidation Bid',
+		// Liquidy
+		'liquidy-swap': 'Liquidy Swap', 'liquidy-exec': 'Liquidy Execute',
+		// BRUNE
+		'brune-swap': 'BRUNE Swap',
+		// Nami Index
+		'nami-deposit': 'Index Deposit', 'nami-withdraw': 'Index Withdraw',
+		// Other
+		'revenue-run': 'Revenue Dist', 'merge-deposit': 'Merge', 'merge-withdraw': 'Merge Out',
 		'secure': 'Secure', 'tcy_stake': 'TCY Stake', 'tcy_unstake': 'TCY Unstake',
 	};
 	const typeColors: Record<string, string> = {
 		swap: 'var(--app-accent)', addLiquidity: '#10b981', withdraw: '#f59e0b', send: '#22d3ee', refund: '#ef4444',
 		switch: '#a78bfa', contract: '#64748b', donate: '#f472b6',
-		// Rujira decoded types
-		'fin-trade': '#f59e0b', 'fin-arb': '#f97316', 'fin-range': '#10b981',
-		'fin-range-fee': '#10b981', 'ghost-borrow': '#ef4444', 'ghost-repay': '#22c55e',
+		// FIN
+		'fin-trade': '#f59e0b', 'fin-arb': '#f97316',
+		'fin-order': '#f59e0b', 'fin-order-wd': '#f59e0b',
+		'fin-order-inc': '#f59e0b', 'fin-order-dec': '#f59e0b',
+		'fin-mm-fee': '#f97316',
+		// FIN Range
+		'fin-range': '#10b981', 'fin-range-dep': '#10b981',
+		'fin-range-wd': '#10b981', 'fin-range-claim': '#10b981',
+		'fin-range-close': '#10b981', 'fin-range-xfer': '#10b981',
+		'fin-range-fee': '#10b981',
+		// BOW
+		'bow-swap': '#6366f1', 'bow-deposit': '#6366f1', 'bow-withdraw': '#6366f1',
+		// TC
+		'tc-swap': '#6366f1',
+		// Ghost
+		'ghost-borrow': '#ef4444', 'ghost-repay': '#22c55e',
 		'ghost-lend': '#6366f1', 'ghost-withdraw': '#a78bfa',
-		'bow-swap': '#6366f1', 'tc-swap': '#6366f1',
+		'ghost-credit-create': '#8b5cf6', 'ghost-credit-action': '#8b5cf6',
+		'ghost-credit-borrow': '#ef4444', 'ghost-credit-repay': '#22c55e',
+		'ghost-credit-send': '#8b5cf6', 'ghost-credit-exec': '#8b5cf6',
+		'ghost-liquidation': '#ef4444',
+		// DCA
 		'calc-init': '#a78bfa', 'calc-process': '#a78bfa',
 		'calc-withdraw': '#a78bfa', 'calc-create': '#a78bfa',
 		'calc-internal': '#94a3b8', 'calc-update': '#94a3b8',
-		'fin-order': '#f59e0b', 'fin-order-wd': '#f59e0b',
-		'auto-workflow': '#94a3b8',
+		// Auto
+		'auto-workflow': '#94a3b8', 'auto-cancel': '#94a3b8',
+		// Staking
+		'ruji-stake': '#10b981', 'ruji-unstake': '#f59e0b', 'ruji-claim': '#10b981',
+		// Pilot
+		'pilot-swap': '#ef4444', 'pilot-order': '#ef4444',
+		// Liquidy
+		'liquidy-swap': '#22d3ee', 'liquidy-exec': '#22d3ee',
+		// BRUNE
+		'brune-swap': '#f97316',
+		// Nami
+		'nami-deposit': '#3b82f6', 'nami-withdraw': '#3b82f6',
+		// Other
+		'revenue-run': '#94a3b8', 'merge-deposit': '#94a3b8', 'merge-withdraw': '#94a3b8',
 		'secure': '#3b82f6', 'tcy_stake': '#10b981', 'tcy_unstake': '#f59e0b',
 	};
 
@@ -150,14 +209,17 @@
 			const receivedCurrency = tx.assetOut;
 			// Koinly labels for Rujira types
 			const koinlyLabel = (type: string): string => {
-				if (['swap', 'fin-trade', 'fin-arb', 'bow-swap', 'tc-swap', 'calc-process'].includes(type)) return '';
-				if (type === 'addLiquidity' || type === 'fin-range') return 'liquidity_in';
-				if (type === 'withdraw') return 'liquidity_out';
-				if (type === 'ghost-borrow') return 'borrow';
-				if (type === 'ghost-repay') return 'repay';
-				if (type === 'ghost-lend') return 'deposit';
-				if (type === 'ghost-withdraw') return 'withdrawal';
-				if (type === 'fin-range-fee') return 'income';
+				if (['swap', 'fin-trade', 'fin-arb', 'bow-swap', 'tc-swap', 'calc-process',
+					'liquidy-swap', 'liquidy-exec', 'brune-swap', 'pilot-swap'].includes(type)) return '';
+				if (['addLiquidity', 'fin-range', 'fin-range-dep', 'bow-deposit', 'nami-deposit'].includes(type)) return 'liquidity_in';
+				if (['withdraw', 'fin-range-wd', 'fin-range-close', 'bow-withdraw', 'nami-withdraw'].includes(type)) return 'liquidity_out';
+				if (['ghost-borrow', 'ghost-credit-borrow'].includes(type)) return 'borrow';
+				if (['ghost-repay', 'ghost-credit-repay'].includes(type)) return 'repay';
+				if (['ghost-lend', 'ghost-credit-create'].includes(type)) return 'deposit';
+				if (['ghost-withdraw', 'ghost-credit-send'].includes(type)) return 'withdrawal';
+				if (['fin-range-fee', 'fin-range-claim', 'fin-mm-fee', 'ruji-claim'].includes(type)) return 'income';
+				if (['ruji-stake'].includes(type)) return 'staking';
+				if (['ruji-unstake'].includes(type)) return 'unstaking';
 				return '';
 			};
 			const label = koinlyLabel(tx.type);
@@ -238,47 +300,64 @@
 	const txSends = $derived(report?.transactions?.filter((t: any) => t.type === 'send').length || 0);
 
 	// Rujira-specific stats
-	const rujiraTypes = ['fin-trade', 'fin-arb', 'fin-range', 'fin-range-fee', 'bow-swap', 'tc-swap'];
-	const ghostTypes = ['ghost-borrow', 'ghost-repay', 'ghost-lend', 'ghost-withdraw'];
+	const rujiraTypes = [
+		'fin-trade', 'fin-arb', 'fin-range', 'fin-range-dep', 'fin-range-wd',
+		'fin-range-claim', 'fin-range-close', 'fin-range-xfer', 'fin-range-fee',
+		'fin-order', 'fin-order-wd', 'fin-order-inc', 'fin-order-dec', 'fin-mm-fee',
+		'bow-swap', 'bow-deposit', 'bow-withdraw', 'tc-swap',
+		'pilot-swap', 'pilot-order', 'liquidy-swap', 'liquidy-exec',
+		'brune-swap', 'ruji-stake', 'ruji-unstake', 'ruji-claim',
+		'nami-deposit', 'nami-withdraw',
+	];
+	const ghostTypes = [
+		'ghost-borrow', 'ghost-repay', 'ghost-lend', 'ghost-withdraw',
+		'ghost-credit-create', 'ghost-credit-action', 'ghost-credit-borrow',
+		'ghost-credit-repay', 'ghost-credit-send', 'ghost-credit-exec',
+		'ghost-liquidation',
+	];
 	const calcTypes = ['calc-init', 'calc-process', 'calc-withdraw', 'calc-create', 'calc-internal', 'calc-update'];
 
 	const txRujiraTrades = $derived(report?.transactions?.filter((t: any) => rujiraTypes.includes(t.type)).length || 0);
 	const txGhost = $derived(report?.transactions?.filter((t: any) => ghostTypes.includes(t.type)).length || 0);
 	const txDCA = $derived(report?.transactions?.filter((t: any) => calcTypes.includes(t.type)).length || 0);
 
-	// Group transactions by txID — only group semantically related types
+	// Group ALL contract actions within the same txID together.
+	// In Rujira, one user action (swap, DCA, etc.) triggers many contracts atomically:
+	//   User does a FIN trade → triggers fin-trade + tc-swap + bow-swap + ghost-borrow/repay
+	//   + fin-arb + range-fee + mm-fee — ALL in one txID.
+	// Lower priority number = shown as primary (the user's actual action).
+	// Higher priority = shown as sibling (internal mechanics).
 	const GROUP_PRIORITY: Record<string, number> = {
+		// User-initiated THORChain actions (always primary)
 		'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
 		'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
-		'calc-create': 20, 'calc-update': 21, 'calc-withdraw': 22,
-		'fin-order': 23, 'fin-order-wd': 24, 'fin-range': 25,
-		'ghost-lend': 26, 'ghost-withdraw': 27,
-		'tc-swap': 30, 'bow-swap': 31, 'fin-trade': 32,
-		'auto-workflow': 40,
-		'calc-process': 50, 'calc-init': 51, 'calc-internal': 52,
-		'ghost-borrow': 60, 'ghost-repay': 61,
-		'fin-arb': 70, 'fin-range-fee': 71,
+		// User-initiated Rujira actions
+		'calc-create': 15, 'calc-update': 16, 'calc-withdraw': 17,
+		'fin-order': 18, 'fin-order-wd': 19, 'fin-order-inc': 18, 'fin-order-dec': 19,
+		'fin-range': 20, 'fin-range-dep': 20, 'fin-range-wd': 20,
+		'fin-range-claim': 20, 'fin-range-close': 20, 'fin-range-xfer': 20,
+		'ghost-lend': 21, 'ghost-withdraw': 22,
+		'ghost-credit-create': 23, 'ghost-credit-borrow': 24, 'ghost-credit-repay': 25,
+		'ghost-credit-send': 26, 'ghost-credit-exec': 27, 'ghost-credit-action': 28,
+		'ghost-liquidation': 24,
+		'liquidy-swap': 29,
+		'bow-deposit': 30, 'bow-withdraw': 30,
+		'auto-workflow': 31, 'auto-cancel': 32,
+		'ruji-stake': 33, 'ruji-unstake': 33, 'ruji-claim': 33,
+		'pilot-swap': 34, 'pilot-order': 34,
+		'brune-swap': 35,
+		'nami-deposit': 36, 'nami-withdraw': 36,
+		'merge-deposit': 37, 'merge-withdraw': 37,
+		// Routing / execution layer (internal — shown as siblings)
+		'tc-swap': 50, 'bow-swap': 51, 'fin-trade': 52,
+		'calc-process': 55, 'calc-init': 56, 'calc-internal': 57,
+		'liquidy-exec': 58,
+		// Fully internal mechanics (lowest display priority)
+		'ghost-borrow': 70, 'ghost-repay': 71,
+		'fin-arb': 80, 'fin-range-fee': 81, 'fin-mm-fee': 82,
+		'revenue-run': 90,
 		'contract': 100, 'unknown': 999,
 	};
-
-	// Only group types that are semantically related (same process)
-	const GROUP_FAMILY: Record<string, string> = {
-		'calc-create': 'dca', 'calc-update': 'dca', 'calc-withdraw': 'dca',
-		'calc-process': 'dca', 'calc-init': 'dca', 'calc-internal': 'dca',
-		'fin-trade': 'trade', 'tc-swap': 'trade', 'bow-swap': 'trade',
-		'fin-order': 'order', 'fin-order-wd': 'order',
-		'fin-range': 'range', 'fin-range-fee': 'range',
-		'fin-arb': 'arb',
-		'ghost-borrow': 'ghost', 'ghost-repay': 'ghost', 'ghost-lend': 'ghost', 'ghost-withdraw': 'ghost',
-		'swap': 'swap', 'addLiquidity': 'lp', 'withdraw': 'lp',
-		'send': 'send', 'refund': 'refund',
-		'auto-workflow': 'dca',
-	};
-
-	function getGroupKey(tx: any): string {
-		const family = GROUP_FAMILY[tx.type] || tx.type;
-		return `${tx.txID}:${family}`;
-	}
 
 	function groupByTxID(txs: any[]): Array<{ primary: any; siblings: any[]; txID: string }> {
 		const groups: Array<{ primary: any; siblings: any[]; txID: string }> = [];
@@ -288,8 +367,9 @@
 				groups.push({ primary: tx, siblings: [], txID: '' });
 				continue;
 			}
-			const key = getGroupKey(tx);
-			const idx = idxMap.get(key);
+			// Group by raw txID — in Rujira, one user action triggers many
+			// contracts atomically (trade + arb + ghost + fees all in one tx)
+			const idx = idxMap.get(tx.txID);
 			if (idx !== undefined) {
 				const g = groups[idx];
 				const newPri = GROUP_PRIORITY[tx.type] ?? 500;
@@ -301,7 +381,7 @@
 					g.siblings.push(tx);
 				}
 			} else {
-				idxMap.set(key, groups.length);
+				idxMap.set(tx.txID, groups.length);
 				groups.push({ primary: tx, siblings: [], txID: tx.txID });
 			}
 		}

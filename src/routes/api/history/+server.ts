@@ -49,16 +49,42 @@ function rawAmount(raw: string): string {
 
 // ── Rujira contract type mapping ──
 const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
+	// FIN — Orderbook DEX
 	'wasm-rujira-fin/trade':              { type: 'fin-trade',       label: 'Trade (Orderbook)' },
 	'wasm-rujira-fin/arb':                { type: 'fin-arb',         label: 'Arb' },
-	'wasm-rujira-fin/range.create':       { type: 'fin-range',       label: 'Range LP' },
+	'wasm-rujira-fin/order.create':       { type: 'fin-order',       label: 'Limit Order' },
+	'wasm-rujira-fin/order.withdraw':     { type: 'fin-order-wd',    label: 'Cancel Order' },
+	'wasm-rujira-fin/order.increase':     { type: 'fin-order-inc',   label: 'Increase Order' },
+	'wasm-rujira-fin/order.retract':      { type: 'fin-order-dec',   label: 'Retract Order' },
+	'wasm-rujira-fin/market-maker.fee':   { type: 'fin-mm-fee',      label: 'MM Fee' },
+	// FIN Range — Concentrated Liquidity
+	'wasm-rujira-fin/range.create':       { type: 'fin-range',       label: 'Range Create' },
+	'wasm-rujira-fin/range.deposit':      { type: 'fin-range-dep',   label: 'Range Deposit' },
+	'wasm-rujira-fin/range.withdraw':     { type: 'fin-range-wd',    label: 'Range Withdraw' },
+	'wasm-rujira-fin/range.claim':        { type: 'fin-range-claim', label: 'Range Claim' },
+	'wasm-rujira-fin/range.close':        { type: 'fin-range-close', label: 'Range Close' },
+	'wasm-rujira-fin/range.transfer':     { type: 'fin-range-xfer',  label: 'Range Transfer' },
 	'wasm-rujira-fin/range.fee':          { type: 'fin-range-fee',   label: 'Range Fee' },
+	// BOW — AMM Pools
+	'wasm-rujira-bow/swap':               { type: 'bow-swap',        label: 'AMM Swap' },
+	'wasm-rujira-bow/deposit':            { type: 'bow-deposit',     label: 'AMM Deposit' },
+	'wasm-rujira-bow/withdraw':           { type: 'bow-withdraw',    label: 'AMM Withdraw' },
+	// TC Swap — THORChain Base Layer
+	'wasm-rujira-thorchain-swap/swap':    { type: 'tc-swap',         label: 'Swap (TC)' },
+	// GHOST Vault — Lending
 	'wasm-rujira-ghost-vault/borrow':     { type: 'ghost-borrow',    label: 'Borrow' },
 	'wasm-rujira-ghost-vault/repay':      { type: 'ghost-repay',     label: 'Repay' },
 	'wasm-rujira-ghost-vault/deposit':    { type: 'ghost-lend',      label: 'Lend' },
 	'wasm-rujira-ghost-vault/withdraw':   { type: 'ghost-withdraw',  label: 'Withdraw Lend' },
-	'wasm-rujira-bow/swap':               { type: 'bow-swap',        label: 'AMM Swap' },
-	'wasm-rujira-thorchain-swap/swap':    { type: 'tc-swap',         label: 'Swap (TC)' },
+	// GHOST Credit — Credit Accounts
+	'wasm-rujira-ghost-credit/account.create':       { type: 'ghost-credit-create', label: 'Credit Account' },
+	'wasm-rujira-ghost-credit/account.msg':          { type: 'ghost-credit-action', label: 'Credit Action' },
+	'wasm-rujira-ghost-credit/account.msg/borrow':   { type: 'ghost-credit-borrow', label: 'Credit Borrow' },
+	'wasm-rujira-ghost-credit/account.msg/repay':    { type: 'ghost-credit-repay',  label: 'Credit Repay' },
+	'wasm-rujira-ghost-credit/account.msg/send':     { type: 'ghost-credit-send',   label: 'Credit Send' },
+	'wasm-rujira-ghost-credit/account.msg/execute':  { type: 'ghost-credit-exec',   label: 'Credit Execute' },
+	'wasm-rujira-ghost-credit/account.liquidate':    { type: 'ghost-liquidation',   label: 'Liquidation' },
+	// CALC — DCA (Calculated Finance)
 	'wasm-calc-strategy/init':            { type: 'calc-init',       label: 'DCA Create' },
 	'wasm-calc-strategy/process':         { type: 'calc-process',    label: 'DCA Execute' },
 	'wasm-calc-strategy/withdraw':        { type: 'calc-withdraw',   label: 'DCA Withdraw' },
@@ -67,23 +93,60 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 	'wasm-calc-strategy/process-node.messages': { type: 'calc-internal', label: 'DCA (step)' },
 	'wasm-calc-strategy/update':                { type: 'calc-update',   label: 'DCA Update' },
 	'wasm-calc-manager/strategy.update':        { type: 'calc-update',   label: 'DCA Update' },
-	'wasm-rujira-fin/order.create':             { type: 'fin-order',     label: 'Limit Order' },
-	'wasm-rujira-fin/order.withdraw':           { type: 'fin-order-wd',  label: 'Cancel Order' },
-	'wasm-autorujira-workflow-manager/execute_instance': { type: 'auto-workflow', label: 'Auto Workflow' },
+	// Auto Workflow (AutoRujira)
+	'wasm-autorujira-workflow-manager/execute_instance': { type: 'auto-workflow',    label: 'Auto Workflow' },
+	'wasm-autorujira-workflow-manager/cancel_instance':  { type: 'auto-cancel',      label: 'Cancel Workflow' },
+	// Staking (RUJI/sTCY)
+	'wasm-rujira-staking/liquid.bond':    { type: 'ruji-stake',      label: 'RUJI Stake' },
+	'wasm-rujira-staking/liquid.unbond':  { type: 'ruji-unstake',    label: 'RUJI Unstake' },
+	'wasm-rujira-staking/account.bond':   { type: 'ruji-stake',      label: 'RUJI Stake' },
+	'wasm-rujira-staking/account.claim':  { type: 'ruji-claim',      label: 'RUJI Claim' },
+	'wasm-rujira-staking/account.withdraw': { type: 'ruji-unstake',  label: 'RUJI Unstake' },
+	// Pilot — Liquidation marketplace
+	'wasm-rujira-pilot/swap':             { type: 'pilot-swap',      label: 'Liquidation Swap' },
+	'wasm-rujira-pilot/order':            { type: 'pilot-order',     label: 'Liquidation Bid' },
+	// Liquidy Swap (cross-chain router)
+	'wasm-liquidy-swap/swap':             { type: 'liquidy-swap',    label: 'Liquidy Swap' },
+	'wasm-liquidy-swap/execute':          { type: 'liquidy-exec',    label: 'Liquidy Execute' },
+	'wasm-liquidy-swap-execute':          { type: 'liquidy-exec',    label: 'Liquidy Execute' },
+	// BRUNE — BTC stablecoin
+	'wasm-rujira-brune/swap':             { type: 'brune-swap',      label: 'BRUNE Swap' },
+	// Nami Index
+	'wasm-nami-index-fixed/deposit':      { type: 'nami-deposit',    label: 'Index Deposit' },
+	'wasm-nami-index-fixed/withdraw':     { type: 'nami-withdraw',   label: 'Index Withdraw' },
+	'wasm-nami-index-nav/deposit':        { type: 'nami-deposit',    label: 'Index Deposit' },
+	'wasm-nami-index-nav/withdraw':       { type: 'nami-withdraw',   label: 'Index Withdraw' },
+	// Revenue
+	'wasm-rujira-revenue/run':            { type: 'revenue-run',     label: 'Revenue Dist' },
+	// Merge
+	'wasm-rujira-merge/deposit':          { type: 'merge-deposit',   label: 'Merge Deposit' },
+	'wasm-rujira-merge/withdraw':         { type: 'merge-withdraw',  label: 'Merge Withdraw' },
 };
 
-// Dedup priority — lower = keep; higher = drop when sibling exists
+// Dedup priority — lower = keep as primary; higher = show as sibling
 const DEDUP_PRIORITY: Record<string, number> = {
 	'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
 	'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
 	'calc-create': 20, 'calc-update': 21, 'calc-withdraw': 22,
-	'fin-order': 23, 'fin-order-wd': 24, 'fin-range': 25,
+	'fin-order': 23, 'fin-order-wd': 24, 'fin-order-inc': 23, 'fin-order-dec': 24,
+	'fin-range': 25, 'fin-range-dep': 25, 'fin-range-wd': 25,
+	'fin-range-claim': 25, 'fin-range-close': 25, 'fin-range-xfer': 25,
 	'ghost-lend': 26, 'ghost-withdraw': 27,
-	'tc-swap': 30, 'bow-swap': 31, 'fin-trade': 32,
-	'auto-workflow': 40,
+	'ghost-credit-create': 28, 'ghost-credit-action': 29,
+	'ghost-credit-borrow': 28, 'ghost-credit-repay': 28,
+	'ghost-credit-send': 29, 'ghost-credit-exec': 29,
+	'ghost-liquidation': 28,
+	'tc-swap': 30, 'bow-swap': 31, 'bow-deposit': 31, 'bow-withdraw': 31, 'fin-trade': 32,
+	'auto-workflow': 40, 'auto-cancel': 40,
+	'ruji-stake': 41, 'ruji-unstake': 41, 'ruji-claim': 41,
+	'pilot-swap': 42, 'pilot-order': 42,
+	'liquidy-swap': 43, 'liquidy-exec': 44,
+	'brune-swap': 45,
+	'nami-deposit': 46, 'nami-withdraw': 46,
 	'calc-process': 50, 'calc-init': 51, 'calc-internal': 52,
 	'ghost-borrow': 60, 'ghost-repay': 61,
-	'fin-arb': 70, 'fin-range-fee': 71,
+	'fin-arb': 70, 'fin-range-fee': 71, 'fin-mm-fee': 72,
+	'revenue-run': 80, 'merge-deposit': 81, 'merge-withdraw': 81,
 	'contract': 100, 'unknown': 999,
 };
 
@@ -185,8 +248,140 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 			rawOut = attrs.amount || fundAmount;
 			break;
 		}
-		case 'auto-workflow': {
-			// Workflow orchestrator — no funds, just metadata
+		case 'fin-order-inc':
+		case 'fin-order-dec': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			break;
+		}
+		case 'fin-range-dep': {
+			// Add liquidity to existing range
+			if (funds.length >= 2) {
+				assetIn = funds[0].asset; rawIn = funds[0].amount;
+				assetOut = funds[1].asset; rawOut = funds[1].amount;
+			} else if (funds.length === 1) {
+				assetIn = fundAsset; rawIn = fundAmount;
+			}
+			break;
+		}
+		case 'fin-range-wd':
+		case 'fin-range-close': {
+			// Withdraw/close range position
+			assetOut = fundAsset;
+			rawOut = fundAmount;
+			if (attrs.amount) rawOut = attrs.amount;
+			break;
+		}
+		case 'fin-range-claim': {
+			// Claim accumulated fees
+			if (attrs.base && attrs.base !== '0') { rawOut = attrs.base; }
+			if (attrs.quote && attrs.quote !== '0') { rawOut = attrs.quote; }
+			break;
+		}
+		case 'fin-range-xfer': {
+			// Transfer range ownership — no funds
+			break;
+		}
+		case 'fin-mm-fee': {
+			// Market maker fee collection
+			if (attrs.base && attrs.base !== '0') { rawOut = attrs.base; }
+			if (attrs.quote && attrs.quote !== '0') { rawOut = attrs.quote; }
+			break;
+		}
+		case 'ghost-credit-create': {
+			// Create credit account — no funds
+			break;
+		}
+		case 'ghost-credit-borrow': {
+			assetOut = fundAsset;
+			rawOut = attrs.amount || fundAmount;
+			break;
+		}
+		case 'ghost-credit-repay': {
+			assetIn = fundAsset;
+			rawIn = attrs.amount || fundAmount;
+			break;
+		}
+		case 'ghost-credit-send':
+		case 'ghost-credit-exec':
+		case 'ghost-credit-action': {
+			if (fundAmount !== '0') { assetIn = fundAsset; rawIn = fundAmount; }
+			break;
+		}
+		case 'ghost-liquidation': {
+			if (fundAmount !== '0') { assetIn = fundAsset; rawIn = fundAmount; }
+			break;
+		}
+		case 'bow-deposit': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			break;
+		}
+		case 'bow-withdraw': {
+			assetOut = fundAsset;
+			rawOut = fundAmount;
+			break;
+		}
+		case 'ruji-stake': {
+			assetIn = fundAsset || 'RUJI';
+			rawIn = fundAmount;
+			break;
+		}
+		case 'ruji-unstake':
+		case 'ruji-claim': {
+			assetOut = fundAsset || 'RUJI';
+			rawOut = fundAmount;
+			break;
+		}
+		case 'pilot-swap': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			if (attrs.returned) {
+				const retParts = attrs.returned.match(/^(\d+)(.+)$/);
+				if (retParts) { rawOut = retParts[1]; assetOut = cleanAsset(retParts[2]); }
+			}
+			break;
+		}
+		case 'pilot-order': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			break;
+		}
+		case 'liquidy-swap':
+		case 'liquidy-exec': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			if (attrs.returned) {
+				const retParts = attrs.returned.match(/^(\d+)(.+)$/);
+				if (retParts) { rawOut = retParts[1]; assetOut = cleanAsset(retParts[2]); }
+			}
+			break;
+		}
+		case 'brune-swap': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			if (attrs.returned) {
+				const retParts = attrs.returned.match(/^(\d+)(.+)$/);
+				if (retParts) { rawOut = retParts[1]; assetOut = cleanAsset(retParts[2]); }
+			}
+			break;
+		}
+		case 'nami-deposit': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			break;
+		}
+		case 'nami-withdraw': {
+			assetOut = fundAsset;
+			rawOut = fundAmount;
+			break;
+		}
+		case 'auto-workflow':
+		case 'auto-cancel':
+		case 'revenue-run':
+		case 'merge-deposit':
+		case 'merge-withdraw': {
+			if (fundAmount !== '0') { assetIn = fundAsset; rawIn = fundAmount; }
 			break;
 		}
 		default: {
