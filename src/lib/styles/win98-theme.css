@@ -300,9 +300,10 @@ html.win98 body {
 	height: 20px !important;
 	width: auto !important;
 }
-/* ALL ghost logos → purple gradient look on silver bg */
+/* ALL ghost logos → swap to purple gradient version */
 .win98 img[src*="redacted-logo"] {
-	filter: brightness(0.6) sepia(1) saturate(5) hue-rotate(240deg) !important;
+	content: url('/redacted-logo-purple.svg') !important;
+	filter: none !important;
 	opacity: 1 !important;
 }
 .win98 .logo-ozone {
