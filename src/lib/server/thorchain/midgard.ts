@@ -210,6 +210,25 @@ export async function syncAllMembers(): Promise<{
 			}).onConflictDoNothing();
 		}
 
+		// Auto-link cosmos address for every thor user (same key, free compliance coverage)
+		const allThorUsers = [...existingSet];
+		for (let i = 0; i < allThorUsers.length; i += 100) {
+			const batch = allThorUsers.slice(i, i + 100);
+			const cosmosLinks = batch.map((thorAddr) => {
+				try {
+					const decoded = bech32.decode(thorAddr);
+					const cosmosAddr = bech32.encode('cosmos', decoded.words);
+					return { thorAddress: thorAddr, l1Address: cosmosAddr, chain: 'GAIA' };
+				} catch { return null; }
+			}).filter(Boolean) as { thorAddress: string; l1Address: string; chain: string }[];
+
+			if (cosmosLinks.length > 0) {
+				await db.insert(l1Addresses)
+					.values(cosmosLinks)
+					.onConflictDoNothing();
+			}
+		}
+
 		// Update lastSeen for all
 		await db.update(rujiraUsers).set({ lastSeen: new Date() });
 
