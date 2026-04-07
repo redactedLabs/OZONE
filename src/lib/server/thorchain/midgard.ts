@@ -237,10 +237,6 @@ export async function syncAllMembers(): Promise<{
 		// Update lastSeen for all
 		await db.update(rujiraUsers).set({ lastSeen: new Date() });
 
-		// Defensive cleanup: remove any non-thor addresses from rujira_users
-		await db.delete(rujiraUsers)
-			.where(sql`thor_address NOT LIKE 'thor%'`);
-
 		const duration = Date.now() - start;
 		await db.insert(syncLog).values({
 			type: 'MIDGARD',
