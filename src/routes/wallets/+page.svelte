@@ -95,12 +95,12 @@
 			</div>
 			<div class="text-[10px] font-mono mt-0.5" style="color: var(--text-faint);">{(data.config.fee / 100).toFixed(2)}%</div>
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Protocol Fee</div>
-			<div class="stat-tip">Fee charged on deposits into the Private Reserve. Read from the proxy contract state. Currently {data.config.fee} basis points ({(data.config.fee / 100).toFixed(2)}%).</div>
+			<div class="stat-tip">Fee charged per interaction with the protocol. Read from the proxy contract state. Currently {data.config.fee} basis points ({(data.config.fee / 100).toFixed(2)}%).</div>
 		</div>
 	</div>
 
 	<!-- Architecture Flow Diagram -->
-	<div class="dash-box rounded-xl p-5 sm:p-6 mb-6" data-win-title="Architecture">
+	<div class="dash-box rounded-xl p-5 sm:p-6 pb-6 mb-6" data-win-title="Architecture">
 		<h2 class="text-sm font-bold mb-4" style="color: var(--text);">How Private Wallets Work</h2>
 
 		<!-- Desktop: horizontal flow -->
@@ -113,7 +113,7 @@
 
 			<!-- Arrow 1 -->
 			<div class="flex flex-col items-center px-2">
-				<div class="text-[8px] font-mono mb-1 px-2 py-0.5 rounded" style="background: rgba(16,185,129,0.1); color: #10b981;">OFAC Screen</div>
+				<div class="text-[8px] font-mono mb-1 px-2 py-0.5 rounded" style="background: rgba(16,185,129,0.1); color: #10b981;">AML Screen</div>
 				<div class="text-lg" style="color: var(--text-faint);">&#8594;</div>
 			</div>
 
@@ -132,7 +132,7 @@
 			<!-- Private Wallet -->
 			<div class="flow-box rounded-lg p-3 text-center" style="border: 2px solid #a78bfa; background: rgba(167,139,250,0.05); min-width: 120px;">
 				<div class="text-xs font-bold mb-1" style="color: #a78bfa;">Spendable</div>
-				<div class="text-[9px]" style="color: var(--text-faint);">Private Wallet</div>
+				<div class="text-[9px]" style="color: var(--text-faint);">Sub-wallet contract</div>
 			</div>
 
 			<!-- Arrow 3 -->
@@ -155,7 +155,7 @@
 			</div>
 
 			<div class="flex flex-col items-center py-1">
-				<div class="text-[8px] font-mono px-2 py-0.5 rounded" style="background: rgba(16,185,129,0.1); color: #10b981;">OFAC Screen</div>
+				<div class="text-[8px] font-mono px-2 py-0.5 rounded" style="background: rgba(16,185,129,0.1); color: #10b981;">AML Screen</div>
 				<div class="text-lg" style="color: var(--text-faint);">&#8595;</div>
 			</div>
 
@@ -171,7 +171,7 @@
 
 			<div class="flow-box rounded-lg p-3 text-center w-full" style="border: 2px solid #a78bfa; background: rgba(167,139,250,0.05);">
 				<div class="text-xs font-bold mb-1" style="color: #a78bfa;">Spendable</div>
-				<div class="text-[9px]" style="color: var(--text-faint);">Private Wallet</div>
+				<div class="text-[9px]" style="color: var(--text-faint);">Sub-wallet contract</div>
 			</div>
 
 			<div class="flex flex-col items-center py-1">
@@ -194,7 +194,7 @@
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Deposit</h3>
 			<p class="text-xs leading-relaxed" style="color: var(--text-muted);">
-				Deposit RUNE from your public wallet into the Private Reserve. Your address is screened against OFAC and sanctions lists before the deposit is accepted.
+				Deposit RUNE from your public wallet into the Private Reserve. Your address is screened against AML and sanctions lists before the deposit is accepted.
 			</p>
 		</div>
 
@@ -227,7 +227,7 @@
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Withdraw</h3>
 			<p class="text-xs leading-relaxed" style="color: var(--text-muted);">
-				Move funds back to Private Reserve, then withdraw to your original public address. ZK proof required. Same address in, same address out — no mixing.
+				Move funds back to Private Reserve, then withdraw to your original public address. ZK proof required. Same address in, same address out.
 			</p>
 		</div>
 	</div>
@@ -247,21 +247,6 @@
 					<span class="text-[9px] ml-1" style="color: var(--text-faint);">{copied === data.proxyAddress ? 'Copied!' : '(click to copy)'}</span>
 				</button>
 			</div>
-
-			{#if data.config.adminAddress}
-				<div>
-					<div class="text-[10px] mb-1" style="color: var(--text-faint);">Admin Address</div>
-					<button
-						class="text-xs font-mono cursor-pointer bg-transparent border-none p-0"
-						style="color: var(--text);"
-						title="Click to copy"
-						onclick={() => copyToClipboard(data.config.adminAddress)}
-					>
-						{truncAddr(data.config.adminAddress)}
-						<span class="text-[9px] ml-1" style="color: var(--text-faint);">{copied === data.config.adminAddress ? 'Copied!' : '(click to copy)'}</span>
-					</button>
-				</div>
-			{/if}
 
 			<div>
 				<div class="text-[10px] mb-1" style="color: var(--text-faint);">Code IDs</div>
