@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { user, syncLog } from '$lib/server/db/schema';
+import { user, syncLog, complianceEntries } from '$lib/server/db/schema';
 import { desc, sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -19,6 +19,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.from(syncLog)
 		.groupBy(syncLog.type);
 
+	const complianceBySource = await db
+		.select({
+			source: complianceEntries.source,
+			count: sql<number>`count(*)`
+		})
+		.from(complianceEntries)
+		.groupBy(complianceEntries.source);
+
+	const complianceCounts: Record<string, number> = {};
+	for (const r of complianceBySource) {
+		complianceCounts[r.source] = Number(r.count);
+	}
+
 	return {
 		user: locals.user,
 		adminUsers: users.map(u => ({
@@ -33,6 +46,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			lastRun: s.lastRun,
 			lastStatus: s.lastStatus,
 			totalRuns: Number(s.totalRuns),
+			dbCount: complianceCounts[s.type] ?? null,
 		})),
 	};
 };

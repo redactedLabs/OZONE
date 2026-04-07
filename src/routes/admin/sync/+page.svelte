@@ -27,15 +27,21 @@
 		return `${(ms / 1000).toFixed(1)}s`;
 	}
 
-	const syncTypeMap: Record<string, { name: string; triggerType: string; color: string }> = {
+	const syncTypeMap: Record<string, { name: string; triggerType: string; color: string; dbSource?: string }> = {
 		MIDGARD: { name: 'Members', triggerType: 'members', color: '#818cf8' },
-		OFAC: { name: 'OFAC SDN', triggerType: 'ofac', color: '#ef4444' },
-		EU: { name: 'EU Sanctions', triggerType: 'eu', color: '#3b82f6' },
-		HACK: { name: 'Known Hacks', triggerType: 'hacks', color: '#f59e0b' },
-		TETHER: { name: 'Tether Frozen', triggerType: 'tether', color: '#26a17b' },
-		SCREEN: { name: 'Screening', triggerType: 'screening', color: '#6366f1' },
+		OFAC: { name: 'OFAC SDN', triggerType: 'ofac', color: '#ef4444', dbSource: 'OFAC' },
+		EU: { name: 'EU Sanctions', triggerType: 'eu', color: '#3b82f6', dbSource: 'EU' },
+		HACK: { name: 'Known Hacks', triggerType: 'hacks', color: '#f59e0b', dbSource: 'HACK' },
+		TETHER: { name: 'Tether Frozen', triggerType: 'tether', color: '#26a17b', dbSource: 'TETHER' },
+		SCREEN: { name: 'Screening', triggerType: 'screening', color: '#6366f1', dbSource: 'SCREEN' },
 		L1_DISCOVERY: { name: 'L1 Discovery', triggerType: 'l1-batch', color: '#10b981' },
 	};
+
+	function getDbCount(source: string | undefined): number | null {
+		if (!source) return null;
+		const entry = data.stats.complianceBySource.find(s => s.source === source);
+		return entry ? entry.count : null;
+	}
 
 	async function triggerSync(type: string) {
 		loadingType = type;
@@ -203,6 +209,7 @@
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 			{#each Object.entries(syncTypeMap) as [key, info]}
 				{@const syncData = data.syncTypes.find(s => s.type === key)}
+				{@const dbCount = getDbCount(info.dbSource)}
 				<div class="rounded-xl p-4" style="background: #0d0d1f; border: 1px solid #1e293b;">
 					<div class="flex items-center gap-2 mb-3">
 						<span class="rounded px-2 py-0.5 text-[10px] font-bold" style="background: {info.color}22; color: {info.color}; border: 1px solid {info.color}44;">{key}</span>
@@ -229,8 +236,14 @@
 								<span>Duration</span>
 								<span style="color: #f1f5f9;">{formatDuration(syncData.lastDuration)}</span>
 							</div>
+							{#if dbCount != null}
+								<div class="flex justify-between">
+									<span>In DB</span>
+									<span class="font-semibold" style="color: {info.color};">{dbCount.toLocaleString()}</span>
+								</div>
+							{/if}
 							<div class="flex justify-between">
-								<span>Records</span>
+								<span>Last Synced</span>
 								<span style="color: #f1f5f9;">{syncData.lastRecords?.toLocaleString() ?? '—'}</span>
 							</div>
 							<div class="flex justify-between">

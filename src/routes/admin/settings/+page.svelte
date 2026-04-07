@@ -226,6 +226,9 @@
 						<span class="text-xs ml-2" style="color: #475569;">{info.desc}</span>
 					</div>
 					<div class="flex items-center gap-2 shrink-0">
+						{#if stat.dbCount != null}
+							<span class="text-xs font-semibold" style="color: {info.color};">{stat.dbCount.toLocaleString()}</span>
+						{/if}
 						<span class="inline-block h-2 w-2 rounded-full" style="background: {stat.lastStatus === 'success' ? '#10b981' : '#ef4444'};"></span>
 						<span class="text-xs" style="color: #64748b;">{timeAgo(stat.lastRun)}</span>
 						<span class="text-[10px]" style="color: #475569;">{stat.totalRuns} runs</span>
