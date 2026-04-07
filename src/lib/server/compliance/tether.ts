@@ -65,11 +65,11 @@ export async function syncTether(): Promise<{
 		];
 		const hardcodedCount = KNOWN_TETHER_FROZEN.length;
 
-		// Fetch from Etherscan V2 (live on-chain AddedBlackList - RemovedBlackList)
+		// Fetch from Etherscan V2 (all AddedBlackList events ever)
 		const ethAddresses = await fetchEthBlacklist();
 		addresses.push(...ethAddresses);
 
-		// Fetch from TronGrid (frozen TRC20 addresses — live on-chain events)
+		// Fetch from TronGrid (all AddedBlackList events ever)
 		const tronAddresses = await fetchTronBlacklist();
 		addresses.push(...tronAddresses);
 
@@ -208,7 +208,7 @@ async function fetchTronGridEvents(eventName: string): Promise<string[]> {
 	if (apiKey) headers['TRON-PRO-API-KEY'] = apiKey;
 
 	let pages = 0;
-	const maxPages = 200; // Safety cap: 200 pages × 200 events = 40K events max
+	const maxPages = 500; // Safety cap: 500 pages × 200 events = 100K events max
 
 	while (url && pages < maxPages) {
 		let res = await fetch(url, { headers });
