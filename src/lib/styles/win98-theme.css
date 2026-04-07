@@ -123,12 +123,12 @@ html.win98 body {
 .win98 [style*="color: #334155"] { color: #000000 !important; }
 .win98 [style*="color: #818cf8"] { color: #000080 !important; }
 .win98 [style*="color: #6366f1"] { color: #000080 !important; }
-.win98 [style*="color: #10b981"] { color: #008000 !important; }
+.win98 [style*="color: #10b981"] { color: #000080 !important; }
 .win98 [style*="color: #22d3ee"] { color: #000080 !important; }
 .win98 [style*="color: #a855f7"] { color: #000080 !important; }
 .win98 [style*="color: #ef4444"] { color: #ff0000 !important; }
 .win98 [style*="color: #f59e0b"] { color: #000080 !important; }
-.win98 [style*="color: #26a17b"] { color: #008000 !important; }
+.win98 [style*="color: #26a17b"] { color: #000080 !important; }
 .win98 [style*="color: #3b82f6"] { color: #000080 !important; }
 .win98 [style*="color: #ec4899"] { color: #800080 !important; }
 .win98 [style*="color: #c4a430"] { color: #000080 !important; }
@@ -140,7 +140,7 @@ html.win98 body {
 .win98 [style*="color: #ff0013"] { color: #ff0000 !important; }
 .win98 [style*="color: #f7931a"] { color: #000080 !important; }
 .win98 [style*="color: #627eea"] { color: #000080 !important; }
-.win98 [style*="color: #2ecc71"] { color: #008000 !important; }
+.win98 [style*="color: #2ecc71"] { color: #000080 !important; }
 .win98 [style*="color: #e84142"] { color: #ff0000 !important; }
 .win98 [style*="color: #6d75f2"] { color: #000080 !important; }
 .win98 [style*="color: #f97316"] { color: #000080 !important; }
@@ -300,9 +300,9 @@ html.win98 body {
 	height: 20px !important;
 	width: auto !important;
 }
-/* ALL ghost logos → keep original purple gradient, full opacity */
+/* ALL ghost logos → purple gradient look on silver bg */
 .win98 img[src*="redacted-logo"] {
-	filter: none !important;
+	filter: brightness(0.6) sepia(1) saturate(5) hue-rotate(240deg) !important;
 	opacity: 1 !important;
 }
 .win98 .logo-ozone {
