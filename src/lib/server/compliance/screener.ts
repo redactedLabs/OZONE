@@ -117,25 +117,28 @@ export async function screenAllUsers(): Promise<ScreeningResult> {
 			}
 		}
 
-		// 4. Update user flags
-		const allUsers = await db.select().from(rujiraUsers);
-		for (const user of allUsers) {
-			const isFlagged = flaggedThorAddresses.has(user.thorAddress);
-			const flagReason = isFlagged
-				? matches
-						.filter((m) => m.thorAddress === user.thorAddress)
-						.map((m) => `${m.matchSource}: ${m.entityName} (${m.l1Address})`)
-						.join('; ')
-				: null;
+		// 4. Update user flags (batch: unflag all, then flag matched ones)
+		const now = new Date();
+		await db.update(rujiraUsers).set({
+			flagged: false,
+			flagReason: null,
+			screenedAt: now
+		});
 
-			await db
-				.update(rujiraUsers)
-				.set({
-					flagged: isFlagged,
-					flagReason,
-					screenedAt: new Date()
-				})
-				.where(eq(rujiraUsers.id, user.id));
+		if (flaggedThorAddresses.size > 0) {
+			const flaggedAddrs = [...flaggedThorAddresses];
+			for (let i = 0; i < flaggedAddrs.length; i += 100) {
+				const chunk = flaggedAddrs.slice(i, i + 100);
+				for (const thorAddr of chunk) {
+					const reason = matches
+						.filter((m) => m.thorAddress === thorAddr)
+						.map((m) => `${m.matchSource}: ${m.entityName} (${m.l1Address})`)
+						.join('; ');
+					await db.update(rujiraUsers)
+						.set({ flagged: true, flagReason: reason })
+						.where(eq(rujiraUsers.thorAddress, thorAddr));
+				}
+			}
 		}
 
 		const duration = Date.now() - start;
