@@ -11,7 +11,7 @@
 	],
 	"functions": {
 		"src/routes/api/sync/tether/+server.ts": {
-			"maxDuration": 120
+			"maxDuration": 60
 		}
 	}
 }
