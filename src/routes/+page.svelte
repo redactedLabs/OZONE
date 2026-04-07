@@ -538,7 +538,7 @@
 		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="p-5 sm:p-6 flex flex-col justify-center">
 				<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
-					<span class="text-[10px] font-mono" style="color: var(--stat-indigo);">Free &middot; No auth required</span>
+					<span class="text-[10px] font-mono" style="color: #6366f1;">Free &middot; No auth required</span>
 				</div>
 				<h3 class="text-lg sm:text-xl font-bold mb-2" style="color: var(--text);">Ozone API</h3>
 				<p class="text-xs sm:text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
