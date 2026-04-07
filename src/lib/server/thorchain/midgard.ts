@@ -120,7 +120,7 @@ export async function syncAllMembers(): Promise<{
 		const existingSet = new Set(existing.map((e) => e.thorAddress));
 
 		const toInsert = rujiraMembers.filter(
-			(m) => !existingSet.has(m.address)
+			(m) => m.address.startsWith('thor') && !existingSet.has(m.address)
 		);
 
 		// Batch insert in chunks of 500

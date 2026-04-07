@@ -4,7 +4,6 @@ import { syncAllMembers } from '$lib/server/thorchain/midgard';
 import { syncOFAC } from '$lib/server/compliance/ofac';
 import { syncEU } from '$lib/server/compliance/eu';
 import { syncHackList } from '$lib/server/compliance/hacks';
-import { syncTether } from '$lib/server/compliance/tether';
 import { screenAllUsers } from '$lib/server/compliance/screener';
 import { env } from '$env/dynamic/private';
 
@@ -21,7 +20,7 @@ async function runSync() {
 		results.members = { error: String(e) };
 	}
 
-	// Step 2: Compliance lists (can be slow)
+	// Step 2: Compliance lists
 	try {
 		results.hacks = await syncHackList();
 	} catch (e) {
@@ -38,12 +37,6 @@ async function runSync() {
 		results.eu = await syncEU();
 	} catch (e) {
 		errors.push(`EU: ${e}`);
-	}
-
-	try {
-		results.tether = await syncTether();
-	} catch (e) {
-		errors.push(`Tether: ${e}`);
 	}
 
 	// Step 3: Screen
