@@ -186,7 +186,13 @@ async function fetchTronGridEvents(eventName: string): Promise<string[]> {
 	let url: string | null = `${TRONGRID_API}/${USDT_TRON_CONTRACT}/events?event_name=${eventName}&limit=200`;
 
 	while (url) {
-		const res = await fetch(url);
+		let res = await fetch(url);
+
+		// Retry once on 429 after backoff
+		if (res.status === 429) {
+			await new Promise((r) => setTimeout(r, 5000));
+			res = await fetch(url);
+		}
 		if (!res.ok) break;
 
 		const data = await res.json();
@@ -199,8 +205,8 @@ async function fetchTronGridEvents(eventName: string): Promise<string[]> {
 
 		// Follow pagination via fingerprint
 		url = data.meta?.links?.next || null;
-		// Rate limit: TronGrid free tier needs breathing room
-		if (url) await new Promise((r) => setTimeout(r, 300));
+		// TronGrid free tier: 1s between requests to avoid 429
+		if (url) await new Promise((r) => setTimeout(r, 1000));
 	}
 
 	return addresses;
