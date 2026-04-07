@@ -246,7 +246,7 @@
 	const txGhost = $derived(report?.transactions?.filter((t: any) => ghostTypes.includes(t.type)).length || 0);
 	const txDCA = $derived(report?.transactions?.filter((t: any) => calcTypes.includes(t.type)).length || 0);
 
-	// Group transactions by txID — sibling contract events collapse under one row
+	// Group transactions by txID — only group semantically related types
 	const GROUP_PRIORITY: Record<string, number> = {
 		'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
 		'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
@@ -261,6 +261,25 @@
 		'contract': 100, 'unknown': 999,
 	};
 
+	// Only group types that are semantically related (same process)
+	const GROUP_FAMILY: Record<string, string> = {
+		'calc-create': 'dca', 'calc-update': 'dca', 'calc-withdraw': 'dca',
+		'calc-process': 'dca', 'calc-init': 'dca', 'calc-internal': 'dca',
+		'fin-trade': 'trade', 'tc-swap': 'trade', 'bow-swap': 'trade',
+		'fin-order': 'order', 'fin-order-wd': 'order',
+		'fin-range': 'range', 'fin-range-fee': 'range',
+		'fin-arb': 'arb',
+		'ghost-borrow': 'ghost', 'ghost-repay': 'ghost', 'ghost-lend': 'ghost', 'ghost-withdraw': 'ghost',
+		'swap': 'swap', 'addLiquidity': 'lp', 'withdraw': 'lp',
+		'send': 'send', 'refund': 'refund',
+		'auto-workflow': 'dca',
+	};
+
+	function getGroupKey(tx: any): string {
+		const family = GROUP_FAMILY[tx.type] || tx.type;
+		return `${tx.txID}:${family}`;
+	}
+
 	function groupByTxID(txs: any[]): Array<{ primary: any; siblings: any[]; txID: string }> {
 		const groups: Array<{ primary: any; siblings: any[]; txID: string }> = [];
 		const idxMap = new Map<string, number>();
@@ -269,7 +288,8 @@
 				groups.push({ primary: tx, siblings: [], txID: '' });
 				continue;
 			}
-			const idx = idxMap.get(tx.txID);
+			const key = getGroupKey(tx);
+			const idx = idxMap.get(key);
 			if (idx !== undefined) {
 				const g = groups[idx];
 				const newPri = GROUP_PRIORITY[tx.type] ?? 500;
@@ -281,7 +301,7 @@
 					g.siblings.push(tx);
 				}
 			} else {
-				idxMap.set(tx.txID, groups.length);
+				idxMap.set(key, groups.length);
 				groups.push({ primary: tx, siblings: [], txID: tx.txID });
 			}
 		}
