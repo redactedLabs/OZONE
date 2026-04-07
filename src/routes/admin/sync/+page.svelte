@@ -7,6 +7,7 @@
 	let refreshInterval: ReturnType<typeof setInterval>;
 	let loadingType = $state<string | null>(null);
 	let lastResult = $state<{ type: string; success: boolean; message: string } | null>(null);
+	let showRefetchConfirm = $state(false);
 
 	function timeAgo(dateStr: string | null | undefined): string {
 		if (!dateStr) return 'Never';
@@ -67,7 +68,7 @@
 	}
 
 	async function triggerRefetchAll() {
-		if (!confirm('This will mark ALL users for L1 re-fetch. The cron will process them in batches of 30. Continue?')) return;
+		showRefetchConfirm = false;
 		await triggerSync('l1-refetch');
 	}
 
@@ -166,7 +167,7 @@
 					{loadingType === 'l1-batch' ? 'Processing...' : 'Fetch Next Batch'}
 				</button>
 				<button
-					onclick={triggerRefetchAll}
+					onclick={() => showRefetchConfirm = true}
 					disabled={loadingType !== null}
 					class="rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
 					style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);"
@@ -186,7 +187,7 @@
 			</div>
 			{#if data.stats.unfetchedUsers > 0}
 				<p class="text-[10px] mt-1" style="color: #475569;">
-					{data.stats.unfetchedUsers.toLocaleString()} remaining · ~{Math.ceil(data.stats.unfetchedUsers / 30)} batches · ETA ~{Math.ceil(data.stats.unfetchedUsers / 1440)} days at 2 cron runs/hour
+					{data.stats.unfetchedUsers.toLocaleString()} remaining · ~{Math.ceil(data.stats.unfetchedUsers / 100)} batches · ETA ~{Math.ceil(data.stats.unfetchedUsers / 14400)} days at 6 cron runs/hour
 				</p>
 			{/if}
 		</div>
@@ -317,3 +318,32 @@
 		</div>
 	</div>
 </div>
+
+{#if showRefetchConfirm}
+	<div class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.6);">
+		<div class="rounded-xl p-6 max-w-md mx-4" style="background: #0d0d1f; border: 1px solid #1e293b;">
+			<h3 class="text-lg font-bold mb-3" style="color: #ef4444;">Re-fetch ALL L1 Addresses</h3>
+			<div class="space-y-2 text-sm mb-4" style="color: #94a3b8;">
+				<p>This will mark <strong style="color: #f1f5f9;">{data.stats.thorUsers.toLocaleString()}</strong> users for L1 re-discovery.</p>
+				<p>Existing L1 addresses are <strong style="color: #10b981;">NOT deleted</strong> — they are kept and new ones are added alongside them.</p>
+				<p>The cron will process them in batches of 100 every 10 minutes. Full re-scan will take ~{Math.ceil(data.stats.thorUsers / 14400)} days.</p>
+			</div>
+			<div class="flex gap-3 justify-end">
+				<button
+					onclick={() => showRefetchConfirm = false}
+					class="rounded-lg px-4 py-2 text-xs font-medium"
+					style="background: #1e293b; color: #94a3b8;"
+				>
+					Cancel
+				</button>
+				<button
+					onclick={triggerRefetchAll}
+					class="rounded-lg px-4 py-2 text-xs font-bold"
+					style="background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);"
+				>
+					Yes, Re-fetch ALL
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
