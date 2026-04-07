@@ -53,7 +53,7 @@
 	<div class="text-center mb-8">
 		<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style="color: var(--text);">Redacted Dashboard</h1>
 		<p class="text-sm" style="color: var(--text-muted);">
-			Privacy-preserving wallets on THORChain — deposit, transact, withdraw without revealing your identity.
+			Privacy-preserving wallets on Rujira & THORChain — deposit, interact, transact, withdraw without revealing your identity.
 		</p>
 	</div>
 

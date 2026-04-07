@@ -21,7 +21,7 @@
 			links: [
 				{ label: 'Wallet Explorer', href: '/history' },
 				{ label: 'Proof of Innocence', href: '/certificate' },
-				{ label: 'Redacted Dashboard', href: '/wallets' },
+				{ label: 'Redacted Dashboard', href: '/privacy' },
 			]
 		},
 		{
