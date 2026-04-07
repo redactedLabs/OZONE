@@ -45,6 +45,9 @@ const KNOWN_TETHER_FROZEN: Array<{ address: string; chain: string }> = [
 
 export async function syncTether(): Promise<{
 	count: number;
+	ethCount: number;
+	tronCount: number;
+	hardcodedCount: number;
 	duration: number;
 }> {
 	const start = Date.now();
@@ -53,6 +56,7 @@ export async function syncTether(): Promise<{
 		const addresses: Array<{ address: string; chain: string }> = [
 			...KNOWN_TETHER_FROZEN,
 		];
+		const hardcodedCount = KNOWN_TETHER_FROZEN.length;
 
 		// Fetch from Etherscan V2 (live on-chain AddedBlackList - RemovedBlackList)
 		const ethAddresses = await fetchEthBlacklist();
@@ -100,7 +104,13 @@ export async function syncTether(): Promise<{
 			duration
 		});
 
-		return { count: upserted, duration };
+		return {
+			count: upserted,
+			ethCount: ethAddresses.length,
+			tronCount: tronAddresses.length,
+			hardcodedCount,
+			duration
+		};
 	} catch (error) {
 		const duration = Date.now() - start;
 		await db.insert(syncLog).values({
