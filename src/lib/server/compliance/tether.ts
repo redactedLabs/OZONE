@@ -1,10 +1,13 @@
 import { db } from '../db';
 import { complianceEntries, syncLog } from '../db/schema';
 import { env } from '$env/dynamic/private';
+import { eq, sql } from 'drizzle-orm';
 import bs58check from 'bs58check';
 
 /**
  * Tether (USDT) frozen/blacklisted addresses — live on-chain event scanning.
+ * APPEND-ONLY: entries are NEVER deleted. Once an address has been blacklisted,
+ * it stays in the DB forever. Removed addresses get their reason updated.
  *
  * Sources:
  * - Ethereum: USDT contract AddedBlackList / RemovedBlackList events via Etherscan V2 API
@@ -28,9 +31,7 @@ function hexToTronAddress(hex: string): string {
 }
 
 // Known frozen addresses from public Dune/community datasets as a baseline
-// These are the most well-known Tether-frozen addresses
 const KNOWN_TETHER_FROZEN: Array<{ address: string; chain: string }> = [
-	// Major ETH frozen addresses (from Tether transparency reports + on-chain events)
 	{ address: '0xefbaaf73fc22f70785515c1e2be3d5ba2fb8e9b0', chain: 'ETH' },
 	{ address: '0x1da5821544e25c636c1417ba96ade4cf6d2f9b5a', chain: 'ETH' },
 	{ address: '0x7db418b5d567a4e0e8c59ad71be1fce48f3e6107', chain: 'ETH' },
@@ -60,22 +61,30 @@ export async function syncTether(): Promise<{
 	const start = Date.now();
 
 	try {
-		const addresses: Array<{ address: string; chain: string }> = [
+		// SAFETY: Count existing TETHER entries BEFORE doing anything
+		const [beforeCount] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(complianceEntries)
+			.where(eq(complianceEntries.source, 'TETHER'));
+		const existingCount = beforeCount?.count || 0;
+
+		// Collect ALL addresses that have EVER been blacklisted (append-only)
+		const addedAddresses: Array<{ address: string; chain: string }> = [
 			...KNOWN_TETHER_FROZEN,
 		];
 		const hardcodedCount = KNOWN_TETHER_FROZEN.length;
 
-		// Fetch from Etherscan V2 (all AddedBlackList events ever)
-		const ethAddresses = await fetchEthBlacklist();
-		addresses.push(...ethAddresses);
+		// Fetch ALL AddedBlackList events from ETH (not subtracting removed)
+		const ethAdded = await fetchAllAddedETH();
+		addedAddresses.push(...ethAdded);
 
-		// Fetch from TronGrid (all AddedBlackList events ever)
-		const tronAddresses = await fetchTronBlacklist();
-		addresses.push(...tronAddresses);
+		// Fetch ALL AddedBlackList events from TRON (not subtracting removed)
+		const tronAdded = await fetchAllAddedTRON();
+		addedAddresses.push(...tronAdded);
 
 		// Deduplicate
 		const seen = new Set<string>();
-		const unique = addresses.filter((a) => {
+		const unique = addedAddresses.filter((a) => {
 			const key = `${a.chain}:${a.address.toLowerCase()}`;
 			if (seen.has(key)) return false;
 			seen.add(key);
@@ -84,7 +93,7 @@ export async function syncTether(): Promise<{
 
 		let upserted = 0;
 
-		// Batch upsert in chunks of 100 for performance
+		// Batch upsert in chunks of 100
 		for (let i = 0; i < unique.length; i += 100) {
 			const chunk = unique.slice(i, i + 100);
 			const values = chunk.map((entry) => ({
@@ -102,19 +111,65 @@ export async function syncTether(): Promise<{
 			upserted += chunk.length;
 		}
 
+		// Now fetch removed addresses and mark them (but NEVER delete)
+		const ethRemoved = await fetchEtherscanEvents(ETH_REMOVED_TOPIC);
+		const tronRemoved = await fetchTronGridEvents('RemovedBlackList');
+		const removedSet = new Set([
+			...ethRemoved.map(a => a.toLowerCase()),
+			...tronRemoved.map(a => a.toLowerCase()),
+		]);
+
+		// Mark removed addresses with updated reason (still kept in DB)
+		if (removedSet.size > 0) {
+			const removedArr = [...removedSet];
+			for (let i = 0; i < removedArr.length; i += 100) {
+				const chunk = removedArr.slice(i, i + 100);
+				for (const addr of chunk) {
+					await db.update(complianceEntries)
+						.set({
+							reason: `USDT address (unfrozen by Tether)`,
+							lastSeen: new Date()
+						})
+						.where(
+							sql`address = ${addr} AND source = 'TETHER'`
+						);
+				}
+			}
+		}
+
+		// SAFETY CHECK: verify count didn't decrease
+		const [afterCount] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(complianceEntries)
+			.where(eq(complianceEntries.source, 'TETHER'));
+		const finalCount = afterCount?.count || 0;
+
+		if (finalCount < existingCount) {
+			// This should NEVER happen. Log critical error.
+			console.error(`[TETHER SYNC CRITICAL] Count decreased: ${existingCount} → ${finalCount}. This should never happen!`);
+			await db.insert(syncLog).values({
+				type: 'TETHER',
+				status: 'error',
+				recordsProcessed: upserted,
+				flagsFound: 0,
+				error: `SAFETY: Count decreased from ${existingCount} to ${finalCount}! Possible data loss.`,
+				duration: Date.now() - start
+			});
+		}
+
 		const duration = Date.now() - start;
 		await db.insert(syncLog).values({
 			type: 'TETHER',
 			status: 'success',
-			recordsProcessed: upserted,
-			flagsFound: 0,
+			recordsProcessed: finalCount,
+			flagsFound: removedSet.size,
 			duration
 		});
 
 		return {
-			count: upserted,
-			ethCount: ethAddresses.length,
-			tronCount: tronAddresses.length,
+			count: finalCount,
+			ethCount: ethAdded.length,
+			tronCount: tronAdded.length,
 			hardcodedCount,
 			duration
 		};
@@ -159,7 +214,6 @@ async function fetchEtherscanEvents(topic0: string): Promise<string[]> {
 		if (data.status !== '1' || !Array.isArray(data.result) || data.result.length === 0) break;
 
 		for (const log of data.result) {
-			// Address is in data field (ABI-encoded, padded to 32 bytes)
 			const raw = log.data;
 			if (raw && raw.length >= 66) {
 				const addr = '0x' + raw.slice(26, 66);
@@ -177,21 +231,14 @@ async function fetchEtherscanEvents(topic0: string): Promise<string[]> {
 }
 
 /**
- * Fetch currently frozen ETH USDT addresses via Etherscan V2.
- * Fetches both AddedBlackList and RemovedBlackList events,
- * then computes the net frozen set.
+ * Fetch ALL AddedBlackList ETH addresses (no subtraction).
+ * Returns unique addresses only.
  */
-async function fetchEthBlacklist(): Promise<Array<{ address: string; chain: string }>> {
+async function fetchAllAddedETH(): Promise<Array<{ address: string; chain: string }>> {
 	try {
-		const [added, removed] = await Promise.all([
-			fetchEtherscanEvents(ETH_ADDED_TOPIC),
-			fetchEtherscanEvents(ETH_REMOVED_TOPIC)
-		]);
-
-		const removedSet = new Set(removed);
-		const frozen = [...new Set(added)].filter((addr) => !removedSet.has(addr));
-
-		return frozen.map((addr) => ({ address: addr, chain: 'ETH' }));
+		const added = await fetchEtherscanEvents(ETH_ADDED_TOPIC);
+		const unique = [...new Set(added)];
+		return unique.map((addr) => ({ address: addr, chain: 'ETH' }));
 	} catch {
 		return [];
 	}
@@ -226,16 +273,13 @@ async function fetchTronGridEvents(eventName: string): Promise<string[]> {
 		for (const event of data.data) {
 			const rawAddr = event.result?._user || event.result?.user;
 			if (rawAddr) {
-				// TronGrid returns 0x hex — convert to base58 T... address
 				const addr = rawAddr.startsWith('0x') ? hexToTronAddress(rawAddr) : rawAddr;
 				addresses.push(addr);
 			}
 		}
 
 		pages++;
-		// Follow pagination via fingerprint
 		url = data.meta?.links?.next || null;
-		// Rate limit: 1.5s without API key, 600ms with — TronGrid free tier is strict
 		if (url) await new Promise((r) => setTimeout(r, apiKey ? 600 : 1500));
 	}
 
@@ -243,21 +287,14 @@ async function fetchTronGridEvents(eventName: string): Promise<string[]> {
 }
 
 /**
- * Fetch currently frozen TRON USDT addresses via TronGrid.
- * Fetches both AddedBlackList and RemovedBlackList events,
- * then computes the net frozen set.
+ * Fetch ALL AddedBlackList TRON addresses (no subtraction).
+ * Returns unique addresses only.
  */
-async function fetchTronBlacklist(): Promise<Array<{ address: string; chain: string }>> {
+async function fetchAllAddedTRON(): Promise<Array<{ address: string; chain: string }>> {
 	try {
-		const [added, removed] = await Promise.all([
-			fetchTronGridEvents('AddedBlackList'),
-			fetchTronGridEvents('RemovedBlackList')
-		]);
-
-		const removedSet = new Set(removed);
-		const frozen = added.filter((addr) => !removedSet.has(addr));
-
-		return frozen.map((addr) => ({ address: addr, chain: 'TRX' }));
+		const added = await fetchTronGridEvents('AddedBlackList');
+		const unique = [...new Set(added)];
+		return unique.map((addr) => ({ address: addr, chain: 'TRX' }));
 	} catch {
 		return [];
 	}
