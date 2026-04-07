@@ -656,7 +656,7 @@
 		{/if}
 
 		<!-- Stats row (clickable filters) -->
-		<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+		<div class="flex flex-wrap gap-2 mb-3">
 			<button onclick={() => (activeFilter = activeFilter === 'swap' ? null : 'swap')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'swap' ? 'border-color: var(--app-accent); box-shadow: 0 0 12px rgba(99,102,241,0.15);' : ''} cursor: pointer;">
 				<div class="text-lg font-bold font-mono" style="color: var(--app-accent);">{txSwaps}</div>
 				<div class="text-[10px]" style="color: var(--text-muted);">Swaps</div>
