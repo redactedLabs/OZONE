@@ -91,12 +91,73 @@
 	<main class="relative">
 		{@render children()}
 	</main>
+
+	<footer class="site-footer">
+		<div class="footer-inner">
+			<div class="footer-brand">
+				<a href="/" class="footer-logo">
+					<img src="/redacted-logo.svg" alt="Redacted" style="height: 16px; width: auto; opacity: 0.6;" />
+					<span style="font-weight: bold; font-size: 11px; color: var(--text-faint); margin-left: 1px;">\OZONE</span>
+				</a>
+				<span class="footer-copy" style="color: var(--text-ghost);">On-chain compliance for THORChain & Rujira</span>
+			</div>
+			<div class="footer-links">
+				<a href="https://x.com/redacted_money" target="_blank" rel="noopener">X / Twitter</a>
+				<a href="https://docs.redacted.money" target="_blank" rel="noopener">Docs</a>
+				<a href="https://rujira.network" target="_blank" rel="noopener">Rujira</a>
+				<a href="https://thorchain.org" target="_blank" rel="noopener">THORChain</a>
+			</div>
+		</div>
+	</footer>
 </div>
 
 <style>
 	:global(html), :global(body) {
 		background-color: var(--bg) !important;
 		color: var(--text) !important;
+	}
+
+	.site-footer {
+		margin-top: 4rem;
+		padding: 2rem 1.5rem;
+		border-top: 1px solid var(--app-border);
+	}
+	.footer-inner {
+		max-width: 72rem;
+		margin: 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+	.footer-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+	.footer-logo {
+		display: flex;
+		align-items: center;
+		text-decoration: none;
+		gap: 0;
+	}
+	.footer-copy {
+		font-size: 10px;
+	}
+	.footer-links {
+		display: flex;
+		gap: 1.25rem;
+		flex-wrap: wrap;
+	}
+	.footer-links a {
+		font-size: 11px;
+		color: var(--text-faint);
+		text-decoration: none;
+		transition: color 0.15s;
+	}
+	.footer-links a:hover {
+		color: var(--text);
 	}
 
 	.win98-toggle {
