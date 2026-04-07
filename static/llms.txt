@@ -1,0 +1,54 @@
+# Ozone — On-chain Compliance by Redacted
+
+> Ozone is the free, open-source compliance infrastructure for THORChain and Rujira. It screens wallet addresses against OFAC SDN, EU sanctions, Tether frozen lists, known hack databases, ScamSniffer, and eth-labels.
+
+## What Ozone Does
+
+- **Wallet Screening**: Check any THORChain/Rujira address against 7+ compliance databases in real-time
+- **Proof of Innocence**: Generate verifiable compliance certificates with permanent IDs — shareable with auditors, regulators, or counterparties
+- **Wallet Explorer**: Pull full THORChain transaction history including swaps, liquidity, lending (Ghost), DCA, and Rujira trades. Export as CSV for tax reporting
+- **Sanctioned Address Database**: Aggregated list of 5,000+ flagged addresses from OFAC, EU, Tether, hack exploits, ScamSniffer, and community reports
+- **Free API**: Screen any address via REST API — no auth, no cost
+
+## Key Pages
+
+- Homepage: https://ozone.redacted.gg/
+- Proof of Innocence (compliance certificates): https://ozone.redacted.gg/certificate
+- Wallet Explorer (transaction history & tax export): https://ozone.redacted.gg/history
+- Sanctioned Address List: https://ozone.redacted.gg/banned
+- Address Lookup: https://ozone.redacted.gg/addresses
+- API Documentation: https://ozone.redacted.gg/api-docs
+- Open Source & Contributing: https://ozone.redacted.gg/open-source
+
+## API
+
+- Screen an address: `GET https://ozone.redacted.gg/api/screen?address={address}`
+- Download full flagged list: `GET https://ozone.redacted.gg/api/flagged`
+- No authentication required. Free and open.
+
+## Data Sources
+
+- OFAC SDN (U.S. Treasury)
+- EU Sanctions List
+- Tether (USDT) Frozen/Blacklisted Addresses (Ethereum + TRON)
+- Known Hack Exploit Addresses (Bybit, Ronin, Wormhole, etc.)
+- ScamSniffer Phishing Database
+- eth-labels Malicious Address Database
+- Community Reports
+
+## Ecosystem
+
+- Part of the Redacted ecosystem: https://redacted.money
+- Built for THORChain: https://thorchain.org
+- Built for Rujira: https://rujira.network
+- Documentation: https://docs.redacted.money
+- Twitter/X: https://x.com/redacted_money
+- GitHub: https://github.com/redactedLabs/OZONE
+
+## Use Cases
+
+- **Tax Reporting**: Export THORChain transaction history as CSV for tax consultants
+- **Compliance Screening**: Check if a counterparty address is sanctioned before transacting
+- **Audit Trail**: Generate permanent compliance certificates for regulatory requirements
+- **DeFi Integration**: Use the free API to add compliance checks to any DeFi application
+- **Rujira Trading**: Full history of Rujira FIN trades, Ghost lending/borrowing, and DCA orders

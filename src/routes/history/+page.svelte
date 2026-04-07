@@ -299,12 +299,13 @@
 </script>
 
 <svelte:head>
-	<title>THORChain Wallet Explorer & History Export — Ozone</title>
-	<meta name="description" content="Explore any THORChain wallet. Export history as Koinly CSV. Share privately with your tax advisor, lawyer, or anyone — no account needed. Free tool by Redacted." />
-	<meta property="og:title" content="THORChain Wallet Explorer & History Export — Ozone" />
-	<meta property="og:description" content="Explore THORChain wallets. Export history. Share privately with anyone." />
-	<meta property="og:type" content="website" />
-	<meta name="twitter:card" content="summary_large_image" />
+	<title>THORChain Wallet Explorer & Tax Export — Rujira History | Ozone</title>
+	<meta name="description" content="Explore any THORChain or Rujira wallet. Full transaction history: swaps, liquidity, Ghost lending, DCA, FIN trades. Export as Koinly CSV for tax reporting. Share privately — no account needed." />
+	<meta property="og:title" content="THORChain Wallet Explorer & Tax Export — Ozone" />
+	<meta property="og:description" content="Full THORChain & Rujira history. Export CSV for tax. Swaps, LP, Ghost, DCA, FIN trades." />
+	<meta property="og:url" content="https://ozone.redacted.gg/history" />
+	<meta name="twitter:title" content="THORChain & Rujira Wallet Explorer — Ozone" />
+	<meta name="twitter:description" content="Full transaction history & tax CSV export. Free tool by Redacted." />
 </svelte:head>
 
 <div class="mx-auto px-4 pt-20 pb-16" class:max-w-6xl={phase === 'idle'} class:max-w-5xl={phase !== 'idle'}>

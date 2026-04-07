@@ -66,7 +66,11 @@ if data["flagged"]:
 </script>
 
 <svelte:head>
-	<title>API — Ozone</title>
+	<title>Free Compliance Screening API — THORChain & Crypto | Ozone</title>
+	<meta name="description" content="Free REST API for crypto compliance screening. Check any address against OFAC, EU sanctions, Tether frozen, hack databases. No auth required. JSON response." />
+	<meta property="og:title" content="Free Compliance Screening API — Ozone" />
+	<meta property="og:description" content="Screen any crypto address against OFAC, EU, Tether, hacks. No auth, no cost. REST API." />
+	<meta property="og:url" content="https://ozone.redacted.gg/api-docs" />
 </svelte:head>
 
 <div class="mx-auto max-w-5xl px-4 pt-20 pb-16">

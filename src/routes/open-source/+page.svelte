@@ -36,8 +36,11 @@
 </script>
 
 <svelte:head>
-	<title>Open Source — Ozone</title>
-	<meta name="description" content="Ozone is the open-source compliance layer for decentralized finance. Report sanctioned or hacked wallets and help shape a safer DeFi ecosystem." />
+	<title>Open Source Compliance for DeFi — Contribute | Ozone</title>
+	<meta name="description" content="Ozone is the open-source compliance layer for THORChain, Rujira, and DeFi. Report sanctioned or hacked wallets, submit data sources, and help build transparent on-chain compliance." />
+	<meta property="og:title" content="Open Source Compliance — Ozone" />
+	<meta property="og:description" content="Community-powered compliance for DeFi. Report wallets, contribute data, open PRs." />
+	<meta property="og:url" content="https://ozone.redacted.gg/open-source" />
 </svelte:head>
 
 <div class="mx-auto max-w-4xl px-4 pt-20 pb-16">

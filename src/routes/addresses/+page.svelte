@@ -81,7 +81,11 @@
 </script>
 
 <svelte:head>
-	<title>Addresses — Ozone</title>
+	<title>THORChain Address Lookup — Compliance Screening | Ozone</title>
+	<meta name="description" content="Look up any THORChain or Rujira address. See linked L1 chains (BTC, ETH, AVAX), compliance status, and screening results. Real-time OFAC & sanctions checking." />
+	<meta property="og:title" content="THORChain Address Lookup — Ozone" />
+	<meta property="og:description" content="Look up any THORChain address. See linked chains, compliance status, screening results." />
+	<meta property="og:url" content="https://ozone.redacted.gg/addresses" />
 </svelte:head>
 
 <!-- Address Detail Popup -->

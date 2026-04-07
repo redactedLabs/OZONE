@@ -98,12 +98,13 @@
 </script>
 
 <svelte:head>
-	<title>Proof of Innocence — Ozone</title>
-	<meta name="description" content="Screen any THORChain address against OFAC, EU sanctions, Chainalysis, and more. Get a verifiable compliance certificate — shareable and permanent." />
-	<meta property="og:title" content="Proof of Innocence — Ozone" />
-	<meta property="og:description" content="On-chain compliance certificate. Screen any address against 8+ databases." />
-	<meta property="og:type" content="website" />
-	<meta name="twitter:card" content="summary_large_image" />
+	<title>Proof of Innocence — THORChain Compliance Certificate | Ozone</title>
+	<meta name="description" content="Screen any THORChain or Rujira address against OFAC, EU sanctions, Tether frozen, known hacks, and more. Get a verifiable compliance certificate with a permanent ID — shareable with auditors, regulators, or counterparties." />
+	<meta property="og:title" content="Proof of Innocence — Compliance Certificate | Ozone" />
+	<meta property="og:description" content="Verifiable compliance certificate for THORChain & Rujira. Screen against 7+ databases. Permanent & shareable." />
+	<meta property="og:url" content="https://ozone.redacted.gg/certificate" />
+	<meta name="twitter:title" content="Proof of Innocence — Ozone" />
+	<meta name="twitter:description" content="Get a verifiable compliance certificate for any THORChain address. Free." />
 </svelte:head>
 
 <div class="mx-auto px-4 pt-20 pb-16" class:max-w-5xl={phase === 'idle'} class:max-w-3xl={phase !== 'idle'}>

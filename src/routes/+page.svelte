@@ -222,7 +222,24 @@
 </script>
 
 <svelte:head>
-	<title>Ozone — On-chain Compliance by Redacted</title>
+	<title>Ozone — On-chain Compliance for THORChain & Rujira</title>
+	<meta name="description" content="Free compliance infrastructure for THORChain & Rujira. Screen wallets against OFAC, EU sanctions, Tether frozen lists. Export transaction history for tax reporting. Proof of innocence certificates." />
+	<meta property="og:title" content="Ozone — On-chain Compliance for THORChain & Rujira" />
+	<meta property="og:description" content="Screen wallets, export tax history, get compliance certificates. OFAC, EU, Tether, hack databases. Free & open source." />
+	<meta property="og:url" content="https://ozone.redacted.gg" />
+	<meta name="twitter:title" content="Ozone — On-chain Compliance for THORChain & Rujira" />
+	<meta name="twitter:description" content="Screen wallets, export tax history, get compliance certificates. Free & open source." />
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		"@context": "https://schema.org",
+		"@type": "WebApplication",
+		"name": "Ozone",
+		"description": "Free on-chain compliance infrastructure for THORChain & Rujira. Wallet screening, tax export, compliance certificates.",
+		"url": "https://ozone.redacted.gg",
+		"applicationCategory": "FinanceApplication",
+		"operatingSystem": "Web",
+		"offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+		"creator": { "@type": "Organization", "name": "Redacted", "url": "https://redacted.money" }
+	})}</script>`}
 </svelte:head>
 
 <!-- Page with GodRays bg -->
