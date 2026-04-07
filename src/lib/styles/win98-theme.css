@@ -300,11 +300,9 @@ html.win98 body {
 	height: 20px !important;
 	width: auto !important;
 }
-/* ALL ghost logos → pixelated purple in Win98 */
+/* ALL ghost logos → keep original purple gradient, full opacity */
 .win98 img[src*="redacted-logo"] {
-	content: url('/redacted-logo-tiny.png') !important;
-	image-rendering: pixelated !important;
-	filter: brightness(0) saturate(100%) invert(12%) sepia(80%) saturate(6000%) hue-rotate(270deg) brightness(80%) !important;
+	filter: none !important;
 	opacity: 1 !important;
 }
 .win98 .logo-ozone {
