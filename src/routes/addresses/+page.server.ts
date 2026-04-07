@@ -5,16 +5,22 @@ import { eq, and, desc, sql, inArray, like } from 'drizzle-orm';
 
 const MIDGARD_URL = 'https://gateway.liquify.com/chain/thorchain_midgard';
 
-/**
- * If an address isn't in our DB, try to look it up on Midgard
- * and auto-import it + its L1 addresses.
- */
 function chainFromAsset(asset: string): string {
 	if (!asset) return 'UNKNOWN';
 	if (asset.includes('.')) return asset.split('.')[0] || 'UNKNOWN';
 	if (asset.includes('~')) return asset.split('~')[0] || 'UNKNOWN';
 	if (asset.includes('/')) return asset.split('/')[0] || 'UNKNOWN';
 	return asset.split('-')[0] || 'UNKNOWN';
+}
+
+function chainFromAddress(address: string): string | null {
+	if (!address) return null;
+	if (address.startsWith('thor')) return 'THOR';
+	if (address.startsWith('cosmos')) return 'GAIA';
+	if (address.startsWith('bc1') || /^[13][a-km-zA-HJ-NP-Z1-9]{25,}$/.test(address)) return 'BTC';
+	if (address.startsWith('ltc1') || /^[LM][a-km-zA-HJ-NP-Z1-9]{25,}$/.test(address)) return 'LTC';
+	if (address.startsWith('bnb')) return 'BNB';
+	return null;
 }
 
 async function lookupAndImport(address: string) {
@@ -47,7 +53,7 @@ async function lookupAndImport(address: string) {
 				for (const io of [...(action.in || []), ...(action.out || [])]) {
 					if (io.address && !io.address.startsWith('thor') && io.address !== address) {
 						const asset = io.coins?.[0]?.asset || '';
-						const chain = chainFromAsset(asset);
+						const chain = chainFromAddress(io.address) || chainFromAsset(asset);
 						if (chain !== 'UNKNOWN') {
 							await db.insert(l1Addresses).values({
 								thorAddress: address,
@@ -74,7 +80,7 @@ async function lookupAndImport(address: string) {
 				const memberData = await memberRes.json();
 				for (const pool of memberData?.pools || []) {
 					if (pool.assetAddress) {
-						const chain = chainFromAsset(pool.pool);
+						const chain = chainFromAddress(pool.assetAddress) || chainFromAsset(pool.pool);
 						await db.insert(l1Addresses).values({
 							thorAddress: address,
 							l1Address: pool.assetAddress,

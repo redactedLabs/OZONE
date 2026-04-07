@@ -3,9 +3,46 @@ import { rujiraUsers, l1Addresses, syncLog } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import pLimit from 'p-limit';
+import { bech32 } from 'bech32';
 
 const MIDGARD_URL = () => env.MIDGARD_URL || 'https://gateway.liquify.com/chain/thorchain_midgard';
 const RUJIRA_GQL = 'https://api.rujira.network/api/graphiql';
+
+/**
+ * Convert a Cosmos SDK bech32 address (cosmos1, osmo1, etc.) to thor1.
+ * Same key bytes, different prefix. Returns null for non-Cosmos chains.
+ * IMPORTANT: Only Cosmos SDK chains share key derivation with THORChain.
+ * Bitcoin (bc1), Litecoin (ltc1) etc. also use bech32 but have DIFFERENT keys.
+ */
+const COSMOS_SDK_PREFIXES = new Set([
+	'cosmos', 'osmo', 'kujira', 'terra', 'akash', 'juno', 'stars',
+	'inj', 'sei', 'evmos', 'cro', 'axelar', 'stride', 'umee', 'regen'
+]);
+
+function toThorAddress(address: string): string | null {
+	try {
+		const decoded = bech32.decode(address);
+		if (decoded.prefix === 'thor') return address;
+		if (!COSMOS_SDK_PREFIXES.has(decoded.prefix)) return null;
+		return bech32.encode('thor', decoded.words);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Detect chain from address prefix. Returns null for ambiguous cases (e.g. 0x).
+ */
+function chainFromAddress(address: string): string | null {
+	if (!address) return null;
+	if (address.startsWith('thor')) return 'THOR';
+	if (address.startsWith('cosmos')) return 'GAIA';
+	if (address.startsWith('bc1') || /^[13][a-km-zA-HJ-NP-Z1-9]{25,}$/.test(address)) return 'BTC';
+	if (address.startsWith('ltc1') || /^[LM][a-km-zA-HJ-NP-Z1-9]{25,}$/.test(address)) return 'LTC';
+	if (address.startsWith('bnb')) return 'BNB';
+	// 0x is ambiguous (ETH/BSC/AVAX/BASE) — fall back to asset-based detection
+	return null;
+}
 
 async function fetchWithRetry(
 	url: string,
@@ -101,10 +138,14 @@ async function fetchAllRujiraUsers(): Promise<
 
 /**
  * Step 1: Fetch ALL Rujira users from League leaderboard and bulk insert.
+ * - thor1 addresses: insert directly
+ * - cosmos1/osmo1/etc bech32: convert to thor1 (same key), store original as L1 with chain GAIA
+ * - 0x/bc1/ltc1: resolve to thor via Midgard actions, store original as L1
  */
 export async function syncAllMembers(): Promise<{
 	total: number;
 	newUsers: number;
+	converted: number;
 	duration: number;
 }> {
 	const start = Date.now();
@@ -112,6 +153,7 @@ export async function syncAllMembers(): Promise<{
 	try {
 		const rujiraMembers = await fetchAllRujiraUsers();
 		let newUsers = 0;
+		let converted = 0;
 
 		// Get existing users
 		const existing = await db
@@ -119,11 +161,20 @@ export async function syncAllMembers(): Promise<{
 			.from(rujiraUsers);
 		const existingSet = new Set(existing.map((e) => e.thorAddress));
 
-		const toInsert = rujiraMembers.filter(
-			(m) => m.address.startsWith('thor') && !existingSet.has(m.address)
-		);
+		// Separate thor addresses from non-thor
+		const thorMembers: typeof rujiraMembers = [];
+		const nonThorMembers: typeof rujiraMembers = [];
 
-		// Batch insert in chunks of 500
+		for (const m of rujiraMembers) {
+			if (m.address.startsWith('thor')) {
+				thorMembers.push(m);
+			} else {
+				nonThorMembers.push(m);
+			}
+		}
+
+		// Insert thor addresses directly
+		const toInsert = thorMembers.filter((m) => !existingSet.has(m.address));
 		for (let i = 0; i < toInsert.length; i += 500) {
 			const chunk = toInsert.slice(i, i + 500);
 			await db
@@ -131,6 +182,32 @@ export async function syncAllMembers(): Promise<{
 				.values(chunk.map((m) => ({ thorAddress: m.address })))
 				.onConflictDoNothing();
 			newUsers += chunk.length;
+		}
+
+		// Convert non-thor bech32 addresses (cosmos1, etc.) to thor1
+		for (const m of nonThorMembers) {
+			const thorAddr = toThorAddress(m.address);
+			if (!thorAddr) continue; // skip non-bech32 (0x, bc1, etc.)
+
+			converted++;
+
+			// Insert the derived thor address as a user
+			if (!existingSet.has(thorAddr)) {
+				await db.insert(rujiraUsers)
+					.values({ thorAddress: thorAddr })
+					.onConflictDoNothing();
+				existingSet.add(thorAddr);
+				newUsers++;
+			}
+
+			// Store the original address as a linked L1
+			const addrChain = chainFromAddress(m.address) || 'GAIA';
+			await db.insert(l1Addresses).values({
+				thorAddress: thorAddr,
+				l1Address: m.address,
+				chain: addrChain,
+				pool: `${addrChain}.ATOM`
+			}).onConflictDoNothing();
 		}
 
 		// Update lastSeen for all
@@ -145,7 +222,7 @@ export async function syncAllMembers(): Promise<{
 			duration
 		});
 
-		return { total: rujiraMembers.length, newUsers, duration };
+		return { total: rujiraMembers.length, newUsers, converted, duration };
 	} catch (error) {
 		const duration = Date.now() - start;
 		await db.insert(syncLog).values({
@@ -182,7 +259,7 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 			for (const pool of pools) {
 				if (!pool.assetAddress) continue;
 
-				const chain = chainFromAsset(pool.pool);
+				const chain = chainFromAddress(pool.assetAddress) || chainFromAsset(pool.pool);
 				poolNames.push(pool.pool);
 
 				await db.insert(l1Addresses).values({
@@ -222,7 +299,8 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 					if (!addr || addr.startsWith('thor')) continue;
 					const asset = io.coins?.[0]?.asset || '';
 					if (!asset) continue;
-					const chain = chainFromAsset(asset);
+					// Prefer address-based chain detection, fall back to asset-based
+					const chain = chainFromAddress(addr) || chainFromAsset(asset);
 					if (chain === 'UNKNOWN') continue;
 
 					await db.insert(l1Addresses).values({

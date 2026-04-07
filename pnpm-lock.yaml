@@ -17,6 +17,9 @@ importers:
       '@threlte/extras':
         specifier: ^9.7.1
         version: 9.13.3(@types/three@0.182.0)(svelte@5.55.1)(three@0.182.0)
+      bech32:
+        specifier: ^2.0.0
+        version: 2.0.0
       better-auth:
         specifier: ^1.5.6
         version: 1.5.6(@opentelemetry/api@1.9.1)(@sveltejs/kit@2.55.0(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.55.1)(vite@6.4.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)))(svelte@5.55.1)(typescript@6.0.2)(vite@6.4.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)))(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(kysely@0.28.14)(pg@8.20.0))(pg@8.20.0)(svelte@5.55.1)
@@ -1031,6 +1034,9 @@ packages:
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
+
+  bech32@2.0.0:
+    resolution: {integrity: sha512-LcknSilhIGatDAsY1ak2I8VtGaHNhgMSYVxFrGLXv+xLHytaKZKcaUJJUE7qmBr7h33o5YQwP55pMI0xmkpJwg==}
 
   better-auth@1.5.6:
     resolution: {integrity: sha512-QSpJTqaT1XVfWRQe/fm3PgeuwOIlz1nWX/Dx7nsHStJ382bLzmDbQk2u7IT0IJ6wS5SRxfqEE1Ev9TXontgyAQ==}
@@ -2449,6 +2455,8 @@ snapshots:
   axobject-query@4.1.0: {}
 
   balanced-match@4.0.4: {}
+
+  bech32@2.0.0: {}
 
   better-auth@1.5.6(@opentelemetry/api@1.9.1)(@sveltejs/kit@2.55.0(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.55.1)(vite@6.4.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)))(svelte@5.55.1)(typescript@6.0.2)(vite@6.4.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)))(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(kysely@0.28.14)(pg@8.20.0))(pg@8.20.0)(svelte@5.55.1):
     dependencies:
