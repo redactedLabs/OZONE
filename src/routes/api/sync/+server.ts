@@ -7,6 +7,9 @@ import { syncHackList } from '$lib/server/compliance/hacks';
 import { screenAllUsers } from '$lib/server/compliance/screener';
 import { env } from '$env/dynamic/private';
 
+// Allow up to 60s for full sync (Vercel Pro)
+export const config = { maxDuration: 60 };
+
 async function runSync() {
 	const start = Date.now();
 	const results: Record<string, any> = {};
