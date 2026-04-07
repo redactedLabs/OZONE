@@ -83,7 +83,8 @@
 		// Liquidy
 		'liquidy-swap': 'Liquidy Swap', 'liquidy-exec': 'Liquidy Execute',
 		// BRUNE
-		'brune-swap': 'BRUNE Swap',
+		'brune-swap': 'BRUNE Swap', 'brune-mint': 'BRUNE Mint', 'brune-burn': 'BRUNE Burn',
+		'brune-bond': 'BRUNE Bond', 'brune-fee': 'BRUNE Fee',
 		// Nami Index
 		'nami-deposit': 'Index Deposit', 'nami-withdraw': 'Index Withdraw',
 		// Other
@@ -127,7 +128,8 @@
 		// Liquidy
 		'liquidy-swap': '#22d3ee', 'liquidy-exec': '#22d3ee',
 		// BRUNE
-		'brune-swap': '#f97316',
+		'brune-swap': '#f97316', 'brune-mint': '#f97316', 'brune-burn': '#f97316',
+		'brune-bond': '#f97316', 'brune-fee': '#94a3b8',
 		// Nami
 		'nami-deposit': '#3b82f6', 'nami-withdraw': '#3b82f6',
 		// Other
@@ -345,7 +347,7 @@
 		'auto-workflow': 31, 'auto-cancel': 32,
 		'ruji-stake': 33, 'ruji-unstake': 33, 'ruji-claim': 33,
 		'pilot-swap': 34, 'pilot-order': 34,
-		'brune-swap': 35,
+		'brune-swap': 35, 'brune-mint': 35, 'brune-burn': 35,
 		'nami-deposit': 36, 'nami-withdraw': 36,
 		'merge-deposit': 37, 'merge-withdraw': 37,
 		// Routing / execution layer (internal — shown as siblings)

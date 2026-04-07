@@ -135,7 +135,7 @@
 				</p>
 			{:else}
 				<div class="text-xs mb-2" style="color: var(--text-muted);">
-					Deposit addresses discovered via Midgard pool participation:
+					Linked addresses discovered via Midgard on-chain activity:
 				</div>
 				<div class="space-y-2 max-h-80 overflow-y-auto">
 					{#each selectedUser.l1Addresses as l1}

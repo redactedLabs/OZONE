@@ -305,7 +305,7 @@
 					<span class="today-label" style="color: var(--text-faint);">1d</span>
 				</div>
 			{/if}
-			<div class="stat-tip">Discovered deposit addresses (BTC, ETH, DOGE, etc.) linked to THORChain wallets via Midgard pool participation. Used for cross-chain compliance screening.</div>
+			<div class="stat-tip">Linked L1 addresses (BTC, ETH, DOGE, etc.) discovered from on-chain activity — swaps, sends, LP deposits, withdrawals. Used for cross-chain compliance screening.</div>
 		</div>
 		<div class="dash-box stat-hover rounded-xl p-4 relative group">
 			<div class="flex items-baseline gap-2">

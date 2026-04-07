@@ -91,8 +91,11 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 	'wasm-calc-manager/strategy.create':  { type: 'calc-create',     label: 'DCA Strategy' },
 	'wasm-calc-strategy/process-node.result':   { type: 'calc-internal', label: 'DCA (step)' },
 	'wasm-calc-strategy/process-node.messages': { type: 'calc-internal', label: 'DCA (step)' },
+	'wasm-calc-strategy/process.reply':         { type: 'calc-internal', label: 'DCA (step)' },
+	'wasm-calc-strategy/execute':               { type: 'calc-process',  label: 'DCA Execute' },
 	'wasm-calc-strategy/update':                { type: 'calc-update',   label: 'DCA Update' },
 	'wasm-calc-manager/strategy.update':        { type: 'calc-update',   label: 'DCA Update' },
+	'wasm-calc-manager/strategy.execute':       { type: 'calc-process',  label: 'DCA Execute' },
 	// Auto Workflow (AutoRujira)
 	'wasm-autorujira-workflow-manager/execute_instance': { type: 'auto-workflow',    label: 'Auto Workflow' },
 	'wasm-autorujira-workflow-manager/cancel_instance':  { type: 'auto-cancel',      label: 'Cancel Workflow' },
@@ -111,6 +114,11 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 	'wasm-liquidy-swap-execute':          { type: 'liquidy-exec',    label: 'Liquidy Execute' },
 	// BRUNE — BTC stablecoin
 	'wasm-rujira-brune/swap':             { type: 'brune-swap',      label: 'BRUNE Swap' },
+	'wasm-rujira-brune/mint':             { type: 'brune-mint',      label: 'BRUNE Mint' },
+	'wasm-rujira-brune/burn':             { type: 'brune-burn',      label: 'BRUNE Burn' },
+	'wasm-rujira-brune/node.bond':        { type: 'brune-bond',      label: 'BRUNE Bond' },
+	'wasm-rujira-brune/fee.distribute':   { type: 'brune-fee',       label: 'BRUNE Fee' },
+	'wasm-rujira-brune/fee.allocate':     { type: 'brune-fee',       label: 'BRUNE Fee' },
 	// Nami Index
 	'wasm-nami-index-fixed/deposit':      { type: 'nami-deposit',    label: 'Index Deposit' },
 	'wasm-nami-index-fixed/withdraw':     { type: 'nami-withdraw',   label: 'Index Withdraw' },
@@ -141,7 +149,7 @@ const DEDUP_PRIORITY: Record<string, number> = {
 	'ruji-stake': 41, 'ruji-unstake': 41, 'ruji-claim': 41,
 	'pilot-swap': 42, 'pilot-order': 42,
 	'liquidy-swap': 43, 'liquidy-exec': 44,
-	'brune-swap': 45,
+	'brune-swap': 45, 'brune-mint': 45, 'brune-burn': 45, 'brune-bond': 80, 'brune-fee': 82,
 	'nami-deposit': 46, 'nami-withdraw': 46,
 	'calc-process': 50, 'calc-init': 51, 'calc-internal': 52,
 	'ghost-borrow': 60, 'ghost-repay': 61,
@@ -164,7 +172,21 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 	if (!contract?.contractType) return null;
 
 	const mapped = RUJIRA_TYPE_MAP[contract.contractType];
-	if (!mapped) return null;
+	if (!mapped) {
+		// Unknown contract type — return with raw type name instead of dropping
+		const funds = parseFunds(contract.funds || '');
+		const fundAsset = funds[0]?.asset || '';
+		const fundAmount = funds[0]?.amount || '0';
+		return {
+			type: 'contract',
+			assetIn: fundAsset,
+			assetOut: '',
+			amountIn: formatAmount(fundAmount),
+			amountOut: '',
+			rawAmountIn: rawAmount(fundAmount),
+			rawAmountOut: '0',
+		};
+	}
 
 	const attrs = contract.attributes || {};
 	const funds = parseFunds(contract.funds || '');
@@ -364,6 +386,23 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 				const retParts = attrs.returned.match(/^(\d+)(.+)$/);
 				if (retParts) { rawOut = retParts[1]; assetOut = cleanAsset(retParts[2]); }
 			}
+			break;
+		}
+		case 'brune-mint': {
+			assetIn = fundAsset;
+			rawIn = fundAmount;
+			assetOut = 'BRUNE';
+			rawOut = attrs.amount || fundAmount;
+			break;
+		}
+		case 'brune-burn': {
+			assetIn = 'BRUNE';
+			rawIn = fundAmount;
+			break;
+		}
+		case 'brune-bond':
+		case 'brune-fee': {
+			if (fundAmount !== '0') { assetIn = fundAsset; rawIn = fundAmount; }
 			break;
 		}
 		case 'nami-deposit': {
