@@ -273,7 +273,7 @@ html.win98 body {
 	box-sizing: border-box;
 }
 .win98 [data-win-title] > *:first-child {
-	margin-top: 6px;
+	margin-top: 12px;
 }
 .win98 [data-win-title] > *:last-child {
 	margin-bottom: 6px;
