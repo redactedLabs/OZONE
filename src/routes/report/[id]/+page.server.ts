@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { reports } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
+import { getContractLabel } from '$lib/utils/rujiraContracts';
 
 const MIDGARD_URL = 'https://gateway.liquify.com/chain/thorchain_midgard';
 const THORNODE_URL = 'https://gateway.liquify.com/chain/thorchain_api';
@@ -42,6 +43,8 @@ function parseAction(a: any) {
 	const outs = a.out || [];
 	const coinsIn = ins[0]?.coins?.[0] || {};
 	const coinsOut = outs[0]?.coins?.[0] || {};
+	const from = ins[0]?.address || '';
+	const to = outs[0]?.address || '';
 
 	return {
 		type: a.type || 'unknown',
@@ -52,8 +55,10 @@ function parseAction(a: any) {
 		amountOut: formatAmount(coinsOut.amount || '0'),
 		rawAmountIn: rawAmount(coinsIn.amount || '0'),
 		rawAmountOut: rawAmount(coinsOut.amount || '0'),
-		from: ins[0]?.address || '',
-		to: outs[0]?.address || '',
+		from,
+		to,
+		fromLabel: getContractLabel(from) || '',
+		toLabel: getContractLabel(to) || '',
 		txID: ins[0]?.txID || '',
 		status: a.status || 'unknown',
 	};

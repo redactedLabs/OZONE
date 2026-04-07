@@ -188,9 +188,9 @@
 
 	function exportCSV() {
 		if (!report) return;
-		const headers = ['Date', 'Type', 'Asset In', 'Amount In', 'Asset Out', 'Amount Out', 'Fee Amount', 'Fee Currency', 'From', 'To', 'TxID', 'Status'];
+		const headers = ['Date', 'Type', 'Asset In', 'Amount In', 'Asset Out', 'Amount Out', 'Fee Amount', 'Fee Currency', 'From', 'To', 'TxID', 'Status', 'Contract'];
 		const rows = report.transactions.map((tx: any) => [
-			tx.date, tx.type, tx.assetIn, tx.rawAmountIn || tx.amountIn, tx.assetOut, tx.rawAmountOut || tx.amountOut, tx.feeAmount || '', tx.feeCurrency || '', tx.from, tx.to, tx.txID, tx.status
+			tx.date, tx.type, tx.assetIn, tx.rawAmountIn || tx.amountIn, tx.assetOut, tx.rawAmountOut || tx.amountOut, tx.feeAmount || '', tx.feeCurrency || '', tx.from, tx.to, tx.txID, tx.status, tx.fromLabel || tx.toLabel || ''
 		]);
 		const csv = [headers, ...rows].map((r: string[]) =>
 			r.map((c: string) => `"${String(c).replace(/"/g, '""')}"`).join(',')
@@ -229,7 +229,9 @@
 				return '';
 			};
 			const label = koinlyLabel(tx.type);
-			const desc = tx.type === 'swap' ? `Swap ${tx.assetIn} → ${tx.assetOut}` : tx.type === 'addLiquidity' ? `LP Add ${tx.assetIn}` : tx.type === 'withdraw' ? `Withdraw ${tx.assetOut}` : tx.type === 'send' ? `Send ${sentAmount !== '0' ? tx.assetIn : tx.assetOut}` : typeLabels[tx.type] || tx.type;
+			const contractName = tx.fromLabel || tx.toLabel || '';
+			let desc = tx.type === 'swap' ? `Swap ${tx.assetIn} → ${tx.assetOut}` : tx.type === 'addLiquidity' ? `LP Add ${tx.assetIn}` : tx.type === 'withdraw' ? `Withdraw ${tx.assetOut}` : tx.type === 'send' ? `Send ${sentAmount !== '0' ? tx.assetIn : tx.assetOut}` : typeLabels[tx.type] || tx.type;
+			if (contractName) desc += ` [${contractName}]`;
 			return [
 				tx.date,
 				sentAmount !== '0' ? sentAmount : '',
@@ -864,6 +866,11 @@
 										{expandedGroups.has(group.txID) ? 'hide' : `+${group.siblings.length}`}
 									</button>
 								{/if}
+								{#if tx.fromLabel || tx.toLabel}
+									<span class="block text-[9px] mt-0.5" style="color: var(--text-faint);">
+										via {tx.fromLabel || tx.toLabel}
+									</span>
+								{/if}
 							</td>
 							<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 								{#if tx.amountIn !== '0'}
@@ -907,6 +914,11 @@
 										<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background: {typeColors[sib.type] || 'var(--text-ghost)'}15; color: {typeColors[sib.type] || 'var(--text-ghost)'};">
 											{typeLabels[sib.type] || sib.type}
 										</span>
+										{#if sib.fromLabel || sib.toLabel}
+											<span class="block text-[9px] mt-0.5" style="color: var(--text-faint);">
+												via {sib.fromLabel || sib.toLabel}
+											</span>
+										{/if}
 									</td>
 									<td class="px-4 py-2 text-xs font-mono" style="color: var(--text);">
 										{#if sib.amountIn !== '0'}

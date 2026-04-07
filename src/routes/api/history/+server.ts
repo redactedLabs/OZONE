@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { reports } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { getContractLabel } from '$lib/utils/rujiraContracts';
 
 const MIDGARD_URL = 'https://gateway.liquify.com/chain/thorchain_midgard';
 const THORNODE_URL = 'https://gateway.liquify.com/chain/thorchain_api';
@@ -487,6 +488,11 @@ function parseAction(a: any) {
 	const coinsOut = outs[0]?.coins?.[0] || {};
 	const fees = extractFees(a);
 
+	const from = ins[0]?.address || '';
+	const to = outs[0]?.address || '';
+	const fromLabel = getContractLabel(from) || '';
+	const toLabel = getContractLabel(to) || '';
+
 	// Try to decode Rujira contract interactions
 	if (a.type === 'contract') {
 		const decoded = parseContractAction(a);
@@ -500,8 +506,10 @@ function parseAction(a: any) {
 				amountOut: decoded.amountOut,
 				rawAmountIn: decoded.rawAmountIn,
 				rawAmountOut: decoded.rawAmountOut,
-				from: ins[0]?.address || '',
-				to: outs[0]?.address || '',
+				from,
+				to,
+				fromLabel,
+				toLabel,
 				txID: ins[0]?.txID || '',
 				status: a.status || 'unknown',
 				feeAmount: fees.feeAmount,
@@ -519,8 +527,10 @@ function parseAction(a: any) {
 		amountOut: formatAmount(coinsOut.amount || '0'),
 		rawAmountIn: rawAmount(coinsIn.amount || '0'),
 		rawAmountOut: rawAmount(coinsOut.amount || '0'),
-		from: ins[0]?.address || '',
-		to: outs[0]?.address || '',
+		from,
+		to,
+		fromLabel,
+		toLabel,
 		txID: ins[0]?.txID || '',
 		status: a.status || 'unknown',
 		feeAmount: fees.feeAmount,
