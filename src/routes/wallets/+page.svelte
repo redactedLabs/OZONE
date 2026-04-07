@@ -70,23 +70,23 @@
 			<div class="stat-tip">Combined balance across the Private Reserve (proxy contract) and all Private Wallets (sub-wallets). Denominated in RUNE.</div>
 		</div>
 
-		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Reserve">
-			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #22d3ee;">
-				{data.proxyBalance > 0 ? `${fmt(data.proxyBalance)}` : '0'}<span class="text-sm font-normal" style="color: #22d3ee;"> ᚱ</span>
-			</div>
-			{#if data.proxyTVLUsd > 0}
-				<div class="text-[10px] font-mono mt-0.5" style="color: var(--text-faint);">{fmtUsd(data.proxyTVLUsd)}</div>
-			{/if}
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Private Reserve</div>
-			<div class="stat-tip">Balance held in the proxy contract (code_id {data.codeIdProxy}). Funds are deposited here before being moved to Private Wallets via ZK proof.</div>
-		</div>
-
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Wallets">
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #a78bfa;">
 				{data.subWalletCount.toLocaleString('en-US')}
 			</div>
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Private Wallets</div>
 			<div class="stat-tip">Number of sub-wallet contracts (code_id {data.codeIdSub}) instantiated from the proxy. Each user creates one Private Wallet via ZK proof.</div>
+		</div>
+
+		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Revenue">
+			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #22d3ee;">
+				{data.feeBalance > 0 ? `${fmt(data.feeBalance)}` : '0'}<span class="text-sm font-normal" style="color: #22d3ee;"> ᚱ</span>
+			</div>
+			{#if data.feeBalanceUsd > 0}
+				<div class="text-[10px] font-mono mt-0.5" style="color: var(--text-faint);">{fmtUsd(data.feeBalanceUsd)}</div>
+			{/if}
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Total Fees</div>
+			<div class="stat-tip">Total protocol fees collected. Balance of the fee address, accumulated from the {data.config.fee} bps fee charged per interaction.</div>
 		</div>
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Fee">

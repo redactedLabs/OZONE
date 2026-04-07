@@ -1,4 +1,5 @@
 const PROXY_ADDRESS = 'thor1c5nhsur6368rtt36f7lczjwjxp02kzc586vcqvx88ptep5au90sshaykqx';
+const FEE_ADDRESS = 'thor15qymde6pkjxl2c068lk2gq0c7rcps4mckd3ngzwgy5n2mx6ms6mq3xntrt';
 const THORNODE = 'https://gateway.liquify.com/chain/thorchain_api';
 const MIDGARD = 'https://gateway.liquify.com/chain/thorchain_midgard';
 const CODE_ID_PROXY = 133;
@@ -106,6 +107,13 @@ async function fetchContractState(): Promise<{
 	return defaults;
 }
 
+async function fetchFeeBalance(): Promise<number> {
+	const data = await fetchJson<BalanceResponse>(
+		`${THORNODE}/cosmos/bank/v1beta1/balances/${FEE_ADDRESS}`
+	);
+	return parseRuneBalance(data);
+}
+
 async function fetchRunePrice(): Promise<number> {
 	const pools = await fetchJson<Pool[]>(`${MIDGARD}/v2/pools`);
 	// Find a stable pool to derive RUNE price
@@ -125,11 +133,12 @@ async function fetchRunePrice(): Promise<number> {
 }
 
 export async function load() {
-	const [proxyResult, subWalletsResult, configResult, priceResult] = await Promise.allSettled([
+	const [proxyResult, subWalletsResult, configResult, priceResult, feeResult] = await Promise.allSettled([
 		fetchProxyBalance(),
 		fetchSubWallets(),
 		fetchContractState(),
-		fetchRunePrice()
+		fetchRunePrice(),
+		fetchFeeBalance()
 	]);
 
 	const proxyBalance = proxyResult.status === 'fulfilled' ? proxyResult.value : 0;
@@ -139,6 +148,7 @@ export async function load() {
 			? configResult.value
 			: { fee: 15, adminAddress: '', feeAddress: '', subWasmId: CODE_ID_SUB };
 	const runePriceUsd = priceResult.status === 'fulfilled' ? priceResult.value : 0;
+	const feeBalance = feeResult.status === 'fulfilled' ? feeResult.value : 0;
 
 	// Fetch sub-wallet balances
 	let totalSubWalletBalance = 0;
@@ -157,9 +167,12 @@ export async function load() {
 		totalTVL,
 		totalTVLUsd: totalTVL * runePriceUsd,
 		proxyTVLUsd: proxyBalance * runePriceUsd,
+		feeBalance,
+		feeBalanceUsd: feeBalance * runePriceUsd,
 		runePriceUsd,
 		config,
 		proxyAddress: PROXY_ADDRESS,
+		feeAddress: FEE_ADDRESS,
 		codeIdProxy: CODE_ID_PROXY,
 		codeIdSub: CODE_ID_SUB,
 		fetchedAt: new Date().toISOString()
