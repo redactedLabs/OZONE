@@ -345,6 +345,7 @@ html.win98 body {
 	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif !important;
 	padding: 2px 4px !important;
 	box-shadow: none !important;
+	box-sizing: border-box !important;
 }
 
 .win98 input::placeholder,
