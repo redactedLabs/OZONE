@@ -281,7 +281,7 @@
 						<th class="px-4 py-2 text-left font-medium">Type</th>
 						<th class="px-4 py-2 text-left font-medium">Status</th>
 						<th class="px-4 py-2 text-right font-medium">Records</th>
-						<th class="px-4 py-2 text-right font-medium">Flags</th>
+						<th class="px-4 py-2 text-right font-medium">Found</th>
 						<th class="px-4 py-2 text-right font-medium">Duration</th>
 						<th class="px-4 py-2 text-left font-medium">Error</th>
 					</tr>
