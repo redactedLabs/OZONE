@@ -6,6 +6,7 @@ import { desc, sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) throw redirect(303, '/login');
+	if (locals.user.role !== 'owner') throw redirect(303, '/admin/lists');
 
 	// User stats
 	const [thorTotal] = await db

@@ -11,6 +11,7 @@
 	let mounted = $state(false);
 
 	const isAdmin = $derived(!!data?.user);
+	const isOwner = $derived(data?.user?.role === 'owner');
 	const toggleTheme = () => theme.toggle();
 
 	const menuGroups = $derived([
@@ -36,22 +37,16 @@
 			links: [
 				{ label: 'Open Source', href: '/open-source' },
 				{ label: 'API', href: '/api-docs' },
+				...(isAdmin ? [{ label: 'Compliance Lists', href: '/admin/lists' }] : []),
+				...(isAdmin ? [{ label: 'Settings', href: '/admin/settings' }] : []),
+				...(isOwner ? [{ label: 'Live Logs', href: '/admin/logs' }] : []),
+				...(isOwner ? [{ label: 'Sync', href: '/admin/sync' }] : []),
 				...(isAdmin
 					? [{ label: 'Logout', href: '/login?logout=1' }]
 					: [{ label: 'Login', href: '/login' }]
 				),
 			]
 		},
-		...(isAdmin ? [{
-			title: 'Admin',
-			variant: 'default' as const,
-			links: [
-				{ label: 'Compliance Lists', href: '/admin/lists' },
-				{ label: 'Live Logs', href: '/admin/logs' },
-				{ label: 'Sync', href: '/admin/sync' },
-				{ label: 'Settings', href: '/admin/settings' },
-			]
-		}] : []),
 	]);
 
 	onMount(() => {

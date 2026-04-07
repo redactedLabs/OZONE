@@ -17,6 +17,7 @@ type SyncType = 'members' | 'ofac' | 'eu' | 'hacks' | 'tether' | 'screening' | '
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+	if (locals.user.role !== 'owner') return json({ error: 'Forbidden' }, { status: 403 });
 
 	const { type } = await request.json() as { type: SyncType };
 

@@ -61,6 +61,53 @@
 		return `${Math.floor(hours / 24)}d ago`;
 	}
 
+	let currentPassword = $state('');
+	let newPassword = $state('');
+	let confirmPassword = $state('');
+	let changingPassword = $state(false);
+	let passwordSuccess = $state('');
+	let passwordError = $state('');
+
+	async function changePassword() {
+		passwordError = '';
+		passwordSuccess = '';
+
+		if (!currentPassword || !newPassword) {
+			passwordError = 'All fields are required';
+			return;
+		}
+		if (newPassword.length < 8) {
+			passwordError = 'New password must be at least 8 characters';
+			return;
+		}
+		if (newPassword !== confirmPassword) {
+			passwordError = 'New passwords do not match';
+			return;
+		}
+
+		changingPassword = true;
+		try {
+			const res = await fetch('/api/admin/change-password', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ currentPassword, newPassword })
+			});
+			const result = await res.json();
+			if (result.error) {
+				passwordError = result.error;
+			} else {
+				passwordSuccess = 'Password changed successfully';
+				currentPassword = '';
+				newPassword = '';
+				confirmPassword = '';
+			}
+		} catch (e: any) {
+			passwordError = e?.message || 'Failed to change password';
+		} finally {
+			changingPassword = false;
+		}
+	}
+
 	const listInfo: Record<string, { name: string; desc: string; color: string }> = {
 		OFAC: { name: 'OFAC SDN', desc: 'US Treasury sanctions list', color: '#ef4444' },
 		EU: { name: 'EU Sanctions', desc: 'European Union consolidated list', color: '#3b82f6' },
@@ -87,6 +134,28 @@
 		Logged in as <strong style="color: #f1f5f9;">{data.user?.email}</strong>
 		<span class="ml-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase" style={roleColors[data.user?.role || 'admin']}>{data.user?.role || 'admin'}</span>
 	</p>
+
+	<!-- Change Password -->
+	<div class="rounded-xl p-6 mb-8" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="Change Password">
+		<h2 class="text-lg font-semibold mb-1" style="color: #f1f5f9;">Change Password</h2>
+		<p class="text-xs mb-4" style="color: #64748b;">Update your login password.</p>
+
+		<div class="flex flex-col gap-3 max-w-sm">
+			<input bind:value={currentPassword} type="password" placeholder="Current password" class="admin-input rounded-lg px-3 py-2 text-sm" />
+			<input bind:value={newPassword} type="password" placeholder="New password" class="admin-input rounded-lg px-3 py-2 text-sm" />
+			<input bind:value={confirmPassword} type="password" placeholder="Confirm new password" class="admin-input rounded-lg px-3 py-2 text-sm" />
+			<button onclick={changePassword} disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword} class="rounded-lg px-5 py-2 text-sm font-medium text-white disabled:opacity-50 self-start" style="background: #6366f1;">
+				{changingPassword ? 'Changing...' : 'Change Password'}
+			</button>
+		</div>
+
+		{#if passwordSuccess}
+			<p class="mt-3 text-sm" style="color: #10b981;">{passwordSuccess}</p>
+		{/if}
+		{#if passwordError}
+			<p class="mt-3 text-sm" style="color: #ef4444;">{passwordError}</p>
+		{/if}
+	</div>
 
 	<!-- Invite -->
 	<div class="rounded-xl p-6 mb-8" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="Invite Collaborator">
