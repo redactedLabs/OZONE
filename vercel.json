@@ -8,10 +8,5 @@
 			"path": "/api/sync/tether",
 			"schedule": "0 */6 * * *"
 		}
-	],
-	"functions": {
-		"src/routes/api/sync/tether/+server.ts": {
-			"maxDuration": 60
-		}
-	}
+	]
 }
