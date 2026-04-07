@@ -38,6 +38,7 @@ function chainFromAddress(address: string): string | null {
 	if (!address) return null;
 	if (address.startsWith('thor')) return 'THOR';
 	if (address.startsWith('cosmos')) return 'GAIA';
+	if (address.startsWith('terra')) return 'TERRA';
 	if (address.startsWith('bc1') || /^[13][a-km-zA-HJ-NP-Z1-9]{25,}$/.test(address)) return 'BTC';
 	if (address.startsWith('ltc1') || /^[LM][a-km-zA-HJ-NP-Z1-9]{25,}$/.test(address)) return 'LTC';
 	if (address.startsWith('bnb')) return 'BNB';

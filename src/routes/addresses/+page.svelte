@@ -10,7 +10,7 @@
 	let dynamicChains = $state<string[]>([]);
 
 	// Static fallback chains used until pools load
-	const staticChains = ['BTC', 'ETH', 'SOL', 'DOGE', 'LTC', 'BCH', 'AVAX', 'BSC', 'BASE', 'GAIA', 'TRON', 'XRP', 'THOR'];
+	const staticChains = ['BTC', 'ETH', 'SOL', 'DOGE', 'LTC', 'BCH', 'AVAX', 'BSC', 'BASE', 'GAIA', 'TERRA', 'TRON', 'XRP', 'THOR'];
 
 	// Load dynamic chains from Midgard pools
 	fetchPoolChains().then((chains) => { dynamicChains = chains; });
@@ -24,7 +24,7 @@
 	// Fallback text icons
 	const chainIcons: Record<string, string> = {
 		BTC: '₿', ETH: 'Ξ', SOL: 'S', DOGE: 'Ð', LTC: 'Ł', BCH: '₿',
-		AVAX: 'A', BSC: 'B', BASE: 'B', GAIA: '⚛', TRON: 'T', XRP: 'X', THOR: 'ᚦ', XMR: 'ɱ', UNKNOWN: '?'
+		AVAX: 'A', BSC: 'B', BASE: 'B', GAIA: '⚛', TERRA: '🌕', TRON: 'T', XRP: 'X', THOR: 'ᚦ', XMR: 'ɱ', UNKNOWN: '?'
 	};
 
 	function chainLogo(chain: string): string | undefined {

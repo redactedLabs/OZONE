@@ -45,6 +45,7 @@ export const STATIC_LOGOS: Record<string, string> = {
 	COMP: `${CMC_CDN}/5692.png`,
 	SNX: `${CMC_CDN}/2586.png`,
 	BASE: `${CMC_CDN}/27716.png`,
+	LUNA: `${CMC_CDN}/4172.png`,
 	RUJI: RUJI_LOGO,
 };
 
@@ -66,6 +67,7 @@ export const CHAIN_COLORS: Record<string, string> = {
 	TRON: 'background: rgba(255, 0, 19, 0.15); border: 1px solid rgba(255, 0, 19, 0.3)',
 	TRX: 'background: rgba(255, 0, 19, 0.15); border: 1px solid rgba(255, 0, 19, 0.3)',
 	XRP: 'background: rgba(0, 170, 228, 0.15); border: 1px solid rgba(0, 170, 228, 0.3)',
+	TERRA: 'background: rgba(38, 100, 237, 0.15); border: 1px solid rgba(38, 100, 237, 0.3)',
 	THOR: 'background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3)',
 	XMR: 'background: rgba(255, 102, 0, 0.15); border: 1px solid rgba(255, 102, 0, 0.3)',
 	ZEC: 'background: rgba(236, 178, 43, 0.15); border: 1px solid rgba(236, 178, 43, 0.3)',
@@ -155,7 +157,7 @@ export function getChainLogo(chain: string, poolAssets?: string[]): string | und
 
 	// Map THORChain chain names to their native token symbols for STATIC_LOGOS lookup
 	const chainToToken: Record<string, string> = {
-		GAIA: 'ATOM', BSC: 'BNB', TRON: 'TRX', THOR: 'RUNE',
+		GAIA: 'ATOM', BSC: 'BNB', TRON: 'TRX', THOR: 'RUNE', TERRA: 'LUNA',
 	};
 	const tokenSymbol = chainToToken[upper] || upper;
 
