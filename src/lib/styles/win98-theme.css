@@ -999,3 +999,13 @@ html.win98 body {
 	90%  { opacity: 1; }
 	100% { top: 15%; left: 50%; opacity: 0; }
 }
+
+/* ══════════════════════════════════════════
+   Private Wallets — flow diagram boxes
+   ══════════════════════════════════════════ */
+.win98 .flow-box {
+	background: #c0c0c0 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	border-radius: 0 !important;
+}
