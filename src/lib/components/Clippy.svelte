@@ -1,28 +1,159 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
+	type Frame = { x: number; y: number; dur: number };
+
 	const tips = [
+		// Tax / Koinly / Export (heavily weighted)
+		"Tax season? Export your full THORChain history as Koinly-compatible CSV — one click in the Wallet Explorer!",
+		"Did you know? Ozone generates Koinly-ready CSVs. Swaps, LPs, sends — all labeled. Your tax consultant will love you.",
+		"Need a tax report? Enter your thor address in the Wallet Explorer, hit Export, and import straight into Koinly!",
+		"Hey! Your THORChain swaps, LP adds, and withdrawals are all exportable. Koinly, CoinTracker, or raw CSV — we got you.",
+		"Pro tip: Export your transaction history BEFORE tax deadline. Ozone pulls every swap, send, and LP action automatically.",
+		"I see you're using THORChain! Don't forget — you can export your full tx history as CSV for tax reporting anytime.",
+		"Fun fact: Ozone labels every transaction type — swaps, streams, LPs, refunds. Perfect for Koinly import!",
+		// Compliance
 		"It looks like you're checking compliance! Need to screen a wallet? Try the Wallet Explorer!",
 		"Did you know? Ozone screens against OFAC, EU sanctions, Tether frozen lists, and more — all free!",
 		"Want a Proof of Innocence? Get a verifiable compliance certificate for any THORChain address!",
-		"Hey! You can export your full transaction history as CSV. Perfect for tax season!",
+		// Features
 		"Trade privately on Rujira! Check out the Redacted Dashboard to learn how.",
 		"Ozone API is free — no auth required. One endpoint, every sanctions list. Check the docs!",
-		"I see you're using Ozone! Fun fact: we monitor wallets across all of THORChain.",
 		"Fun fact: Ozone auto-syncs compliance lists every 30 minutes. Always up to date!",
 		"Need to check an address? The API is just /api/screen?address=thor1... — try it!",
 		"Contribute to compliance! Submit flagged addresses on our Open Source page.",
 	];
 
-	// Idle animation frames from clippyjs agent.ts (sprite coords at 124x93 per frame)
-	const idleFrames = [
-		{ x: 0, y: 0, dur: 1000 },
-		{ x: 0, y: 93, dur: 100 },
-		{ x: 124, y: 93, dur: 100 },
-		{ x: 248, y: 93, dur: 100 },
-		{ x: 372, y: 93, dur: 100 },
-		{ x: 0, y: 0, dur: 100 },
-	];
+	// Animations from clippyjs sprite sheet (124x93 per frame)
+	const animations: Record<string, Frame[]> = {
+		Wave: [
+			{ x: 0, y: 0, dur: 100 },
+			{ x: 1116, y: 1767, dur: 100 }, { x: 1240, y: 1767, dur: 100 },
+			{ x: 1364, y: 1767, dur: 100 }, { x: 1488, y: 1767, dur: 100 },
+			{ x: 1612, y: 1767, dur: 100 }, { x: 1736, y: 1767, dur: 100 },
+			{ x: 1860, y: 1767, dur: 100 }, { x: 1984, y: 1767, dur: 100 },
+			{ x: 2108, y: 1767, dur: 100 }, { x: 2232, y: 1767, dur: 100 },
+			{ x: 2356, y: 1767, dur: 100 }, { x: 2480, y: 1767, dur: 100 },
+			{ x: 2604, y: 1767, dur: 100 }, { x: 2728, y: 1767, dur: 100 },
+			{ x: 2852, y: 1767, dur: 100 }, { x: 2976, y: 1767, dur: 100 },
+			{ x: 3100, y: 1767, dur: 100 }, { x: 3224, y: 1767, dur: 100 },
+			{ x: 0, y: 1860, dur: 100 }, { x: 124, y: 1860, dur: 100 },
+			{ x: 248, y: 1860, dur: 1200 }, { x: 372, y: 1860, dur: 100 },
+			{ x: 248, y: 1860, dur: 1300 }, { x: 496, y: 1860, dur: 50 },
+			{ x: 2976, y: 1767, dur: 50 }, { x: 0, y: 0, dur: 100 },
+		],
+		Greeting: [
+			{ x: 0, y: 0, dur: 100 },
+			{ x: 1612, y: 2790, dur: 100 }, { x: 1736, y: 2790, dur: 100 },
+			{ x: 1860, y: 2790, dur: 100 }, { x: 1984, y: 2790, dur: 100 },
+			{ x: 2108, y: 2790, dur: 100 }, { x: 2232, y: 2790, dur: 100 },
+			{ x: 2356, y: 2790, dur: 100 }, { x: 2480, y: 2790, dur: 100 },
+			{ x: 2604, y: 2790, dur: 100 }, { x: 2728, y: 2790, dur: 100 },
+			{ x: 2852, y: 2790, dur: 100 }, { x: 2976, y: 2790, dur: 100 },
+			{ x: 3100, y: 2790, dur: 100 }, { x: 3224, y: 2790, dur: 100 },
+			{ x: 0, y: 2883, dur: 100 }, { x: 124, y: 2883, dur: 100 },
+			{ x: 248, y: 2883, dur: 100 }, { x: 372, y: 2883, dur: 300 },
+			{ x: 496, y: 2883, dur: 100 }, { x: 372, y: 2883, dur: 450 },
+			{ x: 620, y: 2883, dur: 100 }, { x: 744, y: 2883, dur: 100 },
+			{ x: 868, y: 2883, dur: 100 }, { x: 992, y: 2883, dur: 100 },
+			{ x: 1116, y: 2883, dur: 100 }, { x: 1240, y: 2883, dur: 100 },
+			{ x: 1364, y: 2883, dur: 100 }, { x: 1488, y: 2883, dur: 100 },
+			{ x: 1612, y: 2883, dur: 100 },
+			{ x: 992, y: 1395, dur: 100 }, { x: 1116, y: 1395, dur: 100 },
+			{ x: 1240, y: 1395, dur: 100 }, { x: 1364, y: 1395, dur: 100 },
+			{ x: 1488, y: 1395, dur: 100 }, { x: 1612, y: 1395, dur: 100 },
+			{ x: 1736, y: 1395, dur: 100 }, { x: 1860, y: 1395, dur: 100 },
+			{ x: 0, y: 0, dur: 100 },
+		],
+		GetAttention: [
+			{ x: 0, y: 0, dur: 100 },
+			{ x: 1240, y: 651, dur: 100 }, { x: 1364, y: 651, dur: 100 },
+			{ x: 1488, y: 651, dur: 100 }, { x: 1612, y: 651, dur: 100 },
+			{ x: 1736, y: 651, dur: 100 }, { x: 1860, y: 651, dur: 100 },
+			{ x: 1984, y: 651, dur: 100 }, { x: 2108, y: 651, dur: 100 },
+			{ x: 2232, y: 651, dur: 100 }, { x: 2356, y: 651, dur: 150 },
+			{ x: 2232, y: 651, dur: 150 }, { x: 2356, y: 651, dur: 150 },
+			{ x: 2232, y: 651, dur: 150 }, { x: 2480, y: 651, dur: 150 },
+			{ x: 2604, y: 651, dur: 100 }, { x: 2728, y: 651, dur: 100 },
+			{ x: 2852, y: 651, dur: 100 }, { x: 2976, y: 651, dur: 100 },
+			{ x: 3100, y: 651, dur: 100 }, { x: 3224, y: 651, dur: 100 },
+			{ x: 0, y: 744, dur: 100 }, { x: 124, y: 744, dur: 100 },
+			{ x: 0, y: 0, dur: 100 },
+		],
+		IdleEyeBrowRaise: [
+			{ x: 0, y: 0, dur: 100 },
+			{ x: 1116, y: 186, dur: 100 }, { x: 1240, y: 186, dur: 100 },
+			{ x: 1364, y: 186, dur: 900 }, { x: 1240, y: 186, dur: 100 },
+			{ x: 1116, y: 186, dur: 100 }, { x: 0, y: 0, dur: 100 },
+		],
+		IdleFingerTap: [
+			{ x: 0, y: 0, dur: 100 },
+			{ x: 2976, y: 2976, dur: 100 }, { x: 3100, y: 2976, dur: 100 },
+			{ x: 3224, y: 2976, dur: 100 }, { x: 0, y: 3069, dur: 100 },
+			{ x: 124, y: 3069, dur: 100 }, { x: 248, y: 3069, dur: 150 },
+			{ x: 372, y: 3069, dur: 100 }, { x: 496, y: 3069, dur: 100 },
+			{ x: 620, y: 3069, dur: 100 }, { x: 0, y: 0, dur: 100 },
+		],
+		LookRight: [
+			{ x: 0, y: 0, dur: 100 },
+			{ x: 620, y: 651, dur: 100 }, { x: 744, y: 651, dur: 100 },
+			{ x: 868, y: 651, dur: 1200 }, { x: 992, y: 651, dur: 100 },
+			{ x: 1116, y: 651, dur: 100 }, { x: 0, y: 0, dur: 100 },
+		],
+		LookLeft: [
+			{ x: 0, y: 0, dur: 100 },
+			{ x: 248, y: 1488, dur: 100 }, { x: 372, y: 1488, dur: 100 },
+			{ x: 496, y: 1488, dur: 1200 }, { x: 620, y: 1488, dur: 100 },
+			{ x: 744, y: 1488, dur: 100 }, { x: 0, y: 0, dur: 100 },
+		],
+		IdleHeadScratch: [
+			{ x: 1984, y: 2418, dur: 100 }, { x: 2108, y: 2418, dur: 100 },
+			{ x: 2232, y: 2418, dur: 100 }, { x: 2356, y: 2418, dur: 100 },
+			{ x: 2480, y: 2418, dur: 100 }, { x: 2604, y: 2418, dur: 100 },
+			{ x: 2728, y: 2418, dur: 100 }, { x: 2852, y: 2418, dur: 100 },
+			{ x: 2976, y: 2418, dur: 100 }, { x: 3100, y: 2418, dur: 100 },
+			{ x: 3224, y: 2418, dur: 100 }, { x: 0, y: 2511, dur: 100 },
+			{ x: 124, y: 2511, dur: 100 }, { x: 248, y: 2511, dur: 100 },
+			{ x: 372, y: 2511, dur: 100 }, { x: 496, y: 2511, dur: 100 },
+			{ x: 620, y: 2511, dur: 100 }, { x: 744, y: 2511, dur: 100 },
+			{ x: 868, y: 2511, dur: 100 }, { x: 0, y: 0, dur: 100 },
+		],
+		Writing: [
+			{ x: 0, y: 0, dur: 100 },
+			{ x: 1860, y: 1860, dur: 100 }, { x: 1984, y: 1860, dur: 100 },
+			{ x: 2108, y: 1860, dur: 100 }, { x: 2232, y: 1860, dur: 100 },
+			{ x: 2356, y: 1860, dur: 100 }, { x: 2480, y: 1860, dur: 100 },
+			{ x: 2604, y: 1860, dur: 100 }, { x: 2728, y: 1860, dur: 100 },
+			{ x: 2852, y: 1860, dur: 100 }, { x: 2976, y: 1860, dur: 100 },
+			{ x: 3100, y: 1860, dur: 100 }, { x: 3224, y: 1860, dur: 100 },
+			{ x: 0, y: 1953, dur: 100 }, { x: 124, y: 1953, dur: 100 },
+			{ x: 248, y: 1953, dur: 100 }, { x: 372, y: 1953, dur: 200 },
+			{ x: 496, y: 1953, dur: 200 }, { x: 620, y: 1953, dur: 200 },
+			{ x: 744, y: 1953, dur: 200 }, { x: 868, y: 1953, dur: 200 },
+			{ x: 992, y: 1953, dur: 200 }, { x: 1116, y: 1953, dur: 200 },
+			{ x: 1240, y: 1953, dur: 200 }, { x: 1364, y: 1953, dur: 200 },
+			{ x: 1488, y: 1953, dur: 200 }, { x: 1612, y: 1953, dur: 100 },
+			{ x: 1736, y: 1953, dur: 100 }, { x: 1860, y: 1953, dur: 400 },
+			{ x: 1984, y: 1953, dur: 100 }, { x: 2108, y: 1953, dur: 400 },
+			{ x: 2232, y: 1953, dur: 100 }, { x: 2356, y: 1953, dur: 100 },
+			{ x: 2480, y: 1953, dur: 100 }, { x: 2604, y: 1953, dur: 200 },
+			{ x: 2728, y: 1953, dur: 200 }, { x: 2852, y: 1953, dur: 200 },
+			{ x: 2976, y: 1953, dur: 200 }, { x: 3100, y: 1953, dur: 100 },
+			{ x: 3224, y: 1953, dur: 200 }, { x: 0, y: 2046, dur: 200 },
+			{ x: 124, y: 2046, dur: 200 }, { x: 248, y: 2046, dur: 100 },
+			{ x: 372, y: 2046, dur: 100 }, { x: 496, y: 2046, dur: 100 },
+			{ x: 620, y: 2046, dur: 100 }, { x: 744, y: 2046, dur: 100 },
+			{ x: 868, y: 2046, dur: 100 }, { x: 992, y: 2046, dur: 100 },
+			{ x: 1116, y: 2046, dur: 100 }, { x: 1240, y: 2046, dur: 100 },
+			{ x: 1364, y: 2046, dur: 100 }, { x: 1488, y: 2046, dur: 100 },
+			{ x: 1612, y: 2046, dur: 100 }, { x: 1736, y: 2046, dur: 100 },
+			{ x: 1860, y: 2046, dur: 100 }, { x: 1984, y: 2046, dur: 100 },
+			{ x: 2108, y: 2046, dur: 100 }, { x: 2232, y: 2046, dur: 100 },
+			{ x: 2356, y: 2046, dur: 100 }, { x: 0, y: 0, dur: 100 },
+		],
+	};
+
+	const animNames = Object.keys(animations);
 
 	let position = $state({ x: 0, y: 0 });
 	let dragging = $state(false);
@@ -31,6 +162,7 @@
 	let dismissed = $state(false);
 	let spriteX = $state(0);
 	let spriteY = $state(0);
+	let animating = false;
 	let dragOffset = { x: 0, y: 0 };
 	let tipInterval: ReturnType<typeof setInterval>;
 	let animTimeout: ReturnType<typeof setTimeout>;
@@ -44,23 +176,34 @@
 		tipInterval = setInterval(nextTip, 8000);
 	}
 
-	function playIdle() {
+	function playAnimation(name?: string) {
+		if (animating) return;
+		const animName = name || animNames[Math.floor(Math.random() * animNames.length)];
+		const frames = animations[animName];
+		if (!frames) return;
+
+		animating = true;
 		let i = 0;
+
 		function step() {
-			if (i >= idleFrames.length) {
+			if (i >= frames.length) {
 				spriteX = 0;
 				spriteY = 0;
-				// Play idle again after 3-6 seconds
-				animTimeout = setTimeout(playIdle, 3000 + Math.random() * 3000);
+				animating = false;
+				scheduleNext();
 				return;
 			}
-			spriteX = idleFrames[i].x;
-			spriteY = idleFrames[i].y;
-			const dur = idleFrames[i].dur;
+			spriteX = frames[i].x;
+			spriteY = frames[i].y;
+			const dur = Math.max(frames[i].dur, 16);
 			i++;
 			animTimeout = setTimeout(step, dur);
 		}
 		step();
+	}
+
+	function scheduleNext() {
+		animTimeout = setTimeout(() => playAnimation(), 4000 + Math.random() * 6000);
 	}
 
 	function onBodyClick() {
@@ -70,6 +213,12 @@
 		}
 		nextTip();
 		resetTipInterval();
+		// Play a fun animation on click
+		if (!animating) {
+			clearTimeout(animTimeout);
+			const clickAnims = ['Wave', 'Greeting', 'GetAttention'];
+			playAnimation(clickAnims[Math.floor(Math.random() * clickAnims.length)]);
+		}
 	}
 
 	function onPointerDown(e: PointerEvent) {
@@ -96,7 +245,8 @@
 		position.y = window.innerHeight - 130;
 
 		tipInterval = setInterval(nextTip, 8000);
-		animTimeout = setTimeout(playIdle, 2000);
+		// Start with a Greeting
+		setTimeout(() => playAnimation('Greeting'), 1500);
 
 		return () => {
 			clearInterval(tipInterval);
