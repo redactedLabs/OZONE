@@ -14,15 +14,26 @@
 		"Contribute to compliance! Submit flagged addresses on our Open Source page.",
 	];
 
+	// Idle animation frames from clippyjs agent.ts (sprite coords at 124x93 per frame)
+	const idleFrames = [
+		{ x: 0, y: 0, dur: 1000 },
+		{ x: 0, y: 93, dur: 100 },
+		{ x: 124, y: 93, dur: 100 },
+		{ x: 248, y: 93, dur: 100 },
+		{ x: 372, y: 93, dur: 100 },
+		{ x: 0, y: 0, dur: 100 },
+	];
+
 	let position = $state({ x: 0, y: 0 });
 	let dragging = $state(false);
 	let currentTip = $state(0);
 	let showBubble = $state(true);
 	let dismissed = $state(false);
-	let blinking = $state(false);
+	let spriteX = $state(0);
+	let spriteY = $state(0);
 	let dragOffset = { x: 0, y: 0 };
 	let tipInterval: ReturnType<typeof setInterval>;
-	let blinkInterval: ReturnType<typeof setInterval>;
+	let animTimeout: ReturnType<typeof setTimeout>;
 
 	function nextTip() {
 		currentTip = (currentTip + 1) % tips.length;
@@ -31,6 +42,25 @@
 	function resetTipInterval() {
 		clearInterval(tipInterval);
 		tipInterval = setInterval(nextTip, 8000);
+	}
+
+	function playIdle() {
+		let i = 0;
+		function step() {
+			if (i >= idleFrames.length) {
+				spriteX = 0;
+				spriteY = 0;
+				// Play idle again after 3-6 seconds
+				animTimeout = setTimeout(playIdle, 3000 + Math.random() * 3000);
+				return;
+			}
+			spriteX = idleFrames[i].x;
+			spriteY = idleFrames[i].y;
+			const dur = idleFrames[i].dur;
+			i++;
+			animTimeout = setTimeout(step, dur);
+		}
+		step();
 	}
 
 	function onBodyClick() {
@@ -51,7 +81,7 @@
 
 	function onPointerMove(e: PointerEvent) {
 		if (!dragging) return;
-		const maxX = window.innerWidth - 80;
+		const maxX = window.innerWidth - 130;
 		const maxY = window.innerHeight - 100;
 		position.x = Math.max(0, Math.min(maxX, e.clientX - dragOffset.x));
 		position.y = Math.max(0, Math.min(maxY, e.clientY - dragOffset.y));
@@ -62,19 +92,15 @@
 	}
 
 	onMount(() => {
-		position.x = window.innerWidth - 112;
-		position.y = window.innerHeight - 132;
+		position.x = window.innerWidth - 160;
+		position.y = window.innerHeight - 130;
 
 		tipInterval = setInterval(nextTip, 8000);
-
-		blinkInterval = setInterval(() => {
-			blinking = true;
-			setTimeout(() => { blinking = false; }, 150);
-		}, 4000);
+		animTimeout = setTimeout(playIdle, 2000);
 
 		return () => {
 			clearInterval(tipInterval);
-			clearInterval(blinkInterval);
+			clearTimeout(animTimeout);
 		};
 	});
 </script>
@@ -87,13 +113,13 @@
 		<!-- Speech bubble -->
 		{#if showBubble}
 			<div class="clippy-bubble">
-				<button class="clippy-bubble-close" onclick={() => { showBubble = false; }}>x</button>
+				<button class="clippy-btn clippy-bubble-close" onclick={() => { showBubble = false; }}>x</button>
 				<div class="clippy-bubble-text">{tips[currentTip]}</div>
 				<div class="clippy-bubble-tail"></div>
 			</div>
 		{/if}
 
-		<!-- Clippy body -->
+		<!-- Clippy body (sprite) -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -104,36 +130,13 @@
 			onclick={onBodyClick}
 			style="cursor: {dragging ? 'grabbing' : 'grab'};"
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80" width="60" height="80">
-				<!-- Wire body -->
-				<path d="M30 75 C30 75, 18 65, 18 50 C18 38, 22 30, 28 22 C32 16, 38 14, 40 20 C42 26, 38 34, 34 40 C30 46, 26 52, 26 58 C26 62, 28 65, 30 65"
-					fill="none" stroke="#808080" stroke-width="3.5" stroke-linecap="round"/>
-				<path d="M30 75 C30 75, 42 65, 42 50 C42 38, 38 30, 32 22 C28 16, 22 14, 20 20 C18 26, 22 34, 26 40 C30 46, 34 52, 34 58 C34 62, 32 65, 30 65"
-					fill="none" stroke="#b0b0b0" stroke-width="3.5" stroke-linecap="round"/>
-
-				<!-- Highlight on wire -->
-				<path d="M24 35 C26 28, 30 22, 34 20"
-					fill="none" stroke="#d8d8d8" stroke-width="1.5" stroke-linecap="round"/>
-
-				<!-- Left eye -->
-				<ellipse cx="24" cy="14" rx="7" ry="8" fill="white" stroke="#333" stroke-width="1.5"/>
-				<circle cx="25" cy="14" r="3" fill="#000" class={blinking ? 'blink' : ''}/>
-				<circle cx="26" cy="13" r="1" fill="#fff"/>
-
-				<!-- Right eye -->
-				<ellipse cx="38" cy="14" rx="7" ry="8" fill="white" stroke="#333" stroke-width="1.5"/>
-				<circle cx="39" cy="14" r="3" fill="#000" class={blinking ? 'blink' : ''}/>
-				<circle cx="40" cy="13" r="1" fill="#fff"/>
-
-				<!-- Left eyebrow (raised) -->
-				<path d="M17 5 C20 2, 26 3, 28 5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
-
-				<!-- Right eyebrow -->
-				<path d="M33 5 C35 3, 41 3, 43 6" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
-			</svg>
+			<div
+				class="clippy-sprite"
+				style="background-position: -{spriteX}px -{spriteY}px;"
+			></div>
 
 			<!-- Dismiss X -->
-			<button class="clippy-dismiss" onclick={(e) => { e.stopPropagation(); dismissed = true; }}>x</button>
+			<button class="clippy-btn clippy-dismiss" onclick={(e) => { e.stopPropagation(); dismissed = true; }}>x</button>
 		</div>
 	</div>
 {/if}
@@ -145,36 +148,50 @@
 
 	.clippy-body {
 		position: relative;
-		width: 60px;
-		height: 80px;
+		width: 124px;
+		height: 93px;
 	}
 
-	.clippy-body:hover svg path[stroke="#808080"] {
-		stroke: #909090;
+	.clippy-sprite {
+		width: 124px;
+		height: 93px;
+		background-image: url('/clippy-sprite.png');
+		background-repeat: no-repeat;
+		image-rendering: auto;
+	}
+
+	/* Shared tiny Win98 button — overrides global .win98 button rules */
+	.clippy-btn {
+		background: #c0c0c0 !important;
+		border: 2px solid !important;
+		border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+		border-radius: 0 !important;
+		font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif !important;
+		color: #000 !important;
+		cursor: pointer;
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+		padding: 0 !important;
+		min-width: 0 !important;
+		width: auto !important;
+		max-width: none !important;
+		line-height: 1;
+		box-shadow: none !important;
+		text-shadow: none !important;
+	}
+
+	.clippy-btn:active {
+		border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a !important;
 	}
 
 	.clippy-dismiss {
 		position: absolute;
-		top: -4px;
-		right: -8px;
-		width: 16px;
-		height: 16px;
-		background: #c0c0c0;
-		border: 2px solid;
-		border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+		top: -2px;
+		right: -2px;
+		width: 16px !important;
+		height: 16px !important;
 		font-size: 9px;
-		font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
-		color: #000;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		line-height: 1;
-	}
-
-	.clippy-dismiss:active {
-		border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a;
 	}
 
 	/* Speech bubble */
@@ -182,11 +199,11 @@
 		position: absolute;
 		bottom: calc(100% + 8px);
 		right: 0;
-		width: 220px;
+		width: 240px;
 		background: #ffffe1;
 		border: 1px solid #000000;
 		box-shadow: 2px 2px 0 #808080;
-		padding: 8px 20px 8px 8px;
+		padding: 8px 22px 8px 8px;
 		font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
 		font-size: 11px;
 		color: #000000;
@@ -197,7 +214,7 @@
 	.clippy-bubble-tail {
 		position: absolute;
 		bottom: -6px;
-		right: 20px;
+		right: 24px;
 		width: 0;
 		height: 0;
 		border-left: 6px solid transparent;
@@ -220,32 +237,12 @@
 		position: absolute;
 		top: 2px;
 		right: 2px;
-		width: 14px;
-		height: 14px;
-		background: #c0c0c0;
-		border: 2px solid;
-		border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+		width: 14px !important;
+		height: 14px !important;
 		font-size: 8px;
-		font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
-		color: #000;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		line-height: 1;
-	}
-
-	.clippy-bubble-close:active {
-		border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a;
 	}
 
 	.clippy-bubble-text {
 		word-wrap: break-word;
-	}
-
-	/* Blink animation */
-	:global(.blink) {
-		opacity: 0;
 	}
 </style>

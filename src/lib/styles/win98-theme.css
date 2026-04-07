@@ -351,7 +351,7 @@ html.win98 body {
 .win98 textarea::placeholder { color: #808080 !important; }
 .win98 input[type="checkbox"] { accent-color: #000080; }
 
-.win98 button:not([data-slot]):not(.win98-toggle) {
+.win98 button:not([data-slot]):not(.win98-toggle):not(.clippy-btn) {
 	background: #c0c0c0 !important;
 	color: #000000 !important;
 	border: 2px solid !important;
@@ -366,7 +366,7 @@ html.win98 body {
 	text-shadow: none !important;
 }
 
-.win98 button:not([data-slot]):not(.win98-toggle):active {
+.win98 button:not([data-slot]):not(.win98-toggle):not(.clippy-btn):active {
 	border-color: #0a0a0a #dfdfdf #dfdfdf #0a0a0a !important;
 }
 
