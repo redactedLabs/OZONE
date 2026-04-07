@@ -2,8 +2,8 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { syncTether } from '$lib/server/compliance/tether';
 
-// Allow up to 120s for TRON pagination (Vercel Pro)
-export const config = { maxDuration: 120 };
+// Allow up to 300s for TRON pagination (Vercel Pro max)
+export const config = { maxDuration: 300 };
 
 async function runTetherSync() {
 	const start = Date.now();
