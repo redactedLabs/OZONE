@@ -274,8 +274,8 @@
 			On-chain compliance infrastructure for THORChain & Rujira
 		</p>
 		<div class="flex items-center justify-center gap-3">
-			<a href="/certificate" class="hero-cta-primary rounded-lg px-5 py-2 text-sm font-semibold text-white">Proof of Innocence</a>
-			<a href="/history" class="hero-cta-secondary rounded-lg px-5 py-2 text-sm font-medium">Wallet Explorer</a>
+			<a href="/history" class="hero-cta-primary rounded-lg px-5 py-2 text-sm font-semibold text-white">Wallet Explorer</a>
+			<a href="/certificate" class="hero-cta-secondary rounded-lg px-5 py-2 text-sm font-medium">Proof of Innocence</a>
 		</div>
 	</div>
 

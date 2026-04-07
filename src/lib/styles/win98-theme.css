@@ -1009,3 +1009,7 @@ html.win98 body {
 	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
 	border-radius: 0 !important;
 }
+.win98 .step-dot {
+	background: #000080 !important;
+	border-radius: 0 !important;
+}

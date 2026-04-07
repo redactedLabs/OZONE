@@ -104,7 +104,7 @@
 		<h2 class="text-sm font-bold mb-4" style="color: var(--text);">How Private Wallets Work</h2>
 
 		<!-- Desktop: horizontal flow -->
-		<div class="hidden sm:flex items-center justify-center gap-0">
+		<div class="hidden sm:flex items-center justify-center gap-0 mb-4">
 			<!-- Public Wallet -->
 			<div class="flow-box rounded-lg p-3 text-center" style="border: 2px solid #10b981; background: rgba(16,185,129,0.05); min-width: 120px;">
 				<div class="text-xs font-bold mb-1" style="color: #10b981;">Public Wallet</div>
@@ -114,7 +114,7 @@
 			<!-- Arrow 1 -->
 			<div class="flex flex-col items-center px-2">
 				<div class="text-[8px] font-mono mb-1 px-2 py-0.5 rounded" style="background: rgba(16,185,129,0.1); color: #10b981;">AML Screen</div>
-				<div class="text-lg" style="color: var(--text-faint);">&#8594;</div>
+				<div class="text-sm font-mono" style="color: var(--text-faint);">&#8644;</div>
 			</div>
 
 			<!-- Private Reserve -->
@@ -126,7 +126,7 @@
 			<!-- Arrow 2 -->
 			<div class="flex flex-col items-center px-2">
 				<div class="text-[8px] font-mono mb-1 px-2 py-0.5 rounded" style="background: rgba(167,139,250,0.1); color: #a78bfa;">ZK Proof</div>
-				<div class="text-lg" style="color: var(--text-faint);">&#8594;</div>
+				<div class="text-sm font-mono" style="color: var(--text-faint);">&#8644;</div>
 			</div>
 
 			<!-- Private Wallet -->
@@ -137,7 +137,7 @@
 
 			<!-- Arrow 3 -->
 			<div class="flex flex-col items-center px-2">
-				<div class="text-lg" style="color: var(--text-faint);">&#8594;</div>
+				<div class="text-sm font-mono" style="color: var(--text-faint);">&#8644;</div>
 			</div>
 
 			<!-- DeFi -->
@@ -148,7 +148,7 @@
 		</div>
 
 		<!-- Mobile: vertical flow -->
-		<div class="flex sm:hidden flex-col items-center gap-0">
+		<div class="flex sm:hidden flex-col items-center gap-0 mb-4">
 			<div class="flow-box rounded-lg p-3 text-center w-full" style="border: 2px solid #10b981; background: rgba(16,185,129,0.05);">
 				<div class="text-xs font-bold mb-1" style="color: #10b981;">Public Wallet</div>
 				<div class="text-[9px]" style="color: var(--text-faint);">Your thor1... address</div>
@@ -156,7 +156,7 @@
 
 			<div class="flex flex-col items-center py-1">
 				<div class="text-[8px] font-mono px-2 py-0.5 rounded" style="background: rgba(16,185,129,0.1); color: #10b981;">AML Screen</div>
-				<div class="text-lg" style="color: var(--text-faint);">&#8595;</div>
+				<div class="text-sm font-mono" style="color: var(--text-faint);">&#8645;</div>
 			</div>
 
 			<div class="flow-box rounded-lg p-3 text-center w-full" style="border: 2px solid #22d3ee; background: rgba(34,211,238,0.05);">
@@ -166,7 +166,7 @@
 
 			<div class="flex flex-col items-center py-1">
 				<div class="text-[8px] font-mono px-2 py-0.5 rounded" style="background: rgba(167,139,250,0.1); color: #a78bfa;">ZK Proof</div>
-				<div class="text-lg" style="color: var(--text-faint);">&#8595;</div>
+				<div class="text-sm font-mono" style="color: var(--text-faint);">&#8645;</div>
 			</div>
 
 			<div class="flow-box rounded-lg p-3 text-center w-full" style="border: 2px solid #a78bfa; background: rgba(167,139,250,0.05);">
@@ -175,7 +175,7 @@
 			</div>
 
 			<div class="flex flex-col items-center py-1">
-				<div class="text-lg" style="color: var(--text-faint);">&#8595;</div>
+				<div class="text-sm font-mono" style="color: var(--text-faint);">&#8645;</div>
 			</div>
 
 			<div class="flow-box rounded-lg p-3 text-center w-full" style="border: 2px solid #f59e0b; background: rgba(245,158,11,0.05);">
@@ -189,7 +189,7 @@
 	<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
 		<div class="dash-box rounded-xl p-5" data-win-title="1. Deposit">
 			<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
-				<span class="inline-block h-1.5 w-1.5 rounded-full" style="background: #10b981;"></span>
+				<span class="step-dot" style="background: #10b981;"></span>
 				<span class="text-[10px] font-mono" style="color: #10b981;">Step 1</span>
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Deposit</h3>
@@ -200,7 +200,7 @@
 
 		<div class="dash-box rounded-xl p-5" data-win-title="2. Create Wallet">
 			<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.2);">
-				<span class="inline-block h-1.5 w-1.5 rounded-full" style="background: #a78bfa;"></span>
+				<span class="step-dot" style="background: #a78bfa;"></span>
 				<span class="text-[10px] font-mono" style="color: #a78bfa;">Step 2</span>
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Create Private Wallet</h3>
@@ -211,7 +211,7 @@
 
 		<div class="dash-box rounded-xl p-5" data-win-title="3. Use DeFi">
 			<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);">
-				<span class="inline-block h-1.5 w-1.5 rounded-full" style="background: #f59e0b;"></span>
+				<span class="step-dot" style="background: #f59e0b;"></span>
 				<span class="text-[10px] font-mono" style="color: #f59e0b;">Step 3</span>
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Use in DeFi</h3>
@@ -222,7 +222,7 @@
 
 		<div class="dash-box rounded-xl p-5" data-win-title="4. Withdraw">
 			<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
-				<span class="inline-block h-1.5 w-1.5 rounded-full" style="background: #22d3ee;"></span>
+				<span class="step-dot" style="background: #22d3ee;"></span>
 				<span class="text-[10px] font-mono" style="color: #22d3ee;">Step 4</span>
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Withdraw</h3>
@@ -307,5 +307,12 @@
 
 	.flow-box {
 		transition: border-color 0.2s;
+	}
+	.step-dot {
+		display: inline-block;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		flex-shrink: 0;
 	}
 </style>
