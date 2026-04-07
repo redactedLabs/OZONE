@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Toast from '$lib/components/Toast.svelte';
+	import Clippy from '$lib/components/Clippy.svelte';
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte';
@@ -604,6 +605,10 @@
 
 </div>
 </div>
+
+{#if theme.current === 'win98'}
+	<Clippy />
+{/if}
 
 <Toast
 	message={toast.message}

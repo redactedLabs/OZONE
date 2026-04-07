@@ -1013,3 +1013,25 @@ html.win98 body {
 	background: #000080 !important;
 	border-radius: 0 !important;
 }
+
+/* ══════════════════════════════════════════
+   Clippy assistant
+   ══════════════════════════════════════════ */
+.win98 .clippy-wrap {
+	z-index: 9999;
+}
+.win98 .clippy-bubble {
+	background: #ffffe1 !important;
+	border: 1px solid #000000 !important;
+	box-shadow: 2px 2px 0 #808080;
+	font-family: 'Pixelated MS Sans Serif', 'MS Sans Serif', Tahoma, sans-serif;
+	font-size: 11px;
+	color: #000000;
+}
+.win98 .clippy-dismiss,
+.win98 .clippy-bubble-close {
+	background: #c0c0c0 !important;
+	border: 2px solid !important;
+	border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf !important;
+	border-radius: 0 !important;
+}
