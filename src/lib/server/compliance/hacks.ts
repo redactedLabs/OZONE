@@ -1,6 +1,5 @@
 import { db } from '../db';
 import { complianceEntries, syncLog } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 
 interface HackEntry {
@@ -72,35 +71,20 @@ export async function syncHackList(): Promise<{
 					? entry.address.toLowerCase()
 					: entry.address;
 
-			const existing = await db
-				.select()
-				.from(complianceEntries)
-				.where(
-					and(
-						eq(complianceEntries.address, normalizedAddr),
-						eq(complianceEntries.source, 'HACK')
-					)
-				)
-				.limit(1);
-
-			if (existing.length > 0) {
-				await db
-					.update(complianceEntries)
-					.set({
-						lastSeen: new Date(),
-						entityName: entry.incident,
-						reason: `${entry.incident} (${entry.source})`
-					})
-					.where(eq(complianceEntries.id, existing[0].id));
-			} else {
-				await db.insert(complianceEntries).values({
-					address: normalizedAddr,
-					chain: entry.chain,
-					source: 'HACK',
+			await db.insert(complianceEntries).values({
+				address: normalizedAddr,
+				chain: entry.chain,
+				source: 'HACK',
+				entityName: entry.incident,
+				reason: `${entry.incident} — est. $${entry.estimatedUSD?.toLocaleString()} (${entry.source})`
+			}).onConflictDoUpdate({
+				target: [complianceEntries.address, complianceEntries.source],
+				set: {
+					lastSeen: new Date(),
 					entityName: entry.incident,
-					reason: `${entry.incident} — est. $${entry.estimatedUSD?.toLocaleString()} (${entry.source})`
-				});
-			}
+					reason: `${entry.incident} (${entry.source})`
+				}
+			});
 			upserted++;
 		}
 

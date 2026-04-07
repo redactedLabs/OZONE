@@ -17,7 +17,9 @@ export const complianceEntries = pgTable('compliance_entries', {
 	reason: text('reason'),
 	addedAt: timestamp('added_at').defaultNow(),
 	lastSeen: timestamp('last_seen').defaultNow()
-});
+}, (table) => [
+	uniqueIndex('compliance_addr_source_unique').on(table.address, table.source)
+]);
 
 export const rujiraUsers = pgTable('rujira_users', {
 	id: serial('id').primaryKey(),

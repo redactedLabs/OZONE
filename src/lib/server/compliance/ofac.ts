@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { db } from '../db';
 import { complianceEntries, syncLog } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 const OFAC_SDN_URL =
 	'https://www.treasury.gov/ofac/downloads/sanctions/1.0/sdn_advanced.xml';
@@ -157,35 +157,20 @@ export async function syncOFAC(): Promise<{
 
 							const entityName = nameMap.get(String(identityId)) || 'Unknown OFAC Entity';
 
-							const existing = await db
-								.select()
-								.from(complianceEntries)
-								.where(
-									and(
-										eq(complianceEntries.address, normalizedAddr),
-										eq(complianceEntries.source, 'OFAC')
-									)
-								)
-								.limit(1);
-
-							if (existing.length > 0) {
-								await db
-									.update(complianceEntries)
-									.set({
-										lastSeen: new Date(),
-										entityName,
-										chain
-									})
-									.where(eq(complianceEntries.id, existing[0].id));
-							} else {
-								await db.insert(complianceEntries).values({
-									address: normalizedAddr,
-									chain,
-									source: 'OFAC',
+							await db.insert(complianceEntries).values({
+								address: normalizedAddr,
+								chain,
+								source: 'OFAC',
+								entityName,
+								reason: 'OFAC SDN List'
+							}).onConflictDoUpdate({
+								target: [complianceEntries.address, complianceEntries.source],
+								set: {
+									lastSeen: new Date(),
 									entityName,
-									reason: 'OFAC SDN List'
-								});
-							}
+									chain
+								}
+							});
 						}
 					}
 				}

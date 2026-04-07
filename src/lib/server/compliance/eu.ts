@@ -1,7 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { db } from '../db';
 import { complianceEntries, syncLog } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
 
 const EU_SANCTIONS_URL =
 	'https://webgate.ec.europa.eu/europeaid/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content';
@@ -95,31 +94,16 @@ export async function syncEU(): Promise<{ count: number; duration: number }> {
 			if (seen.has(normalizedAddr)) continue;
 			seen.add(normalizedAddr);
 
-			const existing = await db
-				.select()
-				.from(complianceEntries)
-				.where(
-					and(
-						eq(complianceEntries.address, normalizedAddr),
-						eq(complianceEntries.source, 'EU')
-					)
-				)
-				.limit(1);
-
-			if (existing.length > 0) {
-				await db
-					.update(complianceEntries)
-					.set({ lastSeen: new Date() })
-					.where(eq(complianceEntries.id, existing[0].id));
-			} else {
-				await db.insert(complianceEntries).values({
-					address: normalizedAddr,
-					chain: entry.chain,
-					source: 'EU',
-					entityName: entry.entityName,
-					reason: 'EU Consolidated Sanctions List'
-				});
-			}
+			await db.insert(complianceEntries).values({
+				address: normalizedAddr,
+				chain: entry.chain,
+				source: 'EU',
+				entityName: entry.entityName,
+				reason: 'EU Consolidated Sanctions List'
+			}).onConflictDoUpdate({
+				target: [complianceEntries.address, complianceEntries.source],
+				set: { lastSeen: new Date() }
+			});
 			upserted++;
 		}
 
