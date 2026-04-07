@@ -73,22 +73,22 @@ export async function syncTether(): Promise<{
 
 		let upserted = 0;
 
-		for (const entry of unique) {
-			const normalizedAddr = entry.chain === 'ETH'
-				? entry.address.toLowerCase()
-				: entry.address;
-
-			await db.insert(complianceEntries).values({
-				address: normalizedAddr,
+		// Batch upsert in chunks of 100 for performance
+		for (let i = 0; i < unique.length; i += 100) {
+			const chunk = unique.slice(i, i + 100);
+			const values = chunk.map((entry) => ({
+				address: entry.chain === 'ETH' ? entry.address.toLowerCase() : entry.address,
 				chain: entry.chain,
-				source: 'TETHER',
+				source: 'TETHER' as const,
 				entityName: 'Tether Frozen',
 				reason: `USDT blacklisted address (${entry.chain})`
-			}).onConflictDoUpdate({
+			}));
+
+			await db.insert(complianceEntries).values(values).onConflictDoUpdate({
 				target: [complianceEntries.address, complianceEntries.source],
 				set: { lastSeen: new Date() }
 			});
-			upserted++;
+			upserted += chunk.length;
 		}
 
 		const duration = Date.now() - start;
@@ -127,7 +127,9 @@ async function fetchEtherscanEvents(topic0: string): Promise<string[]> {
 	let page = 1;
 	const perPage = 10000;
 
-	while (true) {
+	const maxPages = 10; // Safety cap: 10 × 10000 = 100K events max
+
+	while (page <= maxPages) {
 		const url = `https://api.etherscan.io/v2/api?chainid=1&module=logs&action=getLogs` +
 			`&address=${USDT_ETH_CONTRACT}&topic0=${topic0}` +
 			`&startblock=0&endblock=latest&page=${page}&offset=${perPage}` +
@@ -182,16 +184,22 @@ async function fetchEthBlacklist(): Promise<Array<{ address: string; chain: stri
  * Fetch all events of a given type from TronGrid with full pagination.
  */
 async function fetchTronGridEvents(eventName: string): Promise<string[]> {
+	const apiKey = env.TRONGRID_API_KEY;
 	const addresses: string[] = [];
 	let url: string | null = `${TRONGRID_API}/${USDT_TRON_CONTRACT}/events?event_name=${eventName}&limit=200`;
+	const headers: Record<string, string> = {};
+	if (apiKey) headers['TRON-PRO-API-KEY'] = apiKey;
 
-	while (url) {
-		let res = await fetch(url);
+	let pages = 0;
+	const maxPages = 200; // Safety cap: 200 pages × 200 events = 40K events max
+
+	while (url && pages < maxPages) {
+		let res = await fetch(url, { headers });
 
 		// Retry once on 429 after backoff
 		if (res.status === 429) {
-			await new Promise((r) => setTimeout(r, 5000));
-			res = await fetch(url);
+			await new Promise((r) => setTimeout(r, 3000));
+			res = await fetch(url, { headers });
 		}
 		if (!res.ok) break;
 
@@ -203,10 +211,11 @@ async function fetchTronGridEvents(eventName: string): Promise<string[]> {
 			if (addr) addresses.push(addr);
 		}
 
+		pages++;
 		// Follow pagination via fingerprint
 		url = data.meta?.links?.next || null;
-		// TronGrid free tier: 1s between requests to avoid 429
-		if (url) await new Promise((r) => setTimeout(r, 1000));
+		// Rate limit: 500ms with API key, 1s without
+		if (url) await new Promise((r) => setTimeout(r, apiKey ? 500 : 1000));
 	}
 
 	return addresses;
