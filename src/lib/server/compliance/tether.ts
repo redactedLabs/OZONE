@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { complianceEntries, syncLog } from '../db/schema';
 import { env } from '$env/dynamic/private';
+import bs58check from 'bs58check';
 
 /**
  * Tether (USDT) frozen/blacklisted addresses — live on-chain event scanning.
@@ -19,6 +20,12 @@ const ETH_REMOVED_TOPIC = '0xd7e9ec6e6ecd65492dce6bf513cd6867560d49544421d0783dd
 
 const TRONGRID_API = 'https://api.trongrid.io/v1/contracts';
 const USDT_TRON_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+
+/** Convert 0x hex address from TronGrid events to TRON base58 T... address */
+function hexToTronAddress(hex: string): string {
+	const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+	return bs58check.encode(Buffer.from('41' + clean, 'hex'));
+}
 
 // Known frozen addresses from public Dune/community datasets as a baseline
 // These are the most well-known Tether-frozen addresses
@@ -206,26 +213,30 @@ async function fetchTronGridEvents(eventName: string): Promise<string[]> {
 	while (url && pages < maxPages) {
 		let res = await fetch(url, { headers });
 
-		// Retry once on 429 after backoff
-		if (res.status === 429) {
-			await new Promise((r) => setTimeout(r, 3000));
+		// Retry on 429 with exponential backoff (up to 3 attempts)
+		for (let attempt = 0; attempt < 3 && res.status === 429; attempt++) {
+			await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
 			res = await fetch(url, { headers });
 		}
 		if (!res.ok) break;
 
 		const data = await res.json();
-		if (!data.success || !Array.isArray(data.data)) break;
+		if (!data.success || !Array.isArray(data.data) || data.data.length === 0) break;
 
 		for (const event of data.data) {
-			const addr = event.result?._user || event.result?.user;
-			if (addr) addresses.push(addr);
+			const rawAddr = event.result?._user || event.result?.user;
+			if (rawAddr) {
+				// TronGrid returns 0x hex — convert to base58 T... address
+				const addr = rawAddr.startsWith('0x') ? hexToTronAddress(rawAddr) : rawAddr;
+				addresses.push(addr);
+			}
 		}
 
 		pages++;
 		// Follow pagination via fingerprint
 		url = data.meta?.links?.next || null;
-		// Rate limit: 500ms with API key, 1s without
-		if (url) await new Promise((r) => setTimeout(r, apiKey ? 500 : 1000));
+		// Rate limit: 1.5s without API key, 600ms with — TronGrid free tier is strict
+		if (url) await new Promise((r) => setTimeout(r, apiKey ? 600 : 1500));
 	}
 
 	return addresses;
