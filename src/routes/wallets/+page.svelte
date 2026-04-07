@@ -51,7 +51,7 @@
 
 	<!-- Header -->
 	<div class="text-center mb-8">
-		<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style="color: var(--text);">Private Wallets</h1>
+		<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style="color: var(--text);">Redacted Dashboard</h1>
 		<p class="text-sm" style="color: var(--text-muted);">
 			Privacy-preserving wallets on THORChain — deposit, transact, withdraw without revealing your identity.
 		</p>
@@ -131,8 +131,8 @@
 
 			<!-- Private Wallet -->
 			<div class="flow-box rounded-lg p-3 text-center" style="border: 2px solid #a78bfa; background: rgba(167,139,250,0.05); min-width: 120px;">
-				<div class="text-xs font-bold mb-1" style="color: #a78bfa;">Private Wallet</div>
-				<div class="text-[9px]" style="color: var(--text-faint);">Sub-wallet contract</div>
+				<div class="text-xs font-bold mb-1" style="color: #a78bfa;">Spendable</div>
+				<div class="text-[9px]" style="color: var(--text-faint);">Private Wallet</div>
 			</div>
 
 			<!-- Arrow 3 -->
@@ -170,8 +170,8 @@
 			</div>
 
 			<div class="flow-box rounded-lg p-3 text-center w-full" style="border: 2px solid #a78bfa; background: rgba(167,139,250,0.05);">
-				<div class="text-xs font-bold mb-1" style="color: #a78bfa;">Private Wallet</div>
-				<div class="text-[9px]" style="color: var(--text-faint);">Sub-wallet contract</div>
+				<div class="text-xs font-bold mb-1" style="color: #a78bfa;">Spendable</div>
+				<div class="text-[9px]" style="color: var(--text-faint);">Private Wallet</div>
 			</div>
 
 			<div class="flex flex-col items-center py-1">
