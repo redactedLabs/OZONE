@@ -136,7 +136,7 @@ html.win98 body {
 .win98 [style*="color: #a78bfa"] { color: #000080 !important; }
 .win98 [style*="color: #9945ff"] { color: #800080 !important; }
 .win98 [style*="color: #f472b6"] { color: #800080 !important; }
-.win98 [style*="color: #fb923c"] { color: #ff0000 !important; }
+.win98 [style*="color: #fb923c"] { color: #000080 !important; }
 .win98 [style*="color: #ff0013"] { color: #ff0000 !important; }
 .win98 [style*="color: #f7931a"] { color: #000080 !important; }
 .win98 [style*="color: #627eea"] { color: #000080 !important; }
