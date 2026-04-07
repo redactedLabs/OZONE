@@ -7,8 +7,8 @@ import { syncHackList } from '$lib/server/compliance/hacks';
 import { screenAllUsers } from '$lib/server/compliance/screener';
 import { env } from '$env/dynamic/private';
 
-// Allow up to 60s for full sync (Vercel Pro)
-export const config = { maxDuration: 60 };
+// Allow up to 120s for full sync: League pagination ~35s + compliance lists + screening
+export const config = { maxDuration: 120 };
 
 async function runSync() {
 	const start = Date.now();
