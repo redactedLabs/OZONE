@@ -35,12 +35,6 @@
 		);
 	});
 
-	let expandedGroups = $state<Set<string>>(new Set());
-	function toggleGroup(txID: string) {
-		const next = new Set(expandedGroups);
-		if (next.has(txID)) next.delete(txID); else next.add(txID);
-		expandedGroups = next;
-	}
 
 	function exportCSV() {
 		if (!data.transactions) return;
@@ -256,7 +250,6 @@
 			<tbody>
 				{#each filteredGroups() as group}
 					{@const tx = group.primary}
-					{@const sibCount = group.subActions.length}
 					<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 						<td class="px-4 py-2.5 text-xs" style="color: var(--text-muted);">
 							{tx.date ? new Date(tx.date).toLocaleDateString() : '--'}
@@ -267,11 +260,6 @@
 							</span>
 							{#if tx.contractName}
 								<span class="text-[10px] ml-1" style="color: var(--text-muted);">{tx.contractName}</span>
-							{/if}
-							{#if sibCount > 0}
-								<button onclick={() => toggleGroup(group.txID)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(99,102,241,0.1); color: var(--app-accent); border: 1px solid rgba(99,102,241,0.2);">
-									{expandedGroups.has(group.txID) ? 'hide' : `+${sibCount}`}
-								</button>
 							{/if}
 						</td>
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
@@ -307,59 +295,7 @@
 							</td>
 						{/if}
 					</tr>
-					{#if sibCount > 0 && expandedGroups.has(group.txID)}
-						{#each group.subActions as sib}
-							<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.6;">
-								<td class="px-4 py-2 text-xs" style="color: var(--text-muted);">
-									<span class="pl-3" style="color: var(--text-ghost);">&#8627;</span>
-									{sib.date ? new Date(sib.date).toLocaleDateString() : '--'}
-								</td>
-								<td class="px-4 py-2">
-									<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background: {TYPE_COLORS[sib.type] || 'var(--text-ghost)'}15; color: {TYPE_COLORS[sib.type] || 'var(--text-ghost)'};">
-										{TYPE_LABELS[sib.type] || sib.type}
-									</span>
-									{#if sib.contractName}
-										<span class="text-[9px] ml-1" style="color: var(--text-faint);">
-											via {sib.contractName}
-										</span>
-									{:else if sib.fromLabel || sib.toLabel}
-										<span class="text-[9px] ml-1" style="color: var(--text-faint);">
-											via {sib.fromLabel || sib.toLabel}
-										</span>
-									{/if}
-								</td>
-								<td class="px-4 py-2 text-xs font-mono" style="color: var(--text);">
-									{#if sib.amountIn !== '0'}
-										<span class="inline-flex items-center gap-1.5">
-											{#if logo(sib.assetIn)}
-												<img src={logo(sib.assetIn)} alt={sib.assetIn} class="w-3.5 h-3.5 rounded-full" />
-											{/if}
-											{sib.amountIn} <span style="color: var(--text-faint);">{sib.assetIn}</span>
-										</span>
-									{:else}--{/if}
-								</td>
-								<td class="px-4 py-2 text-xs font-mono" style="color: var(--text);">
-									{#if sib.amountOut !== '0'}
-										<span class="inline-flex items-center gap-1.5">
-											{#if logo(sib.assetOut)}
-												<img src={logo(sib.assetOut)} alt={sib.assetOut} class="w-3.5 h-3.5 rounded-full" />
-											{/if}
-											{sib.amountOut} <span style="color: var(--text-faint);">{sib.assetOut}</span>
-										</span>
-									{:else}--{/if}
-								</td>
-								<td class="px-4 py-2">
-									<span class="text-[9px]" style="color: {sib.status === 'success' ? '#10b981' : '#f59e0b'};">
-										{sib.status}
-									</span>
-								</td>
-								{#if data.revealWallet}
-									<td class="px-4 py-2"></td>
-								{/if}
-							</tr>
-						{/each}
-					{/if}
-				{/each}
+					{/each}
 				{#if filteredGroups().length === 0}
 					<tr>
 						<td colspan={data.revealWallet ? 6 : 5} class="px-4 py-12 text-center text-sm" style="color: var(--text-muted);">
