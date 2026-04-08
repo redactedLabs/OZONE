@@ -210,6 +210,45 @@ const DEDUP_PRIORITY: Record<string, number> = {
 	'contract': 100, 'unknown': 999,
 };
 
+// ── Pair resolution ──
+
+/**
+ * Resolve the output asset from a trading pair contract name.
+ * Given the input asset and a pair name like "RUJI Trade BTC-USDC" or "XYK Pool: BTC/USDC",
+ * returns the other side of the pair.
+ */
+function resolveOutputFromPair(assetIn: string, contractName: string): string {
+	let pairStr = '';
+	if (contractName.startsWith('RUJI Trade ')) {
+		pairStr = contractName.substring('RUJI Trade '.length);
+	} else if (contractName.startsWith('XYK Pool: ')) {
+		pairStr = contractName.substring('XYK Pool: '.length);
+	}
+	if (!pairStr) return '';
+
+	// Split by last separator (- for FIN, / for BOW)
+	const sep = pairStr.includes('/') ? '/' : '-';
+	const lastSep = pairStr.lastIndexOf(sep);
+	if (lastSep <= 0) return '';
+
+	const basePart = pairStr.substring(0, lastSep);
+	const quotePart = pairStr.substring(lastSep + 1);
+
+	// Extract simple ticker: "USDC.AVAX" → "USDC", "cbBTC.BASE" → "CBBTC"
+	const toTicker = (s: string) => {
+		const dot = s.indexOf('.');
+		return (dot > 0 ? s.substring(0, dot) : s).toUpperCase();
+	};
+
+	const baseTicker = toTicker(basePart);
+	const quoteTicker = toTicker(quotePart);
+	const inUpper = assetIn.toUpperCase();
+
+	if (inUpper === baseTicker) return quoteTicker;
+	if (inUpper === quoteTicker) return baseTicker;
+	return '';
+}
+
 // ── Parsing helpers ──
 
 export function parseFunds(fundsStr: string): Array<{ amount: string; asset: string }> {
@@ -252,7 +291,15 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 		case 'fin-trade': {
 			assetIn = fundAsset;
 			rawIn = fundAmount;
-			rawOut = attrs.bid || attrs.offer || '0';
+			const rawBidOffer = attrs.bid || attrs.offer || '0';
+			// Try to parse embedded denom (format: "12345denom")
+			const boParts = rawBidOffer.match(/^(\d+)(.+)$/);
+			if (boParts && boParts[2] && !/^\d+$/.test(rawBidOffer)) {
+				rawOut = boParts[1];
+				assetOut = cleanAsset(boParts[2]);
+			} else {
+				rawOut = rawBidOffer;
+			}
 			break;
 		}
 		case 'bow-swap':
@@ -522,12 +569,38 @@ export function parseAction(a: any): HistoryTransaction {
 	// Enrich with contract metadata
 	const fromContract = getContract(from);
 	const toContract = getContract(to);
-	const contractName = fromContract?.name || toContract?.name || '';
-	const contractCategory = fromContract?.category || toContract?.category || '';
+	let contractName = fromContract?.name || toContract?.name || '';
+	let contractCategory = fromContract?.category || toContract?.category || '';
 
 	if (a.type === 'contract') {
 		const decoded = parseContractAction(a);
 		if (decoded) {
+			// Resolve missing assetOut from trading pair contract name
+			if (!decoded.assetOut && decoded.assetIn) {
+				let pairContract = fromContract || toContract;
+				// Scan all in/out addresses for contract matches
+				if (!pairContract) {
+					for (const entry of ins) {
+						pairContract = getContract(entry.address || '');
+						if (pairContract) break;
+					}
+				}
+				if (!pairContract) {
+					for (const entry of outs) {
+						pairContract = getContract(entry.address || '');
+						if (pairContract) break;
+					}
+				}
+				if (pairContract) {
+					const resolved = resolveOutputFromPair(decoded.assetIn, pairContract.name);
+					if (resolved) decoded.assetOut = resolved;
+					if (!contractName) {
+						contractName = pairContract.name;
+						contractCategory = pairContract.category;
+					}
+				}
+			}
+
 			return {
 				type: decoded.type,
 				date: a.date ? new Date(parseInt(a.date) / 1e6).toISOString() : '',

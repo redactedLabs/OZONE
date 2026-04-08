@@ -264,21 +264,23 @@
 						</td>
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 							{#if tx.amountIn !== '0'}
+								{@const inAsset = (tx.assetIn || '').toUpperCase()}
 								<span class="inline-flex items-center gap-1.5">
-									{#if logo(tx.assetIn)}
-										<img src={logo(tx.assetIn)} alt={tx.assetIn} class="w-4 h-4 rounded-full" />
+									{#if logo(inAsset)}
+										<img src={logo(inAsset)} alt={inAsset} class="w-4 h-4 rounded-full" />
 									{/if}
-									{tx.amountIn} <span style="color: var(--text-faint);">{tx.assetIn}</span>
+									{tx.amountIn} <span style="color: var(--text-faint);">{inAsset}</span>
 								</span>
 							{:else}--{/if}
 						</td>
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
 							{#if tx.amountOut !== '0'}
+								{@const outAsset = (tx.assetOut || '').toUpperCase()}
 								<span class="inline-flex items-center gap-1.5">
-									{#if logo(tx.assetOut)}
-										<img src={logo(tx.assetOut)} alt={tx.assetOut} class="w-4 h-4 rounded-full" />
+									{#if logo(outAsset)}
+										<img src={logo(outAsset)} alt={outAsset} class="w-4 h-4 rounded-full" />
 									{/if}
-									{tx.amountOut} <span style="color: var(--text-faint);">{tx.assetOut}</span>
+									{tx.amountOut} <span style="color: var(--text-faint);">{outAsset}</span>
 								</span>
 							{:else}--{/if}
 						</td>
