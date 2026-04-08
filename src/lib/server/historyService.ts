@@ -641,8 +641,34 @@ export function groupTransactions(txs: HistoryTransaction[], userAddress?: strin
 		}
 	}
 
-	// Split subActions into visible vs internal count
+	// Enrich primary + split subActions into visible vs internal
 	for (const g of groups) {
+		// Enrich primary's missing output asset from trade/swap siblings
+		if (!g.primary.assetOut || g.primary.amountOut === '0') {
+			for (const s of g.subActions) {
+				if (s.assetOut && s.amountOut !== '0' &&
+					['swap', 'fin-trade', 'tc-swap', 'bow-swap', 'fin-order-wd'].includes(s.type)) {
+					g.primary.assetOut = s.assetOut;
+					g.primary.amountOut = s.amountOut;
+					g.primary.rawAmountOut = s.rawAmountOut;
+					break;
+				}
+			}
+		}
+		// Enrich primary's missing input asset from trade/swap siblings
+		if (!g.primary.assetIn || g.primary.amountIn === '0') {
+			for (const s of g.subActions) {
+				if (s.assetIn && s.amountIn !== '0' &&
+					['swap', 'fin-trade', 'tc-swap', 'bow-swap'].includes(s.type)) {
+					g.primary.assetIn = s.assetIn;
+					g.primary.amountIn = s.amountIn;
+					g.primary.rawAmountIn = s.rawAmountIn;
+					break;
+				}
+			}
+		}
+
+		// Split into visible vs internal
 		const visible: HistoryTransaction[] = [];
 		let internalCount = 0;
 		for (const s of g.subActions) {
@@ -652,6 +678,13 @@ export function groupTransactions(txs: HistoryTransaction[], userAddress?: strin
 				visible.push(s);
 			}
 		}
+
+		// Cap visible sub-actions at 5 to avoid UI clutter
+		if (visible.length > 5) {
+			internalCount += visible.length - 5;
+			visible.length = 5;
+		}
+
 		g.subActions = visible;
 		g.internalCount = internalCount;
 	}

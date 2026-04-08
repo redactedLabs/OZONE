@@ -257,7 +257,6 @@
 				{#each filteredGroups() as group}
 					{@const tx = group.primary}
 					{@const sibCount = group.subActions.length}
-					{@const totalExtra = sibCount + group.internalCount}
 					<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 						<td class="px-4 py-2.5 text-xs" style="color: var(--text-muted);">
 							{tx.date ? new Date(tx.date).toLocaleDateString() : '--'}
@@ -269,9 +268,9 @@
 							{#if tx.contractName}
 								<span class="text-[10px] ml-1" style="color: var(--text-muted);">{tx.contractName}</span>
 							{/if}
-							{#if totalExtra > 0}
+							{#if sibCount > 0}
 								<button onclick={() => toggleGroup(group.txID)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(99,102,241,0.1); color: var(--app-accent); border: 1px solid rgba(99,102,241,0.2);">
-									{expandedGroups.has(group.txID) ? 'hide' : `+${totalExtra}`}
+									{expandedGroups.has(group.txID) ? 'hide' : `+${sibCount}`}
 								</button>
 							{/if}
 						</td>
@@ -308,7 +307,7 @@
 							</td>
 						{/if}
 					</tr>
-					{#if totalExtra > 0 && expandedGroups.has(group.txID)}
+					{#if sibCount > 0 && expandedGroups.has(group.txID)}
 						{#each group.subActions as sib}
 							<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.6;">
 								<td class="px-4 py-2 text-xs" style="color: var(--text-muted);">
@@ -359,14 +358,6 @@
 								{/if}
 							</tr>
 						{/each}
-						{#if group.internalCount > 0}
-							<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.35;">
-								<td class="px-4 py-1.5"></td>
-								<td colspan="{data.revealWallet ? 5 : 4}" class="px-4 py-1.5 text-[9px]" style="color: var(--text-ghost);">
-									+{group.internalCount} internal
-								</td>
-							</tr>
-						{/if}
 					{/if}
 				{/each}
 				{#if filteredGroups().length === 0}
