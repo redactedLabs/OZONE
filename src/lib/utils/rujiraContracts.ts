@@ -416,3 +416,13 @@ export const RUJIRA_CONTRACTS: Record<string, RujiraContract> = {
 export function getContractLabel(address: string): string | undefined {
 	return RUJIRA_CONTRACTS[address]?.name;
 }
+
+/** Look up the full contract entry for a thor address. */
+export function getContract(address: string): RujiraContract | undefined {
+	return RUJIRA_CONTRACTS[address];
+}
+
+/** Check if a thor address is a known Rujira contract. */
+export function isContract(address: string): boolean {
+	return address in RUJIRA_CONTRACTS;
+}

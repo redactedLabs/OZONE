@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { fetchPoolAssets, getTokenLogoSync } from '$lib/utils/tokenLogos';
+	import { TYPE_LABELS, TYPE_COLORS, getKoinlyLabel } from '$lib/utils/historyTypes';
+	import type { HistoryGroup } from '$lib/utils/historyTypes';
 
 	let { data }: { data: PageData } = $props();
 
@@ -10,90 +12,6 @@
 	function logo(symbol: string): string | undefined {
 		return getTokenLogoSync(symbol, poolAssets);
 	}
-
-	const typeLabels: Record<string, string> = {
-		swap: 'Swap', addLiquidity: 'Add LP', withdraw: 'Withdraw', send: 'Send', refund: 'Refund',
-		switch: 'Switch', contract: 'Contract', donate: 'Donate',
-		// FIN — Orderbook
-		'fin-trade': 'Trade', 'fin-arb': 'Arb',
-		'fin-order': 'Limit Order', 'fin-order-wd': 'Claim Order',
-		'fin-order-inc': 'Increase Order', 'fin-order-dec': 'Cancel Order',
-		'fin-mm-fee': 'MM Fee',
-		// FIN Range — Concentrated Liquidity
-		'fin-range': 'Range Create', 'fin-range-dep': 'Range Deposit',
-		'fin-range-wd': 'Range Withdraw', 'fin-range-claim': 'Range Claim',
-		'fin-range-close': 'Range Close', 'fin-range-xfer': 'Range Transfer',
-		'fin-range-fee': 'Range Fee',
-		// BOW — AMM
-		'bow-swap': 'AMM Swap', 'bow-deposit': 'AMM Deposit', 'bow-withdraw': 'AMM Withdraw',
-		// TC Swap
-		'tc-swap': 'Market Order',
-		// Ghost Vault — Lending
-		'ghost-borrow': 'Borrow', 'ghost-repay': 'Repay',
-		'ghost-lend': 'Lend', 'ghost-withdraw': 'Withdraw Lend',
-		// Ghost Credit — Credit Accounts
-		'ghost-credit-create': 'Credit Account', 'ghost-credit-action': 'Credit Action',
-		'ghost-credit-borrow': 'Credit Borrow', 'ghost-credit-repay': 'Credit Repay',
-		'ghost-credit-send': 'Credit Send', 'ghost-credit-exec': 'Credit Execute',
-		'ghost-liquidation': 'Liquidation',
-		// CALC — DCA
-		'calc-init': 'DCA Create', 'calc-process': 'DCA Execute',
-		'calc-withdraw': 'DCA Withdraw', 'calc-create': 'DCA Strategy',
-		'calc-internal': 'DCA (step)', 'calc-update': 'DCA Update',
-		// AutoRujira
-		'auto-workflow': 'Auto Workflow', 'auto-cancel': 'Cancel Workflow',
-		'auto-config': 'Auto Config', 'auto-fee-wd': 'Auto Fee WD',
-		// System
-		'deferred-exec': 'Deferred Exec', 'crank-fee': 'Crank Fee',
-		// Staking
-		'ruji-stake': 'RUJI Stake', 'ruji-unstake': 'RUJI Unstake', 'ruji-claim': 'RUJI Claim',
-		// Pilot — Liquidations
-		'pilot-swap': 'Liquidation Swap', 'pilot-order': 'Liquidation Bid',
-		// Liquidy
-		'liquidy-swap': 'Liquidy Swap', 'liquidy-exec': 'Liquidy Execute',
-		// BRUNE
-		'brune-swap': 'BRUNE Swap', 'brune-mint': 'BRUNE Mint', 'brune-burn': 'BRUNE Burn',
-		'brune-bond': 'BRUNE Bond', 'brune-fee': 'BRUNE Fee',
-		// Nami Index
-		'nami-deposit': 'Index Deposit', 'nami-withdraw': 'Index Withdraw',
-		// Other
-		'revenue-run': 'Revenue Dist', 'merge-deposit': 'Merge', 'merge-withdraw': 'Merge Out',
-		'secure': 'Secure', 'tcy_stake': 'TCY Stake', 'tcy_unstake': 'TCY Unstake',
-	};
-	const typeColors: Record<string, string> = {
-		swap: 'var(--app-accent)', addLiquidity: '#10b981', withdraw: '#f59e0b', send: '#22d3ee', refund: '#ef4444',
-		switch: '#a78bfa', contract: '#64748b', donate: '#f472b6',
-		'fin-trade': '#f59e0b', 'fin-arb': '#f97316',
-		'fin-order': '#f59e0b', 'fin-order-wd': '#f59e0b',
-		'fin-order-inc': '#f59e0b', 'fin-order-dec': '#f59e0b',
-		'fin-mm-fee': '#f97316',
-		'fin-range': '#10b981', 'fin-range-dep': '#10b981',
-		'fin-range-wd': '#10b981', 'fin-range-claim': '#10b981',
-		'fin-range-close': '#10b981', 'fin-range-xfer': '#10b981',
-		'fin-range-fee': '#10b981',
-		'bow-swap': '#6366f1', 'bow-deposit': '#6366f1', 'bow-withdraw': '#6366f1',
-		'tc-swap': '#6366f1',
-		'ghost-borrow': '#ef4444', 'ghost-repay': '#22c55e',
-		'ghost-lend': '#6366f1', 'ghost-withdraw': '#a78bfa',
-		'ghost-credit-create': '#8b5cf6', 'ghost-credit-action': '#8b5cf6',
-		'ghost-credit-borrow': '#ef4444', 'ghost-credit-repay': '#22c55e',
-		'ghost-credit-send': '#8b5cf6', 'ghost-credit-exec': '#8b5cf6',
-		'ghost-liquidation': '#ef4444',
-		'calc-init': '#a78bfa', 'calc-process': '#a78bfa',
-		'calc-withdraw': '#a78bfa', 'calc-create': '#a78bfa',
-		'calc-internal': '#94a3b8', 'calc-update': '#94a3b8',
-		'auto-workflow': '#94a3b8', 'auto-cancel': '#94a3b8',
-		'auto-config': '#94a3b8', 'auto-fee-wd': '#94a3b8',
-		'deferred-exec': '#64748b', 'crank-fee': '#64748b',
-		'ruji-stake': '#10b981', 'ruji-unstake': '#f59e0b', 'ruji-claim': '#10b981',
-		'pilot-swap': '#ef4444', 'pilot-order': '#ef4444',
-		'liquidy-swap': '#22d3ee', 'liquidy-exec': '#22d3ee',
-		'brune-swap': '#f97316', 'brune-mint': '#f97316', 'brune-burn': '#f97316',
-		'brune-bond': '#f97316', 'brune-fee': '#94a3b8',
-		'nami-deposit': '#3b82f6', 'nami-withdraw': '#3b82f6',
-		'revenue-run': '#94a3b8', 'merge-deposit': '#94a3b8', 'merge-withdraw': '#94a3b8',
-		'secure': '#3b82f6', 'tcy_stake': '#10b981', 'tcy_unstake': '#f59e0b',
-	};
 
 	// Filter state
 	let activeFilter = $state('');
@@ -107,83 +25,15 @@
 		return counts;
 	});
 
-	// Filtered transactions
-	const filteredTxs = $derived(() => {
-		const txs = data.transactions || [];
-		if (!activeFilter) return txs;
-		return txs.filter((tx: any) => tx.type === activeFilter);
+	// Filter groups from server-provided data
+	const filteredGroups = $derived<HistoryGroup[]>(() => {
+		const groups: HistoryGroup[] = data.groups || [];
+		if (!activeFilter) return groups;
+		return groups.filter((g: HistoryGroup) =>
+			g.primary.type === activeFilter ||
+			g.subActions.some(s => s.type === activeFilter)
+		);
 	});
-
-	// Group transactions by txID — sibling contract events collapse under one row
-	const GROUP_PRIORITY: Record<string, number> = {
-		'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
-		'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
-		'calc-create': 15, 'calc-update': 16, 'calc-withdraw': 17,
-		'fin-order': 18, 'fin-order-wd': 19, 'fin-order-inc': 18, 'fin-order-dec': 19,
-		'fin-range': 20, 'fin-range-dep': 20, 'fin-range-wd': 20,
-		'fin-range-claim': 20, 'fin-range-close': 20, 'fin-range-xfer': 20,
-		'ghost-lend': 21, 'ghost-withdraw': 22,
-		'ghost-credit-create': 23, 'ghost-credit-borrow': 24, 'ghost-credit-repay': 25,
-		'ghost-credit-send': 26, 'ghost-credit-exec': 27, 'ghost-credit-action': 28,
-		'ghost-liquidation': 24,
-		'liquidy-swap': 29,
-		'bow-deposit': 30, 'bow-withdraw': 30,
-		'auto-workflow': 31, 'auto-cancel': 32,
-		'auto-config': 40, 'auto-fee-wd': 40,
-		'ruji-stake': 33, 'ruji-unstake': 33, 'ruji-claim': 33,
-		'pilot-swap': 34, 'pilot-order': 34,
-		'brune-swap': 35, 'brune-mint': 35, 'brune-burn': 35,
-		'nami-deposit': 36, 'nami-withdraw': 36,
-		'merge-deposit': 37, 'merge-withdraw': 37,
-		'tc-swap': 50, 'bow-swap': 51, 'fin-trade': 52,
-		'calc-process': 55, 'calc-init': 56, 'calc-internal': 57,
-		'liquidy-exec': 58,
-		'ghost-borrow': 70, 'ghost-repay': 71,
-		'fin-arb': 80, 'fin-range-fee': 81, 'fin-mm-fee': 82,
-		'brune-bond': 80, 'brune-fee': 82,
-		'deferred-exec': 85, 'crank-fee': 86,
-		'revenue-run': 90,
-		'contract': 100, 'unknown': 999,
-	};
-
-	function groupByTxID(txs: any[]): Array<{ primary: any; siblings: any[]; txID: string }> {
-		const groups: Array<{ primary: any; siblings: any[]; txID: string }> = [];
-		const idxMap = new Map<string, number>();
-		for (const tx of txs) {
-			if (!tx.txID) {
-				groups.push({ primary: tx, siblings: [], txID: '' });
-				continue;
-			}
-			const idx = idxMap.get(tx.txID);
-			if (idx !== undefined) {
-				const g = groups[idx];
-				const newPri = GROUP_PRIORITY[tx.type] ?? 500;
-				const curPri = GROUP_PRIORITY[g.primary.type] ?? 500;
-				if (newPri < curPri) {
-					g.siblings.push(g.primary);
-					g.primary = tx;
-				} else {
-					g.siblings.push(tx);
-				}
-			} else {
-				idxMap.set(tx.txID, groups.length);
-				groups.push({ primary: tx, siblings: [], txID: tx.txID });
-			}
-		}
-		return groups;
-	}
-
-	// Internal mechanics — hidden as siblings, summarized as count
-	const INTERNAL_TYPES = new Set([
-		'fin-trade', 'fin-arb', 'fin-range-fee', 'fin-mm-fee',
-		'ghost-borrow', 'ghost-repay',
-		'crank-fee', 'deferred-exec', 'revenue-run', 'contract',
-	]);
-
-	function splitSiblings(siblings: any[]): { visible: any[]; hiddenCount: number } {
-		const visible = siblings.filter((s: any) => !INTERNAL_TYPES.has(s.type));
-		return { visible, hiddenCount: siblings.length - visible.length };
-	}
 
 	let expandedGroups = $state<Set<string>>(new Set());
 	function toggleGroup(txID: string) {
@@ -192,13 +42,11 @@
 		expandedGroups = next;
 	}
 
-	const groupedTxs = $derived(groupByTxID(filteredTxs()));
-
 	function exportCSV() {
 		if (!data.transactions) return;
 		const headers = ['Date', 'Type', 'Asset In', 'Amount In', 'Asset Out', 'Amount Out', 'Fee Amount', 'Fee Currency', 'From', 'To', 'TxID', 'Status', 'Contract'];
 		const rows = data.transactions.map((tx: any) => [
-			tx.date, tx.type, tx.assetIn, tx.rawAmountIn || tx.amountIn, tx.assetOut, tx.rawAmountOut || tx.amountOut, tx.feeAmount || '', tx.feeCurrency || '', tx.from, tx.to, tx.txID, tx.status, tx.fromLabel || tx.toLabel || ''
+			tx.date, tx.type, tx.assetIn, tx.rawAmountIn || tx.amountIn, tx.assetOut, tx.rawAmountOut || tx.amountOut, tx.feeAmount || '', tx.feeCurrency || '', tx.from, tx.to, tx.txID, tx.status, tx.contractName || tx.fromLabel || tx.toLabel || ''
 		]);
 		const csv = [headers, ...rows].map((r: string[]) =>
 			r.map((c: string) => `"${String(c).replace(/"/g, '""')}"`).join(',')
@@ -221,20 +69,9 @@
 			const sentCurrency = tx.assetIn;
 			const receivedAmount = tx.rawAmountOut || tx.amountOut;
 			const receivedCurrency = tx.assetOut;
-			const koinlyLabel = (type: string): string => {
-				if (['swap', 'fin-trade', 'fin-arb', 'bow-swap', 'tc-swap', 'calc-process'].includes(type)) return '';
-				if (type === 'addLiquidity' || type === 'fin-range') return 'liquidity_in';
-				if (type === 'withdraw') return 'liquidity_out';
-				if (type === 'ghost-borrow') return 'borrow';
-				if (type === 'ghost-repay') return 'repay';
-				if (type === 'ghost-lend') return 'deposit';
-				if (type === 'ghost-withdraw') return 'withdrawal';
-				if (type === 'fin-range-fee') return 'income';
-				return '';
-			};
-			const label = koinlyLabel(tx.type);
-			const contractName = tx.fromLabel || tx.toLabel || '';
-			let desc = tx.type === 'swap' ? `Swap ${tx.assetIn} → ${tx.assetOut}` : tx.type === 'addLiquidity' ? `LP Add ${tx.assetIn}` : tx.type === 'withdraw' ? `Withdraw ${tx.assetOut}` : tx.type === 'send' ? `Send ${sentAmount !== '0' ? tx.assetIn : tx.assetOut}` : typeLabels[tx.type] || tx.type;
+			const label = getKoinlyLabel(tx.type);
+			const contractName = tx.contractName || tx.fromLabel || tx.toLabel || '';
+			let desc = tx.type === 'swap' ? `Swap ${tx.assetIn} → ${tx.assetOut}` : tx.type === 'addLiquidity' ? `LP Add ${tx.assetIn}` : tx.type === 'withdraw' ? `Withdraw ${tx.assetOut}` : tx.type === 'send' ? `Send ${sentAmount !== '0' ? tx.assetIn : tx.assetOut}` : TYPE_LABELS[tx.type] || tx.type;
 			if (contractName) desc += ` [${contractName}]`;
 			return [
 				tx.date,
@@ -394,9 +231,9 @@
 				onclick={() => activeFilter = activeFilter === type ? '' : type}
 				class="filter-chip"
 				class:active={activeFilter === type}
-				style={activeFilter === type ? `background: ${typeColors[type] || '#64748b'}22; border-color: ${typeColors[type] || '#64748b'}66; color: ${typeColors[type] || '#64748b'};` : ''}
+				style={activeFilter === type ? `background: ${TYPE_COLORS[type] || '#64748b'}22; border-color: ${TYPE_COLORS[type] || '#64748b'}66; color: ${TYPE_COLORS[type] || '#64748b'};` : ''}
 			>
-				{typeLabels[type] || type} ({count})
+				{TYPE_LABELS[type] || type} ({count})
 			</button>
 		{/each}
 	</div>
@@ -417,26 +254,25 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each groupedTxs as group}
+				{#each filteredGroups() as group}
 					{@const tx = group.primary}
-					{@const split = splitSiblings(group.siblings)}
+					{@const sibCount = group.subActions.length}
+					{@const totalExtra = sibCount + group.internalCount}
 					<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 						<td class="px-4 py-2.5 text-xs" style="color: var(--text-muted);">
 							{tx.date ? new Date(tx.date).toLocaleDateString() : '--'}
 						</td>
 						<td class="px-4 py-2.5">
-							<span class="text-[10px] font-bold px-2 py-0.5 rounded" style="background: {typeColors[tx.type] || 'var(--text-ghost)'}15; color: {typeColors[tx.type] || 'var(--text-ghost)'};">
-								{typeLabels[tx.type] || tx.type}
+							<span class="text-[10px] font-bold px-2 py-0.5 rounded" style="background: {TYPE_COLORS[tx.type] || 'var(--text-ghost)'}15; color: {TYPE_COLORS[tx.type] || 'var(--text-ghost)'};">
+								{TYPE_LABELS[tx.type] || tx.type}
 							</span>
-							{#if split.visible.length > 0}
-								<button onclick={() => toggleGroup(group.txID)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(99,102,241,0.1); color: var(--app-accent); border: 1px solid rgba(99,102,241,0.2);">
-									{expandedGroups.has(group.txID) ? 'hide' : `+${split.visible.length}`}
-								</button>
+							{#if tx.contractName}
+								<span class="text-[10px] ml-1" style="color: var(--text-muted);">{tx.contractName}</span>
 							{/if}
-							{#if tx.fromLabel || tx.toLabel}
-								<span class="block text-[9px] mt-0.5" style="color: var(--text-faint);">
-									via {tx.fromLabel || tx.toLabel}
-								</span>
+							{#if totalExtra > 0}
+								<button onclick={() => toggleGroup(group.txID)} class="text-[9px] ml-1 px-1.5 py-0.5 rounded" style="background: rgba(99,102,241,0.1); color: var(--app-accent); border: 1px solid rgba(99,102,241,0.2);">
+									{expandedGroups.has(group.txID) ? 'hide' : `+${totalExtra}`}
+								</button>
 							{/if}
 						</td>
 						<td class="px-4 py-2.5 text-xs font-mono" style="color: var(--text);">
@@ -472,19 +308,23 @@
 							</td>
 						{/if}
 					</tr>
-					{#if split.visible.length > 0 && expandedGroups.has(group.txID)}
-						{#each split.visible as sib}
+					{#if totalExtra > 0 && expandedGroups.has(group.txID)}
+						{#each group.subActions as sib}
 							<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.6;">
 								<td class="px-4 py-2 text-xs" style="color: var(--text-muted);">
 									<span class="pl-3" style="color: var(--text-ghost);">&#8627;</span>
 									{sib.date ? new Date(sib.date).toLocaleDateString() : '--'}
 								</td>
 								<td class="px-4 py-2">
-									<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background: {typeColors[sib.type] || 'var(--text-ghost)'}15; color: {typeColors[sib.type] || 'var(--text-ghost)'};">
-										{typeLabels[sib.type] || sib.type}
+									<span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background: {TYPE_COLORS[sib.type] || 'var(--text-ghost)'}15; color: {TYPE_COLORS[sib.type] || 'var(--text-ghost)'};">
+										{TYPE_LABELS[sib.type] || sib.type}
 									</span>
-									{#if sib.fromLabel || sib.toLabel}
-										<span class="block text-[9px] mt-0.5" style="color: var(--text-faint);">
+									{#if sib.contractName}
+										<span class="text-[9px] ml-1" style="color: var(--text-faint);">
+											via {sib.contractName}
+										</span>
+									{:else if sib.fromLabel || sib.toLabel}
+										<span class="text-[9px] ml-1" style="color: var(--text-faint);">
 											via {sib.fromLabel || sib.toLabel}
 										</span>
 									{/if}
@@ -519,10 +359,17 @@
 								{/if}
 							</tr>
 						{/each}
-
+						{#if group.internalCount > 0}
+							<tr style="border-bottom: 1px solid var(--app-border-subtle); opacity: 0.35;">
+								<td class="px-4 py-1.5"></td>
+								<td colspan="{data.revealWallet ? 5 : 4}" class="px-4 py-1.5 text-[9px]" style="color: var(--text-ghost);">
+									+{group.internalCount} internal
+								</td>
+							</tr>
+						{/if}
 					{/if}
 				{/each}
-				{#if groupedTxs.length === 0}
+				{#if filteredGroups().length === 0}
 					<tr>
 						<td colspan={data.revealWallet ? 6 : 5} class="px-4 py-12 text-center text-sm" style="color: var(--text-muted);">
 							No transactions found.
