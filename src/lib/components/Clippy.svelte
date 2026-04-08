@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { portal } from '$lib/motion-core/utils/use-portal';
 
 	type Frame = { x: number; y: number; dur: number };
 
@@ -258,7 +259,8 @@
 {#if !dismissed}
 	<div
 		class="clippy-wrap"
-		style="position: fixed; left: {position.x}px; top: {position.y}px; z-index: 9999; touch-action: none; user-select: none;"
+		use:portal={'body'}
+		style="position: fixed; left: {position.x}px; top: {position.y}px; z-index: 39; touch-action: none; user-select: none;"
 	>
 		<!-- Speech bubble -->
 		{#if showBubble}
