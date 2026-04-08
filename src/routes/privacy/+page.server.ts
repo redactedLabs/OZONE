@@ -73,11 +73,11 @@ async function fetchJson<T>(url: string): Promise<T> {
 	return res.json();
 }
 
-async function fetchProxyBalance(): Promise<number> {
+async function fetchProxyBalances(): Promise<Array<{ asset: string; amount: number }>> {
 	const data = await fetchJson<BalanceResponse>(
 		`${THORNODE}/cosmos/bank/v1beta1/balances/${PROXY_ADDRESS}`
 	);
-	return parseRuneBalance(data);
+	return parseAllBalances(data);
 }
 
 async function fetchSubWallets(): Promise<string[]> {
@@ -97,8 +97,8 @@ async function fetchSubWallets(): Promise<string[]> {
 	return all;
 }
 
-async function fetchSubWalletBalances(addresses: string[]): Promise<number> {
-	if (addresses.length === 0) return 0;
+async function fetchSubWalletBalances(addresses: string[]): Promise<Array<{ asset: string; amount: number }>> {
+	if (addresses.length === 0) return [];
 
 	const results = await Promise.allSettled(
 		addresses.map((addr) =>
@@ -106,10 +106,14 @@ async function fetchSubWalletBalances(addresses: string[]): Promise<number> {
 		)
 	);
 
-	return results.reduce((sum, r) => {
-		if (r.status === 'fulfilled') return sum + parseRuneBalance(r.value);
-		return sum;
-	}, 0);
+	const merged = new Map<string, number>();
+	for (const r of results) {
+		if (r.status !== 'fulfilled') continue;
+		for (const b of parseAllBalances(r.value)) {
+			merged.set(b.asset, (merged.get(b.asset) || 0) + b.amount);
+		}
+	}
+	return Array.from(merged.entries()).map(([asset, amount]) => ({ asset, amount }));
 }
 
 async function fetchContractState(): Promise<{
@@ -172,14 +176,14 @@ async function fetchRunePrice(): Promise<{ runePrice: number; pools: Pool[] }> {
 
 export async function load() {
 	const [proxyResult, subWalletsResult, configResult, priceResult, feeResult] = await Promise.allSettled([
-		fetchProxyBalance(),
+		fetchProxyBalances(),
 		fetchSubWallets(),
 		fetchContractState(),
 		fetchRunePrice(),
 		fetchFeeBalance()
 	]);
 
-	const proxyBalance = proxyResult.status === 'fulfilled' ? proxyResult.value : 0;
+	const proxyBalances = proxyResult.status === 'fulfilled' ? proxyResult.value : [];
 	const subWallets = subWalletsResult.status === 'fulfilled' ? subWalletsResult.value : [];
 	const config =
 		configResult.status === 'fulfilled'
@@ -202,23 +206,33 @@ export async function load() {
 
 	const feeBalanceUsd = feeAssets.reduce((sum, a) => sum + a.usd, 0);
 
-	// Fetch sub-wallet balances
-	let totalSubWalletBalance = 0;
+	// Fetch sub-wallet balances (all assets)
+	let subBalances: Array<{ asset: string; amount: number }> = [];
 	try {
-		totalSubWalletBalance = await fetchSubWalletBalances(subWallets);
+		subBalances = await fetchSubWalletBalances(subWallets);
 	} catch {
-		// keep 0
+		// keep empty
 	}
 
-	const totalTVL = proxyBalance + totalSubWalletBalance;
+	// Merge proxy + sub-wallet balances into TVL assets
+	const tvlMerged = new Map<string, number>();
+	for (const b of [...proxyBalances, ...subBalances]) {
+		tvlMerged.set(b.asset, (tvlMerged.get(b.asset) || 0) + b.amount);
+	}
+	const tvlAssets = Array.from(tvlMerged.entries())
+		.map(([asset, amount]) => ({
+			asset,
+			amount,
+			usd: amount * (priceMap.get(asset) || 0)
+		}))
+		.sort((a, b) => b.usd - a.usd);
+
+	const totalTVLUsd = tvlAssets.reduce((sum, a) => sum + a.usd, 0);
 
 	return {
-		proxyBalance,
 		subWalletCount: subWallets.length,
-		totalSubWalletBalance,
-		totalTVL,
-		totalTVLUsd: totalTVL * runePriceUsd,
-		proxyTVLUsd: proxyBalance * runePriceUsd,
+		totalTVLUsd,
+		tvlAssets,
 		feeBalance,
 		feeBalanceUsd,
 		feeAssets,

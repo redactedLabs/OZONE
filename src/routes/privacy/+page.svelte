@@ -65,11 +65,37 @@
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">
 				{data.totalTVLUsd > 0 ? fmtUsd(data.totalTVLUsd) : '$0'}
 			</div>
-			{#if data.totalTVL > 0}
-				<div class="text-[10px] font-mono mt-0.5" style="color: var(--text-faint);">{fmt(data.totalTVL)} ᚱ</div>
+			{#if data.tvlAssets.length > 0}
+				<div class="flex items-center mt-1">
+					{#each data.tvlAssets as asset}
+						{@const logo = getTokenLogoSync(asset.asset)}
+						{#if logo}
+							<img src={logo} alt={asset.asset} class="w-4 h-4 rounded-full" style="margin-right: -4px; border: 1px solid var(--card-bg);" />
+						{/if}
+					{/each}
+				</div>
 			{/if}
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Total Value Locked</div>
-			<div class="stat-tip">Combined balance across the Private Reserve (proxy contract) and all Private Wallets (sub-wallets). Denominated in RUNE.</div>
+			<div class="stat-tip" style="min-width: 200px;">
+				<div class="text-[9px] font-semibold mb-1.5" style="color: var(--text-muted);">TVL Breakdown</div>
+				{#each data.tvlAssets as asset}
+					<div class="flex justify-between gap-4 py-0.5">
+						<span class="font-mono">{asset.asset}</span>
+						<span>
+							{fmt(asset.amount)}
+							{#if asset.usd > 0}
+								<span style="color: var(--text-faint);">({fmtUsd(asset.usd)})</span>
+							{/if}
+						</span>
+					</div>
+				{/each}
+				<div class="border-t mt-1.5 pt-1.5" style="border-color: var(--app-border);">
+					<div class="flex justify-between font-semibold">
+						<span>Total</span>
+						<span>{fmtUsd(data.totalTVLUsd)}</span>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Wallets">
