@@ -186,8 +186,9 @@
 				<div class="h-2.5 rounded-full transition-all duration-500" style="width: {progressPct}%; background: #10b981;"></div>
 			</div>
 			{#if data.stats.unfetchedUsers > 0}
+				{@const etaMinutes = Math.ceil(data.stats.unfetchedUsers / 100) * 10}
 				<p class="text-[10px] mt-1" style="color: #475569;">
-					{data.stats.unfetchedUsers.toLocaleString()} remaining · ~{Math.ceil(data.stats.unfetchedUsers / 100)} batches · ETA ~{Math.ceil(data.stats.unfetchedUsers / 14400)} days at 6 cron runs/hour
+					{data.stats.unfetchedUsers.toLocaleString()} remaining · ~{Math.ceil(data.stats.unfetchedUsers / 100)} batches · ETA ~{etaMinutes < 60 ? `${etaMinutes} min` : etaMinutes < 1440 ? `${(etaMinutes / 60).toFixed(1)} hours` : `${(etaMinutes / 1440).toFixed(1)} days`} at 6 cron runs/hour
 				</p>
 			{/if}
 		</div>
