@@ -44,9 +44,18 @@ export function cleanAsset(asset: string): string {
 	}
 
 	if (dashParts.length === 2) {
-		// Pattern: TICKER-ADDRESS (e.g., USDC-0xA0b8..., BUSD-BD1)
-		// First part is always the ticker
-		return dashParts[0].toUpperCase();
+		const first = dashParts[0].toUpperCase();
+		const second = dashParts[1].toUpperCase();
+		// If second part is a contract address, first is the ticker
+		if (dashParts[1].length > 6 || /^0x/i.test(dashParts[1])) {
+			return first;
+		}
+		// Cosmos denom chain-asset format (gaia-atom, base-eth, bsc-bnb)
+		const CHAINS = new Set(['ETH', 'BTC', 'AVAX', 'BSC', 'BASE', 'GAIA', 'TRON', 'DOGE', 'LTC', 'BCH', 'XRP', 'SOL', 'TERRA', 'BNB', 'THOR']);
+		if (CHAINS.has(first) && first !== second) {
+			return second;
+		}
+		return first;
 	}
 
 	// Single part — uppercase and filter junk
@@ -167,8 +176,10 @@ const RUJIRA_TYPE_MAP: Record<string, { type: string; label: string }> = {
 // ── Dedup priority — lower = keep as primary ──
 
 const DEDUP_PRIORITY: Record<string, number> = {
-	'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'send': 4, 'refund': 5,
-	'switch': 6, 'secure': 7, 'tcy_stake': 8, 'tcy_unstake': 9, 'donate': 10,
+	// THORChain native user actions (highest priority)
+	'swap': 1, 'addLiquidity': 2, 'withdraw': 3, 'refund': 4,
+	'switch': 5, 'secure': 6, 'tcy_stake': 7, 'tcy_unstake': 8, 'donate': 9,
+	// Rujira user-initiated actions
 	'calc-create': 20, 'calc-update': 21, 'calc-withdraw': 22,
 	'fin-order': 23, 'fin-order-wd': 24, 'fin-order-inc': 23, 'fin-order-dec': 24,
 	'fin-range': 25, 'fin-range-dep': 25, 'fin-range-wd': 25,
@@ -184,12 +195,16 @@ const DEDUP_PRIORITY: Record<string, number> = {
 	'ruji-stake': 41, 'ruji-unstake': 41, 'ruji-claim': 41,
 	'pilot-swap': 42, 'pilot-order': 42,
 	'liquidy-swap': 43, 'liquidy-exec': 44,
-	'brune-swap': 45, 'brune-mint': 45, 'brune-burn': 45, 'brune-bond': 80, 'brune-fee': 82,
+	'brune-swap': 45, 'brune-mint': 45, 'brune-burn': 45,
 	'nami-deposit': 46, 'nami-withdraw': 46,
-	'merge-deposit': 81, 'merge-withdraw': 81,
-	'calc-process': 50, 'calc-init': 51, 'calc-internal': 52,
+	// Generic send — only primary when no specific contract action exists
+	'send': 50,
+	// Internal mechanics
+	'calc-process': 55, 'calc-init': 56, 'calc-internal': 57,
 	'ghost-borrow': 60, 'ghost-repay': 61,
 	'fin-arb': 70, 'fin-range-fee': 71, 'fin-mm-fee': 72,
+	'brune-bond': 80, 'brune-fee': 82,
+	'merge-deposit': 81, 'merge-withdraw': 81,
 	'revenue-run': 80,
 	'deferred-exec': 85, 'crank-fee': 86,
 	'contract': 100, 'unknown': 999,
@@ -627,7 +642,11 @@ export async function fetchBalances(address: string): Promise<Array<{ asset: str
 
 		const merged = new Map<string, number>();
 		for (const b of balances) {
-			const asset = b.denom === 'rune' ? 'RUNE' : cleanAsset(b.denom || '');
+			const denom = b.denom || '';
+			// Skip share/receipt tokens (LP positions, staking receipts, vault shares)
+			if (/^x\/(bow-|ghost-|staking-|nami-index-|fin-)/.test(denom)) continue;
+			const asset = denom === 'rune' ? 'RUNE' : cleanAsset(denom);
+			if (!asset) continue;
 			const raw = parseInt(b.amount || '0');
 			if (raw === 0) continue;
 			merged.set(asset, (merged.get(asset) || 0) + raw);

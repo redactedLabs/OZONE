@@ -12,8 +12,9 @@ const ICON_CDN = 'https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/c
 const CMC_CDN = 'https://s2.coinmarketcap.com/static/img/coins/64x64';
 const MIDGARD_POOLS = 'https://gateway.liquify.com/chain/thorchain_midgard/v2/pools';
 
-// Official RUJI logo from CoinGecko
+// Rujira ecosystem logos
 const RUJI_LOGO = 'https://coin-images.coingecko.com/coins/images/55372/small/RUJI_180x180.png';
+const SWAPKIT_THOR = (token: string) => `${SWAPKIT_CDN}/thor.${token.toLowerCase()}.png`;
 
 // Static fallbacks for tokens that might not resolve via SwapKit
 export const STATIC_LOGOS: Record<string, string> = {
@@ -47,6 +48,10 @@ export const STATIC_LOGOS: Record<string, string> = {
 	BASE: `${CMC_CDN}/27716.png`,
 	LUNA: `${CMC_CDN}/4172.png`,
 	RUJI: RUJI_LOGO,
+	// Rujira ecosystem
+	TCY: SWAPKIT_THOR('tcy'),
+	LQDY: 'https://coin-images.coingecko.com/coins/images/68811/small/lqdy_token_200x200.png',
+	FOX: `${SWAPKIT_CDN}/eth.fox-0xc770eefad204b5180df6a14ee197d99d808ee52d.png`,
 };
 
 // Default chain color for unknown chains
