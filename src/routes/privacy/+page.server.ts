@@ -1,3 +1,7 @@
+import { db } from '$lib/server/db';
+import { privacySnapshots } from '$lib/server/db/schema';
+import { sql, desc, lte } from 'drizzle-orm';
+
 const PROXY_ADDRESS = 'thor1c5nhsur6368rtt36f7lczjwjxp02kzc586vcqvx88ptep5au90sshaykqx';
 const FEE_ADDRESS = 'thor15qymde6pkjxl2c068lk2gq0c7rcps4mckd3ngzwgy5n2mx6ms6mq3xntrt';
 const THORNODE = 'https://gateway.liquify.com/chain/thorchain_api';
@@ -229,6 +233,48 @@ export async function load() {
 
 	const totalTVLUsd = tvlAssets.reduce((sum, a) => sum + a.usd, 0);
 
+	// --- Snapshot + 1d change logic ---
+	let tvlChange: number | null = null;
+	let walletChange: number | null = null;
+	let revenueChange: number | null = null;
+
+	try {
+		// Rate-limit: only insert if no snapshot in last 10 minutes
+		const recent = await db
+			.select({ id: privacySnapshots.id })
+			.from(privacySnapshots)
+			.where(sql`${privacySnapshots.createdAt} > now() - interval '10 minutes'`)
+			.limit(1);
+
+		if (recent.length === 0) {
+			await db.insert(privacySnapshots).values({
+				tvlUsd: totalTVLUsd.toString(),
+				walletCount: subWallets.length,
+				revenueUsd: feeBalanceUsd.toString()
+			});
+		}
+
+		// Find snapshot from ~24h ago
+		const old = await db
+			.select()
+			.from(privacySnapshots)
+			.where(lte(privacySnapshots.createdAt, sql`now() - interval '24 hours'`))
+			.orderBy(desc(privacySnapshots.createdAt))
+			.limit(1);
+
+		if (old.length > 0) {
+			const oldTvl = parseFloat(old[0].tvlUsd);
+			const oldWallets = old[0].walletCount;
+			const oldRevenue = parseFloat(old[0].revenueUsd);
+
+			if (oldTvl > 0) tvlChange = ((totalTVLUsd - oldTvl) / oldTvl) * 100;
+			walletChange = subWallets.length - oldWallets;
+			if (oldRevenue > 0) revenueChange = ((feeBalanceUsd - oldRevenue) / oldRevenue) * 100;
+		}
+	} catch {
+		// DB errors shouldn't break the page
+	}
+
 	return {
 		subWalletCount: subWallets.length,
 		totalTVLUsd,
@@ -242,6 +288,9 @@ export async function load() {
 		feeAddress: FEE_ADDRESS,
 		codeIdProxy: CODE_ID_PROXY,
 		codeIdSub: CODE_ID_SUB,
-		fetchedAt: new Date().toISOString()
+		fetchedAt: new Date().toISOString(),
+		tvlChange,
+		walletChange,
+		revenueChange
 	};
 }

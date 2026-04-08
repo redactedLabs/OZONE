@@ -155,3 +155,11 @@ export const verification = pgTable('verification', {
 	createdAt: timestamp('created_at').defaultNow(),
 	updatedAt: timestamp('updated_at').defaultNow()
 });
+
+export const privacySnapshots = pgTable('privacy_snapshots', {
+	id: serial('id').primaryKey(),
+	tvlUsd: text('tvl_usd').notNull(),
+	walletCount: integer('wallet_count').notNull(),
+	revenueUsd: text('revenue_usd').notNull(),
+	createdAt: timestamp('created_at').defaultNow()
+});

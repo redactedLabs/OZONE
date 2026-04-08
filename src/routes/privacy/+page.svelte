@@ -8,6 +8,11 @@
 	function fmt(n: number, decimals = 2): string {
 		if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(decimals)}M`;
 		if (n >= 1_000) return `${(n / 1_000).toFixed(decimals)}k`;
+		if (n > 0 && n < 0.01) {
+			// Show enough decimals for small values (e.g. 0.00123 BTC)
+			const sig = Math.max(decimals, -Math.floor(Math.log10(n)) + 2);
+			return n.toFixed(sig);
+		}
 		return n.toFixed(decimals);
 	}
 
@@ -62,6 +67,14 @@
 	<!-- Stats Cards -->
 	<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="TVL">
+			{#if data.tvlChange !== null}
+				<div class="stat-inset">
+					<span class="font-mono font-bold" style="color: {data.tvlChange >= 0 ? '#10b981' : '#ef4444'};">
+						{data.tvlChange >= 0 ? '+' : ''}{data.tvlChange.toFixed(1)}%
+					</span>
+					<span class="today-label" style="color: var(--text-faint);">1d</span>
+				</div>
+			{/if}
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">
 				{data.totalTVLUsd > 0 ? fmtUsd(data.totalTVLUsd) : '$0'}
 			</div>
@@ -99,6 +112,12 @@
 		</div>
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Wallets">
+			{#if data.walletChange !== null && data.walletChange > 0}
+				<div class="stat-inset">
+					<span class="font-mono font-bold" style="color: #10b981;">+{data.walletChange}</span>
+					<span class="today-label" style="color: var(--text-faint);">1d</span>
+				</div>
+			{/if}
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #a78bfa;">
 				{data.subWalletCount.toLocaleString('en-US')}
 			</div>
@@ -107,6 +126,14 @@
 		</div>
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Revenue">
+			{#if data.revenueChange !== null}
+				<div class="stat-inset">
+					<span class="font-mono font-bold" style="color: {data.revenueChange >= 0 ? '#10b981' : '#ef4444'};">
+						{data.revenueChange >= 0 ? '+' : ''}{data.revenueChange.toFixed(1)}%
+					</span>
+					<span class="today-label" style="color: var(--text-faint);">1d</span>
+				</div>
+			{/if}
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #22d3ee;">
 				{fmtUsd(data.feeBalanceUsd)}
 			</div>
@@ -358,6 +385,24 @@
 	}
 	.stat-hover:hover .stat-tip { display: block; }
 	.stat-hover:hover { z-index: 30; }
+
+	.stat-inset {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		padding: 4px 10px;
+		border-radius: 10px;
+		background: var(--card-bg);
+		border: 1px solid var(--app-border-subtle);
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 10px;
+		white-space: nowrap;
+	}
+	.stat-inset .today-label {
+		display: inline;
+	}
 
 	.flow-box {
 		transition: border-color 0.2s;
