@@ -24,9 +24,47 @@ type Pool = {
 	assetPriceUSD: string;
 };
 
+function cleanAsset(asset: string): string {
+	if (!asset) return '';
+	let name = asset;
+	if (name.includes('~')) name = name.split('~')[1];
+	else if (name.includes('/')) name = name.split('/')[1];
+	else if (name.includes('.')) name = name.split('.')[1];
+	const dashParts = name.split('-');
+	if (dashParts.length >= 3) return dashParts[1];
+	if (dashParts.length === 2) {
+		if (dashParts[1].length > 6) return dashParts[0];
+		if (dashParts[0] === dashParts[1]) return dashParts[0];
+		return dashParts[1];
+	}
+	return dashParts[0];
+}
+
 function parseRuneBalance(data: BalanceResponse): number {
 	const rune = data.balances?.find((b) => b.denom === 'rune');
 	return rune ? parseInt(rune.amount, 10) / 1e8 : 0;
+}
+
+function parseAllBalances(data: BalanceResponse): Array<{ asset: string; amount: number }> {
+	const merged = new Map<string, number>();
+	for (const b of data.balances || []) {
+		const asset = b.denom === 'rune' ? 'RUNE' : cleanAsset(b.denom);
+		const raw = parseInt(b.amount || '0') / 1e8;
+		if (raw === 0) continue;
+		merged.set(asset, (merged.get(asset) || 0) + raw);
+	}
+	return Array.from(merged.entries()).map(([asset, amount]) => ({ asset, amount }));
+}
+
+function buildPriceMap(pools: Pool[], runePrice: number): Map<string, number> {
+	const map = new Map<string, number>();
+	map.set('RUNE', runePrice);
+	for (const pool of pools) {
+		const asset = cleanAsset(pool.asset);
+		const usd = parseFloat(pool.assetPriceUSD);
+		if (usd > 0) map.set(asset, usd);
+	}
+	return map;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -107,29 +145,29 @@ async function fetchContractState(): Promise<{
 	return defaults;
 }
 
-async function fetchFeeBalance(): Promise<number> {
+async function fetchFeeBalance(): Promise<{ rune: number; all: Array<{ asset: string; amount: number }> }> {
 	const data = await fetchJson<BalanceResponse>(
 		`${THORNODE}/cosmos/bank/v1beta1/balances/${FEE_ADDRESS}`
 	);
-	return parseRuneBalance(data);
+	return { rune: parseRuneBalance(data), all: parseAllBalances(data) };
 }
 
-async function fetchRunePrice(): Promise<number> {
+async function fetchRunePrice(): Promise<{ runePrice: number; pools: Pool[] }> {
 	const pools = await fetchJson<Pool[]>(`${MIDGARD}/v2/pools`);
 	// Find a stable pool to derive RUNE price
 	const btcPool = pools.find((p) => p.asset === 'BTC.BTC');
 	if (btcPool) {
 		const assetPrice = parseFloat(btcPool.assetPrice);
 		const assetPriceUSD = parseFloat(btcPool.assetPriceUSD);
-		if (assetPrice > 0) return assetPriceUSD / assetPrice;
+		if (assetPrice > 0) return { runePrice: assetPriceUSD / assetPrice, pools };
 	}
 	// Fallback: try any pool
 	for (const pool of pools) {
 		const ap = parseFloat(pool.assetPrice);
 		const apUsd = parseFloat(pool.assetPriceUSD);
-		if (ap > 0 && apUsd > 0) return apUsd / ap;
+		if (ap > 0 && apUsd > 0) return { runePrice: apUsd / ap, pools };
 	}
-	return 0;
+	return { runePrice: 0, pools };
 }
 
 export async function load() {
@@ -147,8 +185,22 @@ export async function load() {
 		configResult.status === 'fulfilled'
 			? configResult.value
 			: { fee: 15, adminAddress: '', feeAddress: '', subWasmId: CODE_ID_SUB };
-	const runePriceUsd = priceResult.status === 'fulfilled' ? priceResult.value : 0;
-	const feeBalance = feeResult.status === 'fulfilled' ? feeResult.value : 0;
+	const priceData = priceResult.status === 'fulfilled' ? priceResult.value : { runePrice: 0, pools: [] };
+	const runePriceUsd = priceData.runePrice;
+	const priceMap = buildPriceMap(priceData.pools, runePriceUsd);
+	const feeData = feeResult.status === 'fulfilled' ? feeResult.value : { rune: 0, all: [] };
+	const feeBalance = feeData.rune;
+
+	// Build fee assets with USD values, sorted by USD descending
+	const feeAssets = feeData.all
+		.map((b) => ({
+			asset: b.asset,
+			amount: b.amount,
+			usd: b.amount * (priceMap.get(b.asset) || 0)
+		}))
+		.sort((a, b) => b.usd - a.usd);
+
+	const feeBalanceUsd = feeAssets.reduce((sum, a) => sum + a.usd, 0);
 
 	// Fetch sub-wallet balances
 	let totalSubWalletBalance = 0;
@@ -168,7 +220,8 @@ export async function load() {
 		totalTVLUsd: totalTVL * runePriceUsd,
 		proxyTVLUsd: proxyBalance * runePriceUsd,
 		feeBalance,
-		feeBalanceUsd: feeBalance * runePriceUsd,
+		feeBalanceUsd,
+		feeAssets,
 		runePriceUsd,
 		config,
 		proxyAddress: PROXY_ADDRESS,

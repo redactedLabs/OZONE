@@ -86,7 +86,26 @@
 				<div class="text-[10px] font-mono mt-0.5" style="color: var(--text-faint);">{fmtUsd(data.feeBalanceUsd)}</div>
 			{/if}
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Total Fees</div>
-			<div class="stat-tip">Total protocol fees collected. Balance of the fee address, accumulated from the {data.config.fee} bps fee charged per interaction.</div>
+			<div class="stat-tip" style="min-width: 200px;">
+				<div class="text-[9px] font-semibold mb-1.5" style="color: var(--text-muted);">Fee Breakdown</div>
+				{#each data.feeAssets as asset}
+					<div class="flex justify-between gap-4 py-0.5">
+						<span class="font-mono">{asset.asset}</span>
+						<span>
+							{fmt(asset.amount)}
+							{#if asset.usd > 0}
+								<span style="color: var(--text-faint);">({fmtUsd(asset.usd)})</span>
+							{/if}
+						</span>
+					</div>
+				{/each}
+				<div class="border-t mt-1.5 pt-1.5" style="border-color: var(--app-border);">
+					<div class="flex justify-between font-semibold">
+						<span>Total</span>
+						<span>{fmtUsd(data.feeBalanceUsd)}</span>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Fee">
