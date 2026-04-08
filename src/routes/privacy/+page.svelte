@@ -63,10 +63,10 @@
 	<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="TVL">
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">
-				{data.totalTVL > 0 ? `${fmt(data.totalTVL)}` : '0'}<span class="text-sm font-normal" style="color: #10b981;"> ᚱ</span>
+				{data.totalTVLUsd > 0 ? fmtUsd(data.totalTVLUsd) : '$0'}
 			</div>
-			{#if data.totalTVLUsd > 0}
-				<div class="text-[10px] font-mono mt-0.5" style="color: var(--text-faint);">{fmtUsd(data.totalTVLUsd)}</div>
+			{#if data.totalTVL > 0}
+				<div class="text-[10px] font-mono mt-0.5" style="color: var(--text-faint);">{fmt(data.totalTVL)} ᚱ</div>
 			{/if}
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Total Value Locked</div>
 			<div class="stat-tip">Combined balance across the Private Reserve (proxy contract) and all Private Wallets (sub-wallets). Denominated in RUNE.</div>
