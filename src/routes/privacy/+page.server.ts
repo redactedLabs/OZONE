@@ -48,7 +48,7 @@ function parseRuneBalance(data: BalanceResponse): number {
 function parseAllBalances(data: BalanceResponse): Array<{ asset: string; amount: number }> {
 	const merged = new Map<string, number>();
 	for (const b of data.balances || []) {
-		const asset = b.denom === 'rune' ? 'RUNE' : cleanAsset(b.denom);
+		const asset = b.denom === 'rune' ? 'RUNE' : cleanAsset(b.denom).toUpperCase();
 		const raw = parseInt(b.amount || '0') / 1e8;
 		if (raw === 0) continue;
 		merged.set(asset, (merged.get(asset) || 0) + raw);
@@ -60,7 +60,7 @@ function buildPriceMap(pools: Pool[], runePrice: number): Map<string, number> {
 	const map = new Map<string, number>();
 	map.set('RUNE', runePrice);
 	for (const pool of pools) {
-		const asset = cleanAsset(pool.asset);
+		const asset = cleanAsset(pool.asset).toUpperCase();
 		const usd = parseFloat(pool.assetPriceUSD);
 		if (usd > 0) map.set(asset, usd);
 	}
