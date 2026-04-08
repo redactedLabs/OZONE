@@ -9,18 +9,51 @@ const THORNODE_URL = 'https://gateway.liquify.com/chain/thorchain_api';
 
 export function cleanAsset(asset: string): string {
 	if (!asset) return '';
+
+	// Known full denoms
+	const lower = asset.toLowerCase();
+	if (lower === 'rune' || lower === 'thor.rune') return 'RUNE';
+
 	let name = asset;
-	if (name.includes('~')) name = name.split('~')[1];
-	else if (name.includes('/')) name = name.split('/')[1];
-	else if (name.includes('.')) name = name.split('.')[1];
-	const dashParts = name.split('-');
-	if (dashParts.length >= 3) return dashParts[1];
-	if (dashParts.length === 2) {
-		if (dashParts[1].length > 6) return dashParts[0];
-		if (dashParts[0] === dashParts[1]) return dashParts[0];
-		return dashParts[1];
+
+	// Strip x/ share/receipt prefix (e.g., x/ghost-vault/avax-usdc-0x...)
+	if (/^x\//i.test(name)) name = name.substring(2);
+
+	// Take last segment after / (handles factory/, ibc/, ghost-vault/, synths)
+	if (name.includes('/')) {
+		const parts = name.split('/');
+		name = parts[parts.length - 1];
 	}
-	return dashParts[0];
+
+	// Strip trade/secured asset chain prefix (ETH~ETH → ETH)
+	if (name.includes('~')) name = name.split('~').pop()!;
+
+	// Strip L1 chain prefix (ETH.ETH → ETH, thor.lqdy-btc → lqdy-btc)
+	if (name.includes('.')) name = name.split('.').pop()!;
+
+	const dashParts = name.split('-');
+
+	if (dashParts.length >= 3) {
+		// Pattern: chain-ticker-address (e.g., avax-usdc-0xb97...)
+		// Second part is typically the ticker
+		const candidate = dashParts[1];
+		if (candidate.length <= 6 && !/^[0-9a-f]+$/i.test(candidate)) {
+			return candidate.toUpperCase();
+		}
+		return dashParts[0].toUpperCase();
+	}
+
+	if (dashParts.length === 2) {
+		// Pattern: TICKER-ADDRESS (e.g., USDC-0xA0b8..., BUSD-BD1)
+		// First part is always the ticker
+		return dashParts[0].toUpperCase();
+	}
+
+	// Single part — uppercase and filter junk
+	const result = dashParts[0].toUpperCase();
+	if (result.startsWith('0X') || (result.startsWith('THOR1') && result.length > 10)) return '';
+	if (result.length > 20 && /^[A-F0-9]+$/.test(result)) return ''; // IBC hash
+	return result;
 }
 
 export function formatAmount(raw: string): string {
@@ -238,7 +271,7 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 		}
 		case 'ghost-withdraw': {
 			assetOut = fundAsset;
-			rawOut = fundAmount;
+			rawOut = attrs.amount || fundAmount;
 			break;
 		}
 		case 'fin-range': {
@@ -343,8 +376,8 @@ function parseContractAction(a: any): { type: string; assetIn: string; assetOut:
 		}
 		case 'ruji-unstake':
 		case 'ruji-claim': {
-			assetOut = fundAsset || 'RUJI';
-			rawOut = fundAmount;
+			assetOut = 'RUJI';
+			rawOut = attrs.returned || fundAmount;
 			break;
 		}
 		case 'pilot-swap': {
