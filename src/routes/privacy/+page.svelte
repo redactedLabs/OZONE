@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { getTokenLogoSync } from '$lib/utils/tokenLogos';
+
 	let { data } = $props();
 
 	let copied = $state('');
@@ -80,10 +82,17 @@
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Revenue">
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #22d3ee;">
-				{data.feeBalance > 0 ? `${fmt(data.feeBalance)}` : '0'}<span class="text-sm font-normal" style="color: #22d3ee;"> ᚱ</span>
+				{fmtUsd(data.feeBalanceUsd)}
 			</div>
-			{#if data.feeBalanceUsd > 0}
-				<div class="text-[10px] font-mono mt-0.5" style="color: var(--text-faint);">{fmtUsd(data.feeBalanceUsd)}</div>
+			{#if data.feeAssets.length > 0}
+				<div class="flex items-center gap-[-4px] mt-1">
+					{#each data.feeAssets as asset}
+						{@const logo = getTokenLogoSync(asset.asset)}
+						{#if logo}
+							<img src={logo} alt={asset.asset} class="w-4 h-4 rounded-full" style="margin-right: -4px; border: 1px solid var(--card-bg);" />
+						{/if}
+					{/each}
+				</div>
 			{/if}
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Total Fees</div>
 			<div class="stat-tip" style="min-width: 200px;">
