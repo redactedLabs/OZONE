@@ -135,6 +135,52 @@ export const INTERNAL_TYPES = new Set([
 	'crank-fee', 'deferred-exec', 'revenue-run', 'contract',
 ]);
 
+export const TYPE_CATEGORIES: Record<string, { label: string; color: string; types: string[] }> = {
+	thorchain: {
+		label: 'THORChain', color: 'var(--app-accent)',
+		types: ['swap', 'addLiquidity', 'withdraw', 'send', 'refund', 'switch', 'donate', 'secure'],
+	},
+	trade: {
+		label: 'RUJI Trade', color: '#f59e0b',
+		types: ['fin-trade', 'fin-arb', 'fin-order', 'fin-order-wd', 'fin-order-inc', 'fin-order-dec',
+			'fin-mm-fee', 'fin-range', 'fin-range-dep', 'fin-range-wd', 'fin-range-claim',
+			'fin-range-close', 'fin-range-xfer', 'fin-range-fee'],
+	},
+	amm: {
+		label: 'AMM', color: '#6366f1',
+		types: ['bow-swap', 'bow-deposit', 'bow-withdraw', 'tc-swap'],
+	},
+	'money-market': {
+		label: 'Money Market', color: '#ef4444',
+		types: ['ghost-borrow', 'ghost-repay', 'ghost-lend', 'ghost-withdraw',
+			'ghost-credit-create', 'ghost-credit-action', 'ghost-credit-borrow',
+			'ghost-credit-repay', 'ghost-credit-send', 'ghost-credit-exec', 'ghost-liquidation'],
+	},
+	dca: {
+		label: 'DCA', color: '#a78bfa',
+		types: ['calc-init', 'calc-process', 'calc-withdraw', 'calc-create', 'calc-internal', 'calc-update'],
+	},
+	staking: {
+		label: 'Staking', color: '#10b981',
+		types: ['ruji-stake', 'ruji-unstake', 'ruji-claim', 'tcy_stake', 'tcy_unstake'],
+	},
+	auto: {
+		label: 'Auto', color: '#94a3b8',
+		types: ['auto-workflow', 'auto-cancel', 'auto-config', 'auto-fee-wd'],
+	},
+	index: {
+		label: 'Index', color: '#3b82f6',
+		types: ['nami-deposit', 'nami-withdraw'],
+	},
+	other: {
+		label: 'Other', color: '#64748b',
+		types: ['pilot-swap', 'pilot-order', 'liquidy-swap', 'liquidy-exec',
+			'brune-swap', 'brune-mint', 'brune-burn', 'brune-bond', 'brune-fee',
+			'deferred-exec', 'crank-fee', 'revenue-run', 'merge-deposit', 'merge-withdraw',
+			'contract', 'unknown'],
+	},
+};
+
 /** Map transaction type to Koinly label */
 export function getKoinlyLabel(type: string): string {
 	if (['swap', 'fin-trade', 'fin-arb', 'bow-swap', 'tc-swap', 'calc-process',

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { fetchPoolAssets, getTokenLogoSync } from '$lib/utils/tokenLogos';
-	import { TYPE_LABELS, TYPE_COLORS, getKoinlyLabel } from '$lib/utils/historyTypes';
+	import { TYPE_LABELS, TYPE_COLORS, TYPE_CATEGORIES, getKoinlyLabel } from '$lib/utils/historyTypes';
 	import type { HistoryGroup } from '$lib/utils/historyTypes';
 
 	let { data }: { data: PageData } = $props();
@@ -13,14 +13,27 @@
 		return getTokenLogoSync(symbol, poolAssets);
 	}
 
-	// Filter state
-	let activeFilter = $state('');
+	// Category filter state
+	let activeCategory = $state<string | null>(null);
+	let activeSubType = $state<string | null>(null);
 
-	// Count transactions by type (across all txs, not just groups)
-	const typeCounts = $derived(() => {
+	const categoryCounts = $derived(() => {
 		const counts: Record<string, number> = {};
 		for (const tx of (data.transactions || [])) {
-			counts[tx.type] = (counts[tx.type] || 0) + 1;
+			for (const [key, cat] of Object.entries(TYPE_CATEGORIES)) {
+				if (cat.types.includes(tx.type)) { counts[key] = (counts[key] || 0) + 1; break; }
+			}
+		}
+		return counts;
+	});
+
+	const subTypeCounts = $derived(() => {
+		if (!activeCategory) return {};
+		const cat = TYPE_CATEGORIES[activeCategory];
+		if (!cat) return {};
+		const counts: Record<string, number> = {};
+		for (const tx of (data.transactions || [])) {
+			if (cat.types.includes(tx.type)) counts[tx.type] = (counts[tx.type] || 0) + 1;
 		}
 		return counts;
 	});
@@ -28,10 +41,11 @@
 	// Filter groups from server-provided data
 	const filteredGroups = $derived<HistoryGroup[]>(() => {
 		const groups: HistoryGroup[] = data.groups || [];
-		if (!activeFilter) return groups;
+		if (!activeCategory) return groups;
+		const matchTypes = activeSubType ? [activeSubType] : (TYPE_CATEGORIES[activeCategory]?.types || []);
 		return groups.filter((g: HistoryGroup) =>
-			g.primary.type === activeFilter ||
-			g.subActions.some(s => s.type === activeFilter)
+			matchTypes.includes(g.primary.type) ||
+			g.subActions.some(s => matchTypes.includes(s.type))
 		);
 	});
 
@@ -211,26 +225,59 @@
 		</div>
 	{/if}
 
-	<!-- Filter chips -->
-	<div class="flex flex-wrap gap-1.5 mb-4 overflow-x-auto pb-1">
+	<!-- Category filter chips -->
+	<div class="flex flex-wrap gap-1.5 mb-2 overflow-x-auto pb-1">
 		<button
-			onclick={() => activeFilter = ''}
+			onclick={() => { activeCategory = null; activeSubType = null; }}
 			class="filter-chip"
-			class:active={!activeFilter}
+			class:active={!activeCategory}
 		>
 			All ({data.transactions?.length || 0})
 		</button>
-		{#each Object.entries(typeCounts()).sort(([, a], [, b]) => b - a) as [type, count]}
-			<button
-				onclick={() => activeFilter = activeFilter === type ? '' : type}
-				class="filter-chip"
-				class:active={activeFilter === type}
-				style={activeFilter === type ? `background: ${TYPE_COLORS[type] || '#64748b'}22; border-color: ${TYPE_COLORS[type] || '#64748b'}66; color: ${TYPE_COLORS[type] || '#64748b'};` : ''}
-			>
-				{TYPE_LABELS[type] || type} ({count})
-			</button>
+		{#each Object.entries(TYPE_CATEGORIES) as [key, cat]}
+			{@const count = categoryCounts()[key] || 0}
+			{#if count > 0}
+				<button
+					onclick={() => { if (activeCategory === key) { activeCategory = null; activeSubType = null; } else { activeCategory = key; activeSubType = null; } }}
+					class="filter-chip"
+					class:active={activeCategory === key}
+					style={activeCategory === key ? `background: ${cat.color}22; border-color: ${cat.color}66; color: ${cat.color};` : ''}
+				>
+					{cat.label} ({count})
+				</button>
+			{/if}
 		{/each}
 	</div>
+
+	<!-- Sub-type pills (only when a category is selected) -->
+	{#if activeCategory && Object.keys(subTypeCounts()).length > 1}
+		<div class="flex flex-wrap gap-1.5 mb-4 overflow-x-auto pb-1">
+			<span class="text-[10px] flex items-center mr-1" style="color: var(--text-faint);">&#8627;</span>
+			<button
+				onclick={() => { activeSubType = null; }}
+				class="filter-chip"
+				class:active={activeSubType === null}
+				style={activeSubType === null ? `background: ${TYPE_CATEGORIES[activeCategory].color}22; border-color: ${TYPE_CATEGORIES[activeCategory].color}66; color: ${TYPE_CATEGORIES[activeCategory].color};` : ''}
+			>
+				All
+			</button>
+			{#each Object.entries(subTypeCounts()).sort(([, a], [, b]) => b - a) as [type, count]}
+				{@const color = TYPE_COLORS[type] || TYPE_CATEGORIES[activeCategory].color}
+				<button
+					onclick={() => { activeSubType = activeSubType === type ? null : type; }}
+					class="filter-chip"
+					class:active={activeSubType === type}
+					style={activeSubType === type ? `background: ${color}22; border-color: ${color}66; color: ${color};` : ''}
+				>
+					{TYPE_LABELS[type] || type} ({count})
+				</button>
+			{/each}
+		</div>
+	{:else if activeCategory}
+		<div class="mb-4"></div>
+	{:else}
+		<div class="mb-4"></div>
+	{/if}
 
 	<!-- Transaction Table -->
 	<div class="overflow-x-auto rounded-xl" style="background: var(--bg-card); border: 1px solid var(--app-border);" data-win-title="Transaction Report">

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fetchPoolAssets, getTokenLogoSync } from '$lib/utils/tokenLogos';
-	import { TYPE_LABELS, TYPE_COLORS, getKoinlyLabel } from '$lib/utils/historyTypes';
+	import { TYPE_LABELS, TYPE_COLORS, TYPE_CATEGORIES, getKoinlyLabel } from '$lib/utils/historyTypes';
 	import type { HistoryGroup } from '$lib/utils/historyTypes';
 
 	let address = $state('');
@@ -163,7 +163,8 @@
 		report = null;
 		error = '';
 		showShareOpts = false;
-		activeFilter = null;
+		activeCategory = null;
+		activeSubType = null;
 	}
 
 	function truncAddr(a: string): string {
@@ -171,69 +172,40 @@
 		return `${a.slice(0, 8)}...${a.slice(-6)}`;
 	}
 
-	// Type filter
-	let activeFilter = $state<string | null>(null);
+	// Category filter state
+	let activeCategory = $state<string | null>(null);
+	let activeSubType = $state<string | null>(null);
 
-	function getAllTypes(): string[] {
-		if (!report?.transactions) return [];
-		const set = new Set<string>();
-		for (const tx of report.transactions) set.add(tx.type);
-		return [...set];
-	}
+	const categoryCounts = $derived(() => {
+		const counts: Record<string, number> = {};
+		for (const tx of (report?.transactions || [])) {
+			for (const [key, cat] of Object.entries(TYPE_CATEGORIES)) {
+				if (cat.types.includes(tx.type)) { counts[key] = (counts[key] || 0) + 1; break; }
+			}
+		}
+		return counts;
+	});
 
-	// Rujira-specific type groups for filter chips
-	const rujiraTypes = [
-		'fin-trade', 'fin-arb', 'fin-range', 'fin-range-dep', 'fin-range-wd',
-		'fin-range-claim', 'fin-range-close', 'fin-range-xfer', 'fin-range-fee',
-		'fin-order', 'fin-order-wd', 'fin-order-inc', 'fin-order-dec', 'fin-mm-fee',
-		'bow-swap', 'bow-deposit', 'bow-withdraw', 'tc-swap',
-		'pilot-swap', 'pilot-order', 'liquidy-swap', 'liquidy-exec',
-		'brune-swap', 'ruji-stake', 'ruji-unstake', 'ruji-claim',
-		'nami-deposit', 'nami-withdraw',
-	];
-	const ghostTypes = [
-		'ghost-borrow', 'ghost-repay', 'ghost-lend', 'ghost-withdraw',
-		'ghost-credit-create', 'ghost-credit-action', 'ghost-credit-borrow',
-		'ghost-credit-repay', 'ghost-credit-send', 'ghost-credit-exec',
-		'ghost-liquidation',
-	];
-	const calcTypes = ['calc-init', 'calc-process', 'calc-withdraw', 'calc-create', 'calc-internal', 'calc-update'];
-
-	const txSwaps = $derived(report?.transactions?.filter((t: any) => t.type === 'swap').length || 0);
-	const txAdds = $derived(report?.transactions?.filter((t: any) => t.type === 'addLiquidity').length || 0);
-	const txWithdraws = $derived(report?.transactions?.filter((t: any) => t.type === 'withdraw').length || 0);
-	const txSends = $derived(report?.transactions?.filter((t: any) => t.type === 'send').length || 0);
-	const txRujiraTrades = $derived(report?.transactions?.filter((t: any) => rujiraTypes.includes(t.type)).length || 0);
-	const txGhost = $derived(report?.transactions?.filter((t: any) => ghostTypes.includes(t.type)).length || 0);
-	const txDCA = $derived(report?.transactions?.filter((t: any) => calcTypes.includes(t.type)).length || 0);
+	const subTypeCounts = $derived(() => {
+		if (!activeCategory) return {};
+		const cat = TYPE_CATEGORIES[activeCategory];
+		if (!cat) return {};
+		const counts: Record<string, number> = {};
+		for (const tx of (report?.transactions || [])) {
+			if (cat.types.includes(tx.type)) counts[tx.type] = (counts[tx.type] || 0) + 1;
+		}
+		return counts;
+	});
 
 	// Filter groups from server-provided data
 	const filteredGroups = $derived<HistoryGroup[]>(() => {
 		const groups: HistoryGroup[] = report?.groups || [];
-		if (!activeFilter) return groups;
-
-		// Determine which types match the filter
-		let matchTypes: string[];
-		if (activeFilter === '_rujira') matchTypes = rujiraTypes;
-		else if (activeFilter === '_ghost') matchTypes = ghostTypes;
-		else if (activeFilter === '_dca') matchTypes = calcTypes;
-		else matchTypes = [activeFilter];
-
+		if (!activeCategory) return groups;
+		const matchTypes = activeSubType ? [activeSubType] : (TYPE_CATEGORIES[activeCategory]?.types || []);
 		return groups.filter((g: HistoryGroup) =>
 			matchTypes.includes(g.primary.type) ||
 			g.subActions.some(s => matchTypes.includes(s.type))
 		);
-	});
-
-	const filteredTxCount = $derived(() => {
-		if (!activeFilter) return report?.transactions?.length || 0;
-		const txs = report?.transactions || [];
-		let matchTypes: string[];
-		if (activeFilter === '_rujira') matchTypes = rujiraTypes;
-		else if (activeFilter === '_ghost') matchTypes = ghostTypes;
-		else if (activeFilter === '_dca') matchTypes = calcTypes;
-		else matchTypes = [activeFilter];
-		return txs.filter((t: any) => matchTypes.includes(t.type)).length;
 	});
 
 </script>
@@ -595,79 +567,60 @@
 			</div>
 		{/if}
 
-		<!-- Stats row (clickable filters) -->
-		<div class="flex flex-wrap gap-2 mb-3">
-			<button onclick={() => (activeFilter = activeFilter === 'swap' ? null : 'swap')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'swap' ? 'border-color: var(--app-accent); box-shadow: 0 0 12px rgba(99,102,241,0.15);' : ''} cursor: pointer;">
-				<div class="text-lg font-bold font-mono" style="color: var(--app-accent);">{txSwaps}</div>
-				<div class="text-[10px]" style="color: var(--text-muted);">Swaps</div>
-			</button>
-			<button onclick={() => (activeFilter = activeFilter === 'addLiquidity' ? null : 'addLiquidity')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'addLiquidity' ? 'border-color: #10b981; box-shadow: 0 0 12px rgba(16,185,129,0.15);' : ''} cursor: pointer;">
-				<div class="text-lg font-bold font-mono" style="color: #10b981;">{txAdds}</div>
-				<div class="text-[10px]" style="color: var(--text-muted);">LP Adds</div>
-			</button>
-			<button onclick={() => (activeFilter = activeFilter === 'withdraw' ? null : 'withdraw')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'withdraw' ? 'border-color: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.15);' : ''} cursor: pointer;">
-				<div class="text-lg font-bold font-mono" style="color: #f59e0b;">{txWithdraws}</div>
-				<div class="text-[10px]" style="color: var(--text-muted);">Withdrawals</div>
-			</button>
-			<button onclick={() => (activeFilter = activeFilter === 'send' ? null : 'send')} class="hist-card rounded-lg p-3 text-left transition-all" style="{activeFilter === 'send' ? 'border-color: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.15);' : ''} cursor: pointer;">
-				<div class="text-lg font-bold font-mono" style="color: #22d3ee;">{txSends}</div>
-				<div class="text-[10px]" style="color: var(--text-muted);">Sends</div>
-			</button>
-		</div>
-
-		<!-- Rujira stats row (only shows if there are Rujira interactions) -->
-		{#if txRujiraTrades > 0 || txGhost > 0 || txDCA > 0}
-			<div class="flex flex-wrap gap-2 mb-3">
-				{#if txRujiraTrades > 0}
-					<button onclick={() => { activeFilter = activeFilter === '_rujira' ? null : '_rujira'; }} class="hist-card rounded-lg px-3 py-2 text-left transition-all flex items-center gap-2" style="{activeFilter === '_rujira' ? 'border-color: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.15);' : ''} cursor: pointer;">
-						<div class="text-base font-bold font-mono" style="color: #f59e0b;">{txRujiraTrades}</div>
-						<div class="text-[10px]" style="color: var(--text-muted);">Rujira Trades</div>
-					</button>
-				{/if}
-				{#if txGhost > 0}
-					<button onclick={() => { activeFilter = activeFilter === '_ghost' ? null : '_ghost'; }} class="hist-card rounded-lg px-3 py-2 text-left transition-all flex items-center gap-2" style="{activeFilter === '_ghost' ? 'border-color: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,0.15);' : ''} cursor: pointer;">
-						<div class="text-base font-bold font-mono" style="color: #ef4444;">{txGhost}</div>
-						<div class="text-[10px]" style="color: var(--text-muted);">Lend/Borrow</div>
-					</button>
-				{/if}
-				{#if txDCA > 0}
-					<button onclick={() => { activeFilter = activeFilter === '_dca' ? null : '_dca'; }} class="hist-card rounded-lg px-3 py-2 text-left transition-all flex items-center gap-2" style="{activeFilter === '_dca' ? 'border-color: #a78bfa; box-shadow: 0 0 12px rgba(167,139,250,0.15);' : ''} cursor: pointer;">
-						<div class="text-base font-bold font-mono" style="color: #a78bfa;">{txDCA}</div>
-						<div class="text-[10px]" style="color: var(--text-muted);">DCA Orders</div>
-					</button>
-				{/if}
-			</div>
-		{/if}
-
-		<!-- Filter pills -->
-		<div class="filter-scroll overflow-x-auto -mx-4 px-4 pb-2 mb-4">
+		<!-- Category filter chips -->
+		<div class="filter-scroll overflow-x-auto -mx-4 px-4 pb-2 mb-2">
 			<div class="flex items-center gap-1.5 min-w-max">
 				<button
-					onclick={() => (activeFilter = null)}
-					class="text-[10px] font-medium px-2.5 py-1 rounded-full transition-all whitespace-nowrap"
-					style="{activeFilter === null ? 'background: var(--app-accent); color: white;' : 'background: var(--card-bg); border: 1px solid var(--app-border); color: var(--text-muted);'}"
+					onclick={() => { activeCategory = null; activeSubType = null; }}
+					class="text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all whitespace-nowrap"
+					style="{activeCategory === null ? 'background: var(--app-accent); color: white;' : 'background: var(--card-bg); border: 1px solid var(--app-border); color: var(--text-muted);'}"
 				>
 					All ({report.totalTransactions})
 				</button>
-				{#each getAllTypes() as t}
-					{@const color = TYPE_COLORS[t] || 'var(--text-ghost)'}
-					{#if !['swap', 'addLiquidity', 'withdraw', 'send'].includes(t)}
+				{#each Object.entries(TYPE_CATEGORIES) as [key, cat]}
+					{@const count = categoryCounts()[key] || 0}
+					{#if count > 0}
 						<button
-							onclick={() => (activeFilter = activeFilter === t ? null : t)}
-							class="text-[10px] font-medium px-2.5 py-1 rounded-full transition-all whitespace-nowrap"
-							style="{activeFilter === t ? `background: ${color}; color: white;` : `background: ${color}10; border: 1px solid ${color}30; color: ${color};`}"
+							onclick={() => { if (activeCategory === key) { activeCategory = null; activeSubType = null; } else { activeCategory = key; activeSubType = null; } }}
+							class="text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all whitespace-nowrap"
+							style="{activeCategory === key ? `background: ${cat.color}; color: white;` : `background: ${cat.color}10; border: 1px solid ${cat.color}30; color: ${cat.color};`}"
 						>
-							{TYPE_LABELS[t] || t} ({report.transactions.filter((tx: any) => tx.type === t).length})
+							{cat.label} ({count})
 						</button>
 					{/if}
 				{/each}
-				{#if activeFilter}
-					<span class="text-[10px] whitespace-nowrap" style="color: var(--text-faint);">
-						Showing {filteredTxCount()} of {report.totalTransactions}
-					</span>
-				{/if}
 			</div>
 		</div>
+
+		<!-- Sub-type pills (only when a category is selected) -->
+		{#if activeCategory && Object.keys(subTypeCounts()).length > 1}
+			<div class="filter-scroll overflow-x-auto -mx-4 px-4 pb-2 mb-4">
+				<div class="flex items-center gap-1.5 min-w-max">
+					<span class="text-[10px] mr-1" style="color: var(--text-faint);">&#8627;</span>
+					<button
+						onclick={() => { activeSubType = null; }}
+						class="text-[10px] font-medium px-2.5 py-1 rounded-full transition-all whitespace-nowrap"
+						style="{activeSubType === null ? `background: ${TYPE_CATEGORIES[activeCategory].color}; color: white;` : `background: var(--card-bg); border: 1px solid var(--app-border); color: var(--text-muted);`}"
+					>
+						All
+					</button>
+					{#each Object.entries(subTypeCounts()).sort(([, a], [, b]) => b - a) as [type, count]}
+						{@const color = TYPE_COLORS[type] || TYPE_CATEGORIES[activeCategory].color}
+						<button
+							onclick={() => { activeSubType = activeSubType === type ? null : type; }}
+							class="text-[10px] font-medium px-2.5 py-1 rounded-full transition-all whitespace-nowrap"
+							style="{activeSubType === type ? `background: ${color}; color: white;` : `background: ${color}10; border: 1px solid ${color}30; color: ${color};`}"
+						>
+							{TYPE_LABELS[type] || type} ({count})
+						</button>
+					{/each}
+				</div>
+			</div>
+		{:else if activeCategory}
+			<div class="mb-4"></div>
+		{:else}
+			<div class="mb-4"></div>
+		{/if}
 
 		<!-- Transaction Table -->
 		<div class="overflow-x-auto rounded-xl" style="background: var(--bg-card); border: 1px solid var(--app-border);">
@@ -734,7 +687,7 @@
 					{#if filteredGroups().length === 0}
 						<tr>
 							<td colspan="6" class="px-4 py-12 text-center text-sm" style="color: var(--text-muted);">
-								{activeFilter ? 'No transactions match this filter.' : 'No transactions found for this address.'}
+								{activeCategory ? 'No transactions match this filter.' : 'No transactions found for this address.'}
 							</td>
 						</tr>
 					{/if}
