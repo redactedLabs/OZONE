@@ -456,6 +456,16 @@
 		display: inline;
 	}
 
+	/* In win98 mode, [data-win-title] > *:first-child gets a 12px top margin to
+	   clear the title bar. The 4 stat boxes have an absolutely-positioned
+	   .stat-inset as their first DOM child when a 1d change exists, so the
+	   margin is invisible there. But when the change is null (e.g. no 24h-old
+	   snapshot yet), the big number becomes :first-child and gets pushed down.
+	   Force 0 so all 4 numbers sit flush with the title bar consistently. */
+	:global(.win98) .dash-box.stat-hover > :first-child {
+		margin-top: 0 !important;
+	}
+
 	.flow-box {
 		transition: border-color 0.2s;
 	}
