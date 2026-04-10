@@ -67,28 +67,34 @@
 	<!-- Stats Cards -->
 	<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Volume">
-			{#if data.volumeChange !== null}
-				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: {data.volumeChange >= 0 ? '#10b981' : '#ef4444'};">
-						{data.volumeChange >= 0 ? '+' : ''}{data.volumeChange.toFixed(1)}%
-					</span>
-					<span class="today-label" style="color: var(--text-faint);">1d</span>
-				</div>
-			{/if}
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #f59e0b;">
 				{data.totalVolumeUsd > 0 ? fmtUsd(data.totalVolumeUsd) : '$0'}
 			</div>
 			{#if data.volumeAssets.length > 0}
+				{@const visibleLogos = data.volumeAssets.map((a) => ({ asset: a, logo: getTokenLogoSync(a.asset) })).filter((x) => x.logo).slice(0, 5)}
+				{@const remaining = data.volumeAssets.length - visibleLogos.length}
 				<div class="flex items-center mt-1">
-					{#each data.volumeAssets as asset}
-						{@const logo = getTokenLogoSync(asset.asset)}
-						{#if logo}
-							<img src={logo} alt={asset.asset} class="w-4 h-4 rounded-full" style="margin-right: -4px; border: 1px solid var(--card-bg);" />
-						{/if}
+					{#each visibleLogos as { asset, logo }}
+						<img src={logo} alt={asset.asset} class="w-4 h-4 rounded-full" style="margin-right: -4px; border: 1px solid var(--card-bg);" />
 					{/each}
+					{#if remaining > 0}
+						<span class="text-[10px] font-mono ml-2" style="color: var(--text-muted);">+{remaining}</span>
+					{/if}
 				</div>
 			{/if}
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Total Volume</div>
+			<div class="flex items-end justify-between gap-2 mt-1">
+				<div class="text-[10px] sm:text-xs" style="color: var(--text-muted);">Total Volume</div>
+				<div class="change-pill">
+					{#if data.volumeChange !== null}
+						<span class="font-mono font-bold" style="color: {data.volumeChange >= 0 ? '#10b981' : '#ef4444'};">
+							{data.volumeChange >= 0 ? '+' : ''}{data.volumeChange.toFixed(1)}%
+						</span>
+					{:else}
+						<span class="font-mono" style="color: var(--text-faint);">—</span>
+					{/if}
+					<span class="today-label" style="color: var(--text-faint);">1d</span>
+				</div>
+			</div>
 			<div class="stat-tip" style="min-width: 220px;">
 				<div class="text-[9px] font-semibold mb-1.5" style="color: var(--text-muted);">Volume Breakdown</div>
 				{#each data.volumeAssets as asset}
@@ -115,28 +121,34 @@
 		</div>
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="TVL">
-			{#if data.tvlChange !== null}
-				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: {data.tvlChange >= 0 ? '#10b981' : '#ef4444'};">
-						{data.tvlChange >= 0 ? '+' : ''}{data.tvlChange.toFixed(1)}%
-					</span>
-					<span class="today-label" style="color: var(--text-faint);">1d</span>
-				</div>
-			{/if}
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">
 				{data.totalTVLUsd > 0 ? fmtUsd(data.totalTVLUsd) : '$0'}
 			</div>
 			{#if data.tvlAssets.length > 0}
+				{@const visibleLogos = data.tvlAssets.map((a) => ({ asset: a, logo: getTokenLogoSync(a.asset) })).filter((x) => x.logo).slice(0, 5)}
+				{@const remaining = data.tvlAssets.length - visibleLogos.length}
 				<div class="flex items-center mt-1">
-					{#each data.tvlAssets as asset}
-						{@const logo = getTokenLogoSync(asset.asset)}
-						{#if logo}
-							<img src={logo} alt={asset.asset} class="w-4 h-4 rounded-full" style="margin-right: -4px; border: 1px solid var(--card-bg);" />
-						{/if}
+					{#each visibleLogos as { asset, logo }}
+						<img src={logo} alt={asset.asset} class="w-4 h-4 rounded-full" style="margin-right: -4px; border: 1px solid var(--card-bg);" />
 					{/each}
+					{#if remaining > 0}
+						<span class="text-[10px] font-mono ml-2" style="color: var(--text-muted);">+{remaining}</span>
+					{/if}
 				</div>
 			{/if}
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Total Value Locked</div>
+			<div class="flex items-end justify-between gap-2 mt-1">
+				<div class="text-[10px] sm:text-xs" style="color: var(--text-muted);">Total Value Locked</div>
+				<div class="change-pill">
+					{#if data.tvlChange !== null}
+						<span class="font-mono font-bold" style="color: {data.tvlChange >= 0 ? '#10b981' : '#ef4444'};">
+							{data.tvlChange >= 0 ? '+' : ''}{data.tvlChange.toFixed(1)}%
+						</span>
+					{:else}
+						<span class="font-mono" style="color: var(--text-faint);">—</span>
+					{/if}
+					<span class="today-label" style="color: var(--text-faint);">1d</span>
+				</div>
+			</div>
 			<div class="stat-tip" style="min-width: 200px;">
 				<div class="text-[9px] font-semibold mb-1.5" style="color: var(--text-muted);">TVL Breakdown</div>
 				{#each data.tvlAssets as asset}
@@ -160,42 +172,52 @@
 		</div>
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Wallets">
-			{#if data.walletChange !== null && data.walletChange > 0}
-				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: #10b981;">+{data.walletChange}</span>
-					<span class="today-label" style="color: var(--text-faint);">1d</span>
-				</div>
-			{/if}
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #a78bfa;">
 				{data.subWalletCount.toLocaleString('en-US')}
 			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Private Wallets</div>
+			<div class="flex items-end justify-between gap-2 mt-1">
+				<div class="text-[10px] sm:text-xs" style="color: var(--text-muted);">Private Wallets</div>
+				<div class="change-pill">
+					{#if data.walletChange !== null && data.walletChange > 0}
+						<span class="font-mono font-bold" style="color: #10b981;">+{data.walletChange}</span>
+					{:else}
+						<span class="font-mono" style="color: var(--text-faint);">—</span>
+					{/if}
+					<span class="today-label" style="color: var(--text-faint);">1d</span>
+				</div>
+			</div>
 			<div class="stat-tip">Number of sub-wallet contracts (code_id {data.codeIdSub}) instantiated from the proxy. Each user creates one Private Wallet via ZK proof.</div>
 		</div>
 
 		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Revenue">
-			{#if data.revenueChange !== null}
-				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: {data.revenueChange >= 0 ? '#10b981' : '#ef4444'};">
-						{data.revenueChange >= 0 ? '+' : ''}{data.revenueChange.toFixed(1)}%
-					</span>
-					<span class="today-label" style="color: var(--text-faint);">1d</span>
-				</div>
-			{/if}
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #22d3ee;">
 				{fmtUsd(data.feeBalanceUsd)}
 			</div>
 			{#if data.feeAssets.length > 0}
-				<div class="flex items-center gap-[-4px] mt-1">
-					{#each data.feeAssets as asset}
-						{@const logo = getTokenLogoSync(asset.asset)}
-						{#if logo}
-							<img src={logo} alt={asset.asset} class="w-4 h-4 rounded-full" style="margin-right: -4px; border: 1px solid var(--card-bg);" />
-						{/if}
+				{@const visibleLogos = data.feeAssets.map((a) => ({ asset: a, logo: getTokenLogoSync(a.asset) })).filter((x) => x.logo).slice(0, 5)}
+				{@const remaining = data.feeAssets.length - visibleLogos.length}
+				<div class="flex items-center mt-1">
+					{#each visibleLogos as { asset, logo }}
+						<img src={logo} alt={asset.asset} class="w-4 h-4 rounded-full" style="margin-right: -4px; border: 1px solid var(--card-bg);" />
 					{/each}
+					{#if remaining > 0}
+						<span class="text-[10px] font-mono ml-2" style="color: var(--text-muted);">+{remaining}</span>
+					{/if}
 				</div>
 			{/if}
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Total Fees</div>
+			<div class="flex items-end justify-between gap-2 mt-1">
+				<div class="text-[10px] sm:text-xs" style="color: var(--text-muted);">Total Fees</div>
+				<div class="change-pill">
+					{#if data.revenueChange !== null}
+						<span class="font-mono font-bold" style="color: {data.revenueChange >= 0 ? '#10b981' : '#ef4444'};">
+							{data.revenueChange >= 0 ? '+' : ''}{data.revenueChange.toFixed(1)}%
+						</span>
+					{:else}
+						<span class="font-mono" style="color: var(--text-faint);">—</span>
+					{/if}
+					<span class="today-label" style="color: var(--text-faint);">1d</span>
+				</div>
+			</div>
 			<div class="stat-tip" style="min-width: 220px;">
 				<div class="text-[9px] font-semibold mb-1.5" style="color: var(--text-muted);">Lifetime Fee Breakdown</div>
 				{#each data.feeAssets as asset}
@@ -438,32 +460,39 @@
 	.stat-hover:hover .stat-tip { display: block; }
 	.stat-hover:hover { z-index: 30; }
 
-	.stat-inset {
-		position: absolute;
-		top: 10px;
-		right: 10px;
-		padding: 4px 10px;
-		border-radius: 10px;
-		background: var(--card-bg);
-		border: 1px solid var(--app-border-subtle);
-		display: flex;
+	.change-pill {
+		display: inline-flex;
 		align-items: center;
 		gap: 4px;
+		padding: 2px 6px;
+		border-radius: 6px;
+		background: var(--card-bg);
+		border: 1px solid var(--app-border-subtle);
 		font-size: 10px;
 		white-space: nowrap;
+		flex-shrink: 0;
 	}
-	.stat-inset .today-label {
+	.change-pill .today-label {
 		display: inline;
 	}
 
-	/* In win98 mode, [data-win-title] > *:first-child gets a 12px top margin to
-	   clear the title bar. The 4 stat boxes have an absolutely-positioned
-	   .stat-inset as their first DOM child when a 1d change exists, so the
-	   margin is invisible there. But when the change is null (e.g. no 24h-old
-	   snapshot yet), the big number becomes :first-child and gets pushed down.
-	   Force 0 so all 4 numbers sit flush with the title bar consistently. */
+	/* In win98 mode each [data-win-title] box has a title bar from ::before and
+	   padding: 0. Add a small inner top/bottom margin to the 4 stat boxes so the
+	   number and the bottom row don't sit flush against the title bar / box edge.
+	   The .stat-tip is :last-child but absolute+display:none, so the visually-last
+	   child is :nth-last-child(2). */
 	:global(.win98) .dash-box.stat-hover > :first-child {
-		margin-top: 0 !important;
+		margin-top: 6px !important;
+	}
+	:global(.win98) .dash-box.stat-hover > :nth-last-child(2) {
+		margin-bottom: 6px !important;
+	}
+	/* Match the win98 styling that the old .stat-inset used to get from
+	   win98-theme.css — flat gray pill, no rounded corners. */
+	:global(.win98) .change-pill {
+		background: #c0c0c0 !important;
+		border: 1px solid #808080 !important;
+		border-radius: 0 !important;
 	}
 
 	.flow-box {
