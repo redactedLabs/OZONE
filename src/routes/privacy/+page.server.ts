@@ -160,6 +160,101 @@ async function fetchFeeBalance(): Promise<{ rune: number; all: Array<{ asset: st
 	return { rune: parseRuneBalance(data), all: parseAllBalances(data) };
 }
 
+type CosmosTxsResponse = {
+	tx_responses?: Array<{
+		txhash: string;
+		events?: Array<{ type: string; attributes: Array<{ key: string; value: string }> }>;
+		logs?: Array<{ events?: Array<{ type: string; attributes: Array<{ key: string; value: string }> }> }>;
+	}>;
+	pagination?: { next_key: string | null; total: string };
+	total?: string;
+};
+
+// Some cosmos-sdk versions return event attribute keys/values base64-encoded.
+function decodeAttr(s: string): string {
+	if (!s) return '';
+	if (/^[A-Za-z0-9+/]+={0,2}$/.test(s) && s.length % 4 === 0) {
+		try {
+			const decoded = atob(s);
+			if (/^[\x20-\x7e]*$/.test(decoded)) return decoded;
+		} catch {
+			// fall through
+		}
+	}
+	return s;
+}
+
+/**
+ * Sum all incoming bank transfers to `addr` over the chain's entire history.
+ * Used to compute lifetime cumulative fees, so the total persists even after
+ * the admin sweeps the fee address.
+ */
+async function fetchCumulativeIncoming(addr: string): Promise<Array<{ asset: string; amount: number }>> {
+	const merged = new Map<string, number>();
+	const seenTxs = new Set<string>();
+	const PAGE_SIZE = 100;
+	const MAX_PAGES = 100; // safety cap: 10k txs
+	let offset = 0;
+
+	for (let page = 0; page < MAX_PAGES; page++) {
+		const url =
+			`${THORNODE}/cosmos/tx/v1beta1/txs` +
+			`?events=${encodeURIComponent(`transfer.recipient='${addr}'`)}` +
+			`&pagination.limit=${PAGE_SIZE}` +
+			`&pagination.offset=${offset}`;
+
+		let data: CosmosTxsResponse;
+		try {
+			data = await fetchJson<CosmosTxsResponse>(url);
+		} catch {
+			break;
+		}
+
+		const txResponses = data.tx_responses || [];
+		if (txResponses.length === 0) break;
+
+		for (const tx of txResponses) {
+			if (seenTxs.has(tx.txhash)) continue;
+			seenTxs.add(tx.txhash);
+
+			// Prefer top-level events (cosmos-sdk 0.46+); fall back to logs[].events.
+			let events = tx.events || [];
+			if (events.length === 0 && tx.logs) {
+				events = tx.logs.flatMap((log) => log.events || []);
+			}
+
+			for (const ev of events) {
+				if (ev.type !== 'transfer') continue;
+				let recipient = '';
+				let amountStr = '';
+				for (const attr of ev.attributes || []) {
+					const k = decodeAttr(attr.key);
+					const v = decodeAttr(attr.value);
+					if (k === 'recipient') recipient = v;
+					else if (k === 'amount') amountStr = v;
+				}
+				if (recipient !== addr || !amountStr) continue;
+
+				// amount can be comma-separated coin list: "100rune,50btc-btc"
+				for (const part of amountStr.split(',')) {
+					const m = part.trim().match(/^(\d+)(.+)$/);
+					if (!m) continue;
+					const raw = parseInt(m[1], 10) / 1e8;
+					if (raw === 0) continue;
+					const denom = m[2];
+					const asset = denom === 'rune' ? 'RUNE' : cleanAsset(denom).toUpperCase();
+					merged.set(asset, (merged.get(asset) || 0) + raw);
+				}
+			}
+		}
+
+		if (txResponses.length < PAGE_SIZE) break;
+		offset += PAGE_SIZE;
+	}
+
+	return Array.from(merged.entries()).map(([asset, amount]) => ({ asset, amount }));
+}
+
 async function fetchRunePrice(): Promise<{ runePrice: number; pools: Pool[] }> {
 	const pools = await fetchJson<Pool[]>(`${MIDGARD}/v2/pools`);
 	// Find a stable pool to derive RUNE price
@@ -199,16 +294,16 @@ export async function load() {
 	const feeData = feeResult.status === 'fulfilled' ? feeResult.value : { rune: 0, all: [] };
 	const feeBalance = feeData.rune;
 
-	// Build fee assets with USD values, sorted by USD descending
-	const feeAssets = feeData.all
+	// Current (un-swept) fee balance — used as a fallback if we don't yet have
+	// cumulative data, and stored alongside cumulative for backward compat.
+	const currentFeeAssets = feeData.all
 		.map((b) => ({
 			asset: b.asset,
 			amount: b.amount,
 			usd: b.amount * (priceMap.get(b.asset) || 0)
 		}))
 		.sort((a, b) => b.usd - a.usd);
-
-	const feeBalanceUsd = feeAssets.reduce((sum, a) => sum + a.usd, 0);
+	const currentFeeBalanceUsd = currentFeeAssets.reduce((sum, a) => sum + a.usd, 0);
 
 	// Fetch sub-wallet balances (all assets)
 	let subBalances: Array<{ asset: string; amount: number }> = [];
@@ -237,6 +332,7 @@ export async function load() {
 	let tvlChange: number | null = null;
 	let walletChange: number | null = null;
 	let revenueChange: number | null = null;
+	let cumulativeFeesAssets: Array<{ asset: string; amount: number }> | null = null;
 
 	try {
 		// Rate-limit: only insert if no snapshot in last 10 minutes
@@ -247,11 +343,37 @@ export async function load() {
 			.limit(1);
 
 		if (recent.length === 0) {
+			// Heavy fetch only on snapshot insert (~ once per 10 min). Falls back
+			// to current balance if the on-chain tx scan fails.
+			let cumUsd = currentFeeBalanceUsd;
+			try {
+				const fetched = await fetchCumulativeIncoming(FEE_ADDRESS);
+				if (fetched.length > 0) {
+					cumulativeFeesAssets = fetched;
+					cumUsd = fetched.reduce((sum, a) => sum + a.amount * (priceMap.get(a.asset) || 0), 0);
+				}
+			} catch {
+				// Fall back: use current balance as cumulative for this snapshot.
+				cumulativeFeesAssets = currentFeeAssets.map((a) => ({ asset: a.asset, amount: a.amount }));
+			}
+
 			await db.insert(privacySnapshots).values({
 				tvlUsd: totalTVLUsd.toString(),
 				walletCount: subWallets.length,
-				revenueUsd: feeBalanceUsd.toString()
+				revenueUsd: currentFeeBalanceUsd.toString(),
+				cumulativeFeesUsd: cumUsd.toString(),
+				cumulativeFeesAssets: cumulativeFeesAssets ?? undefined
 			});
+		} else {
+			// Read latest snapshot for cached cumulative fees
+			const latest = await db
+				.select()
+				.from(privacySnapshots)
+				.orderBy(desc(privacySnapshots.createdAt))
+				.limit(1);
+			if (latest.length > 0 && latest[0].cumulativeFeesAssets) {
+				cumulativeFeesAssets = latest[0].cumulativeFeesAssets as Array<{ asset: string; amount: number }>;
+			}
 		}
 
 		// Find snapshot from ~24h ago
@@ -265,15 +387,48 @@ export async function load() {
 		if (old.length > 0) {
 			const oldTvl = parseFloat(old[0].tvlUsd);
 			const oldWallets = old[0].walletCount;
-			const oldRevenue = parseFloat(old[0].revenueUsd);
+			// Prefer cumulative for revenue change; fall back to revenueUsd for old rows.
+			const oldRevenue = parseFloat(old[0].cumulativeFeesUsd ?? old[0].revenueUsd);
 
 			if (oldTvl > 0) tvlChange = ((totalTVLUsd - oldTvl) / oldTvl) * 100;
 			walletChange = subWallets.length - oldWallets;
-			if (oldRevenue > 0) revenueChange = ((feeBalanceUsd - oldRevenue) / oldRevenue) * 100;
+			// Compare old revenue against current cumulative (set just below).
+			if (oldRevenue > 0) {
+				const newRevenue = cumulativeFeesAssets
+					? cumulativeFeesAssets.reduce((s, a) => s + a.amount * (priceMap.get(a.asset) || 0), 0)
+					: currentFeeBalanceUsd;
+				revenueChange = ((newRevenue - oldRevenue) / oldRevenue) * 100;
+			}
 		}
 	} catch {
 		// DB errors shouldn't break the page
 	}
+
+	// Display values: prefer cumulative (lifetime) over current balance.
+	const feeAssets = cumulativeFeesAssets
+		? cumulativeFeesAssets
+				.map((a) => ({
+					asset: a.asset,
+					amount: a.amount,
+					usd: a.amount * (priceMap.get(a.asset) || 0)
+				}))
+				.sort((a, b) => b.usd - a.usd)
+		: currentFeeAssets;
+	const feeBalanceUsd = feeAssets.reduce((sum, a) => sum + a.usd, 0);
+
+	// Total volume = cumulative fees / fee rate (per asset).
+	const feeRate = config.fee > 0 ? config.fee / 10000 : 0;
+	const volumeAssets = feeRate > 0
+		? feeAssets.map((a) => ({
+				asset: a.asset,
+				amount: a.amount / feeRate,
+				usd: a.usd / feeRate
+			}))
+		: [];
+	const totalVolumeUsd = volumeAssets.reduce((sum, a) => sum + a.usd, 0);
+
+	// Volume scales linearly with fees, so its 1d % change equals the revenue change.
+	const volumeChange = revenueChange;
 
 	return {
 		subWalletCount: subWallets.length,
@@ -282,6 +437,8 @@ export async function load() {
 		feeBalance,
 		feeBalanceUsd,
 		feeAssets,
+		totalVolumeUsd,
+		volumeAssets,
 		runePriceUsd,
 		config,
 		proxyAddress: PROXY_ADDRESS,
@@ -291,6 +448,7 @@ export async function load() {
 		fetchedAt: new Date().toISOString(),
 		tvlChange,
 		walletChange,
-		revenueChange
+		revenueChange,
+		volumeChange
 	};
 }

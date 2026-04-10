@@ -5,6 +5,7 @@ import {
 	timestamp,
 	boolean,
 	integer,
+	jsonb,
 	uniqueIndex
 } from 'drizzle-orm/pg-core';
 
@@ -161,5 +162,7 @@ export const privacySnapshots = pgTable('privacy_snapshots', {
 	tvlUsd: text('tvl_usd').notNull(),
 	walletCount: integer('wallet_count').notNull(),
 	revenueUsd: text('revenue_usd').notNull(),
+	cumulativeFeesUsd: text('cumulative_fees_usd'),
+	cumulativeFeesAssets: jsonb('cumulative_fees_assets').$type<Array<{ asset: string; amount: number }>>(),
 	createdAt: timestamp('created_at').defaultNow()
 });
