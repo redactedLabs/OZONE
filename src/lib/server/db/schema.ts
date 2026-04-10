@@ -164,5 +164,7 @@ export const privacySnapshots = pgTable('privacy_snapshots', {
 	revenueUsd: text('revenue_usd').notNull(),
 	cumulativeFeesUsd: text('cumulative_fees_usd'),
 	cumulativeFeesAssets: jsonb('cumulative_fees_assets').$type<Array<{ asset: string; amount: number }>>(),
+	cumulativeVolumeUsd: text('cumulative_volume_usd'),
+	cumulativeVolumeAssets: jsonb('cumulative_volume_assets').$type<Array<{ asset: string; amount: number }>>(),
 	createdAt: timestamp('created_at').defaultNow()
 });

@@ -66,7 +66,7 @@
 
 	<!-- Stats Cards -->
 	<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Volume">
+		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Volume">
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #f59e0b;">
 				{data.totalVolumeUsd > 0 ? fmtUsd(data.totalVolumeUsd) : '$0'}
 			</div>
@@ -82,7 +82,7 @@
 					{/if}
 				</div>
 			{/if}
-			<div class="flex items-end justify-between gap-2 mt-1">
+			<div class="flex items-end justify-between gap-2 mt-auto pt-1">
 				<div class="text-[10px] sm:text-xs" style="color: var(--text-muted);">Total Volume</div>
 				<div class="change-pill">
 					{#if data.volumeChange !== null}
@@ -114,13 +114,17 @@
 						<span>{fmtUsd(data.totalVolumeUsd)}</span>
 					</div>
 					<div class="text-[9px] mt-1" style="color: var(--text-faint);">
-						Estimated from collected fees ÷ protocol fee ({(data.config.fee / 100).toFixed(2)}%)
+						{#if data.volumeIsReal}
+							Sum of all incoming transfers to the proxy contract — lifetime cumulative.
+						{:else}
+							Estimated from collected fees ÷ protocol fee ({(data.config.fee / 100).toFixed(2)}%)
+						{/if}
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="TVL">
+		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="TVL">
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">
 				{data.totalTVLUsd > 0 ? fmtUsd(data.totalTVLUsd) : '$0'}
 			</div>
@@ -136,7 +140,7 @@
 					{/if}
 				</div>
 			{/if}
-			<div class="flex items-end justify-between gap-2 mt-1">
+			<div class="flex items-end justify-between gap-2 mt-auto pt-1">
 				<div class="text-[10px] sm:text-xs" style="color: var(--text-muted);">Total Value Locked</div>
 				<div class="change-pill">
 					{#if data.tvlChange !== null}
@@ -171,11 +175,11 @@
 			</div>
 		</div>
 
-		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Wallets">
+		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Wallets">
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #a78bfa;">
 				{data.subWalletCount.toLocaleString('en-US')}
 			</div>
-			<div class="flex items-end justify-between gap-2 mt-1">
+			<div class="flex items-end justify-between gap-2 mt-auto pt-1">
 				<div class="text-[10px] sm:text-xs" style="color: var(--text-muted);">Private Wallets</div>
 				<div class="change-pill">
 					{#if data.walletChange !== null && data.walletChange > 0}
@@ -189,7 +193,7 @@
 			<div class="stat-tip">Number of sub-wallet contracts (code_id {data.codeIdSub}) instantiated from the proxy. Each user creates one Private Wallet via ZK proof.</div>
 		</div>
 
-		<div class="dash-box stat-hover rounded-xl p-4 relative group" data-win-title="Revenue">
+		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Revenue">
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #22d3ee;">
 				{fmtUsd(data.feeBalanceUsd)}
 			</div>
@@ -205,7 +209,7 @@
 					{/if}
 				</div>
 			{/if}
-			<div class="flex items-end justify-between gap-2 mt-1">
+			<div class="flex items-end justify-between gap-2 mt-auto pt-1">
 				<div class="text-[10px] sm:text-xs" style="color: var(--text-muted);">Total Fees</div>
 				<div class="change-pill">
 					{#if data.revenueChange !== null}
