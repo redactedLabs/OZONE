@@ -255,6 +255,82 @@ async function fetchCumulativeIncoming(addr: string): Promise<Array<{ asset: str
 	return Array.from(merged.entries()).map(([asset, amount]) => ({ asset, amount }));
 }
 
+/**
+ * Sum proxy → sub-wallet transfers (reserve → spendable). This is the real
+ * "volume" of the protocol: funds made private via ZK proof.
+ * Queries all outgoing from the proxy, then filters to recipients in the
+ * known sub-wallet set (ignoring proxy → user withdrawals).
+ */
+async function fetchReserveToSpendable(
+	proxyAddr: string,
+	subWalletSet: Set<string>
+): Promise<Array<{ asset: string; amount: number }>> {
+	const merged = new Map<string, number>();
+	const seenTxs = new Set<string>();
+	const PAGE_SIZE = 100;
+	const MAX_PAGES = 100;
+	let offset = 0;
+
+	for (let page = 0; page < MAX_PAGES; page++) {
+		const url =
+			`${THORNODE}/cosmos/tx/v1beta1/txs` +
+			`?events=${encodeURIComponent(`transfer.sender='${proxyAddr}'`)}` +
+			`&pagination.limit=${PAGE_SIZE}` +
+			`&pagination.offset=${offset}`;
+
+		let data: CosmosTxsResponse;
+		try {
+			data = await fetchJson<CosmosTxsResponse>(url);
+		} catch {
+			break;
+		}
+
+		const txResponses = data.tx_responses || [];
+		if (txResponses.length === 0) break;
+
+		for (const tx of txResponses) {
+			if (seenTxs.has(tx.txhash)) continue;
+			seenTxs.add(tx.txhash);
+
+			let events = tx.events || [];
+			if (events.length === 0 && tx.logs) {
+				events = tx.logs.flatMap((log) => log.events || []);
+			}
+
+			for (const ev of events) {
+				if (ev.type !== 'transfer') continue;
+				let sender = '';
+				let recipient = '';
+				let amountStr = '';
+				for (const attr of ev.attributes || []) {
+					const k = decodeAttr(attr.key);
+					const v = decodeAttr(attr.value);
+					if (k === 'sender') sender = v;
+					else if (k === 'recipient') recipient = v;
+					else if (k === 'amount') amountStr = v;
+				}
+				// Only count proxy → sub-wallet (reserve → spendable)
+				if (sender !== proxyAddr || !subWalletSet.has(recipient) || !amountStr) continue;
+
+				for (const part of amountStr.split(',')) {
+					const m = part.trim().match(/^(\d+)(.+)$/);
+					if (!m) continue;
+					const raw = parseInt(m[1], 10) / 1e8;
+					if (raw === 0) continue;
+					const denom = m[2];
+					const asset = denom === 'rune' ? 'RUNE' : cleanAsset(denom).toUpperCase();
+					merged.set(asset, (merged.get(asset) || 0) + raw);
+				}
+			}
+		}
+
+		if (txResponses.length < PAGE_SIZE) break;
+		offset += PAGE_SIZE;
+	}
+
+	return Array.from(merged.entries()).map(([asset, amount]) => ({ asset, amount }));
+}
+
 async function fetchRunePrice(): Promise<{ runePrice: number; pools: Pool[] }> {
 	const pools = await fetchJson<Pool[]>(`${MIDGARD}/v2/pools`);
 	// Find a stable pool to derive RUNE price
@@ -335,6 +411,7 @@ export async function load() {
 	let volumeChange: number | null = null;
 	let cumulativeFeesAssets: Array<{ asset: string; amount: number }> | null = null;
 	let cumulativeVolumeAssets: Array<{ asset: string; amount: number }> | null = null;
+	let volumeLockedUsd = 0;
 
 	const sumUsd = (arr: Array<{ asset: string; amount: number }>) =>
 		arr.reduce((s, a) => s + a.amount * (priceMap.get(a.asset) || 0), 0);
@@ -348,25 +425,49 @@ export async function load() {
 			.limit(1);
 
 		if (recent.length === 0) {
-			// Heavy fetch only on snapshot insert (~ once per 10 min). Both fees
-			// and volume scans run in parallel. Falls back gracefully on failure.
+			// Read previous snapshot for delta-based USD locking.
+			const prevSnap = await db
+				.select()
+				.from(privacySnapshots)
+				.orderBy(desc(privacySnapshots.createdAt))
+				.limit(1);
+
+			const prevRawVolume = new Map<string, number>();
+			let prevLockedUsd = 0;
+			if (prevSnap.length > 0) {
+				const prevAssets = prevSnap[0].cumulativeVolumeAssets as Array<{ asset: string; amount: number }> | null;
+				if (prevAssets) for (const a of prevAssets) prevRawVolume.set(a.asset, a.amount);
+				prevLockedUsd = parseFloat(prevSnap[0].cumulativeVolumeUsd || '0');
+			}
+
+			// Heavy fetch — fees + volume (reserve→spendable) in parallel.
+			const subWalletSet = new Set(subWallets);
 			const [feesResult, volumeResult] = await Promise.allSettled([
 				fetchCumulativeIncoming(FEE_ADDRESS),
-				fetchCumulativeIncoming(PROXY_ADDRESS)
+				fetchReserveToSpendable(PROXY_ADDRESS, subWalletSet)
 			]);
 
+			// Fees
 			if (feesResult.status === 'fulfilled' && feesResult.value.length > 0) {
 				cumulativeFeesAssets = feesResult.value;
 			} else {
-				// Fall back: use current balance as cumulative for fees.
 				cumulativeFeesAssets = currentFeeAssets.map((a) => ({ asset: a.asset, amount: a.amount }));
 			}
+			const cumFeesUsd = sumUsd(cumulativeFeesAssets);
+
+			// Volume — lock USD deltas at current prices so the total never drops.
+			// Each asset's delta = max(0, freshRaw - prevRaw). Valued at today's
+			// price and added to the running locked total.
+			volumeLockedUsd = prevLockedUsd;
 			if (volumeResult.status === 'fulfilled' && volumeResult.value.length > 0) {
 				cumulativeVolumeAssets = volumeResult.value;
+				let deltaUsd = 0;
+				for (const a of cumulativeVolumeAssets) {
+					const delta = Math.max(0, a.amount - (prevRawVolume.get(a.asset) || 0));
+					deltaUsd += delta * (priceMap.get(a.asset) || 0);
+				}
+				volumeLockedUsd = prevLockedUsd + deltaUsd;
 			}
-
-			const cumFeesUsd = sumUsd(cumulativeFeesAssets);
-			const cumVolumeUsd = cumulativeVolumeAssets ? sumUsd(cumulativeVolumeAssets) : 0;
 
 			await db.insert(privacySnapshots).values({
 				tvlUsd: totalTVLUsd.toString(),
@@ -374,7 +475,7 @@ export async function load() {
 				revenueUsd: currentFeeBalanceUsd.toString(),
 				cumulativeFeesUsd: cumFeesUsd.toString(),
 				cumulativeFeesAssets: cumulativeFeesAssets ?? undefined,
-				cumulativeVolumeUsd: cumVolumeUsd.toString(),
+				cumulativeVolumeUsd: volumeLockedUsd.toString(),
 				cumulativeVolumeAssets: cumulativeVolumeAssets ?? undefined
 			});
 		} else {
@@ -391,6 +492,7 @@ export async function load() {
 				if (latest[0].cumulativeVolumeAssets) {
 					cumulativeVolumeAssets = latest[0].cumulativeVolumeAssets as Array<{ asset: string; amount: number }>;
 				}
+				volumeLockedUsd = parseFloat(latest[0].cumulativeVolumeUsd || '0');
 			}
 		}
 
@@ -405,7 +507,6 @@ export async function load() {
 		if (old.length > 0) {
 			const oldTvl = parseFloat(old[0].tvlUsd);
 			const oldWallets = old[0].walletCount;
-			// Prefer cumulative for revenue change; fall back to revenueUsd for old rows.
 			const oldRevenue = parseFloat(old[0].cumulativeFeesUsd ?? old[0].revenueUsd);
 
 			if (oldTvl > 0) tvlChange = ((totalTVLUsd - oldTvl) / oldTvl) * 100;
@@ -416,14 +517,10 @@ export async function load() {
 				revenueChange = ((newRevenue - oldRevenue) / oldRevenue) * 100;
 			}
 
-			// Volume change from real cumulative volume snapshots (when available)
-			const oldVolumeStr = old[0].cumulativeVolumeUsd;
-			if (oldVolumeStr && cumulativeVolumeAssets) {
-				const oldVolume = parseFloat(oldVolumeStr);
-				if (oldVolume > 0) {
-					const newVolume = sumUsd(cumulativeVolumeAssets);
-					volumeChange = ((newVolume - oldVolume) / oldVolume) * 100;
-				}
+			// Volume 1d change — compare locked USD totals (both monotonic).
+			const oldLockedVolume = parseFloat(old[0].cumulativeVolumeUsd || '0');
+			if (oldLockedVolume > 0 && volumeLockedUsd > 0) {
+				volumeChange = ((volumeLockedUsd - oldLockedVolume) / oldLockedVolume) * 100;
 			}
 		}
 	} catch {
@@ -442,8 +539,10 @@ export async function load() {
 		: currentFeeAssets;
 	const feeBalanceUsd = feeAssets.reduce((sum, a) => sum + a.usd, 0);
 
-	// Total volume: prefer real on-chain cumulative incoming to the proxy. Fall
-	// back to fees ÷ fee rate when we don't have a snapshot yet.
+	// Volume headline: the locked USD total (monotonically increasing, price
+	// locked at the time of each snapshot that first observed the delta).
+	// Per-asset breakdown for the tooltip uses raw amounts at current prices —
+	// those can fluctuate, but the headline total can't.
 	const feeRate = config.fee > 0 ? config.fee / 10000 : 0;
 	const volumeAssets = cumulativeVolumeAssets
 		? cumulativeVolumeAssets
@@ -460,7 +559,9 @@ export async function load() {
 					usd: a.usd / feeRate
 				}))
 			: [];
-	const totalVolumeUsd = volumeAssets.reduce((sum, a) => sum + a.usd, 0);
+	const totalVolumeUsd = volumeLockedUsd > 0
+		? volumeLockedUsd
+		: volumeAssets.reduce((sum, a) => sum + a.usd, 0);
 	const volumeIsReal = cumulativeVolumeAssets !== null;
 
 	// Fall back to revenue change if we don't yet have a 24h-old volume snapshot.

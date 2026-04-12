@@ -115,7 +115,7 @@
 					</div>
 					<div class="text-[9px] mt-1" style="color: var(--text-faint);">
 						{#if data.volumeIsReal}
-							Sum of all incoming transfers to the proxy contract — lifetime cumulative.
+							Reserve → Spendable transfers, USD locked at time of each swap.
 						{:else}
 							Estimated from collected fees ÷ protocol fee ({(data.config.fee / 100).toFixed(2)}%)
 						{/if}
