@@ -289,7 +289,7 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 
 				await db.insert(l1Addresses).values({
 					thorAddress,
-					l1Address: pool.assetAddress,
+					l1Address: pool.assetAddress.startsWith('0x') ? pool.assetAddress.toLowerCase() : pool.assetAddress,
 					chain,
 					pool: pool.pool
 				}).onConflictDoNothing();
@@ -319,21 +319,41 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 			if (actions.length === 0) break;
 
 			for (const action of actions) {
-				for (const io of [...(action.in || []), ...(action.out || [])]) {
+				const inAddresses = new Set((action.in || []).map((io: any) => io.address).filter(Boolean));
+				const outAddresses: string[] = (action.out || []).map((io: any) => io.address).filter(Boolean);
+
+				const linkL1 = async (io: any) => {
 					const addr = io.address;
-					if (!addr || addr.startsWith('thor')) continue;
+					if (!addr || addr.startsWith('thor')) return;
 					const asset = io.coins?.[0]?.asset || '';
-					// Prefer address-based chain detection, fall back to asset-based
 					const chain = chainFromAddress(addr) || (asset ? chainFromAsset(asset) : null);
-					if (!chain || chain === 'UNKNOWN') continue;
+					if (!chain || chain === 'UNKNOWN') return;
 
 					await db.insert(l1Addresses).values({
 						thorAddress,
-						l1Address: addr,
+						l1Address: addr.startsWith('0x') ? addr.toLowerCase() : addr,
 						chain,
 						pool: asset || `${chain}.unknown`
 					}).onConflictDoNothing();
 					found++;
+				};
+
+				if (inAddresses.has(thorAddress)) {
+					// We initiated this action — collect all non-thor L1 addresses
+					for (const io of [...(action.in || []), ...(action.out || [])]) {
+						await linkL1(io);
+					}
+				} else if (outAddresses.includes(thorAddress)) {
+					// We're in action.out — check for affiliate pattern
+					const otherThorOut = outAddresses.filter(
+						(a: string) => a !== thorAddress && a.startsWith('thor')
+					);
+					if (otherThorOut.length > 0) continue; // affiliate — skip
+
+					// Sole thor recipient — collect L1s from action.in only
+					for (const input of action.in || []) {
+						await linkL1(input);
+					}
 				}
 			}
 

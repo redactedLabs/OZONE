@@ -65,6 +65,25 @@
 		return [...new Set(l1s.map((l: any) => l.chain))];
 	}
 
+	/** Parse flagReason string like "TETHER: Frozen (0xabc...); OFAC: SDN (0xdef...)" into structured entries */
+	function parseFlagReasons(reason: string | null | undefined): Array<{ source: string; text: string; address: string }> {
+		if (!reason) return [];
+		return reason.split(';').map(s => s.trim()).filter(Boolean).map(entry => {
+			const colonIdx = entry.indexOf(':');
+			const source = colonIdx > 0 ? entry.slice(0, colonIdx).trim() : 'UNKNOWN';
+			const rest = colonIdx > 0 ? entry.slice(colonIdx + 1).trim() : entry;
+			const addrMatch = rest.match(/\(([^)]+)\)\s*$/);
+			const address = addrMatch ? addrMatch[1] : '';
+			const text = addrMatch ? rest.slice(0, rest.lastIndexOf('(')).trim() : rest;
+			return { source, text, address };
+		});
+	}
+
+	/** Set of flagged L1 addresses for highlighting in the normal list */
+	function getFlaggedAddresses(reason: string | null | undefined): Set<string> {
+		return new Set(parseFlagReasons(reason).map(f => f.address.toLowerCase()));
+	}
+
 	function doSearch() {
 		const url = new URL(window.location.href);
 		if (searchQuery.trim()) {
@@ -128,18 +147,52 @@
 				</button>
 			</div>
 
+			<!-- Flagged L1 Addresses -->
+			{#if selectedUser.flagged && selectedUser.flagReason}
+				{@const flagEntries = parseFlagReasons(selectedUser.flagReason)}
+				{#if flagEntries.length > 0}
+					<div class="mb-4 p-3 rounded-lg" style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25);">
+						<div class="text-xs font-semibold mb-2" style="color: #ef4444;">Compliance Matches</div>
+						<div class="space-y-1.5">
+							{#each flagEntries as flag}
+								<div class="flex items-start gap-2">
+									<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 mt-0.5" style="background: rgba(239,68,68,0.12); color: #ef4444;">{flag.source}</span>
+									<div class="min-w-0">
+										<div class="text-xs" style="color: var(--text);">{flag.text}</div>
+										{#if flag.address}
+											<button
+												onclick={() => copyAddress(flag.address)}
+												class="font-mono text-[11px] break-all text-left mt-0.5"
+												style="color: #ef4444;"
+											>
+												{flag.address}
+												{#if copiedAddr === flag.address}
+													<span class="ml-1" style="color: #10b981;">&#10003;</span>
+												{/if}
+											</button>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
+			{/if}
+
 			<!-- L1 Addresses -->
 			{#if selectedUser.l1Addresses.length === 0}
 				<p class="text-sm py-4 text-center" style="color: var(--text-muted);">
 					No linked L1 addresses found yet. Run L1 address sync.
 				</p>
 			{:else}
+				{@const flaggedAddrs = getFlaggedAddresses(selectedUser.flagReason)}
 				<div class="text-xs mb-2" style="color: var(--text-muted);">
 					Linked addresses discovered via Midgard on-chain activity:
 				</div>
 				<div class="space-y-2 max-h-80 overflow-y-auto">
 					{#each selectedUser.l1Addresses as l1}
-						<div class="flex items-center gap-3 p-3 rounded-lg" style="background: var(--bg); border: 1px solid var(--app-border);">
+						{@const isFlagged = flaggedAddrs.has(l1.address.toLowerCase())}
+						<div class="flex items-center gap-3 p-3 rounded-lg" style="background: {isFlagged ? 'rgba(239,68,68,0.06)' : 'var(--bg)'}; border: 1px solid {isFlagged ? 'rgba(239,68,68,0.25)' : 'var(--app-border)'};">
 							<span
 								class="flex items-center justify-center w-8 h-8 rounded-full shrink-0"
 								style={chainColor(l1.chain)}

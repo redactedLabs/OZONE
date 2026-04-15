@@ -55,18 +55,32 @@ async function lookupAndImport(address: string) {
 			hasActions = true;
 
 			for (const action of actions) {
-				for (const io of [...(action.in || []), ...(action.out || [])]) {
-					if (io.address && !io.address.startsWith('thor') && io.address !== address) {
-						const asset = io.coins?.[0]?.asset || '';
-						const chain = chainFromAddress(io.address) || chainFromAsset(asset);
-						if (chain !== 'UNKNOWN') {
-							await db.insert(l1Addresses).values({
-								thorAddress: address,
-								l1Address: io.address,
-								chain,
-								pool: asset,
-							}).onConflictDoNothing();
-						}
+				const inAddresses = new Set((action.in || []).map((io: any) => io.address).filter(Boolean));
+				const outAddresses: string[] = (action.out || []).map((io: any) => io.address).filter(Boolean);
+
+				const linkL1 = async (io: any) => {
+					const addr = io.address;
+					if (!addr || addr.startsWith('thor') || addr === address) return;
+					const asset = io.coins?.[0]?.asset || '';
+					const chain = chainFromAddress(addr) || chainFromAsset(asset);
+					if (chain === 'UNKNOWN') return;
+					await db.insert(l1Addresses).values({
+						thorAddress: address,
+						l1Address: addr.startsWith('0x') ? addr.toLowerCase() : addr,
+						chain,
+						pool: asset,
+					}).onConflictDoNothing();
+				};
+
+				if (inAddresses.has(address)) {
+					for (const io of [...(action.in || []), ...(action.out || [])]) {
+						await linkL1(io);
+					}
+				} else if (outAddresses.includes(address)) {
+					const otherThorOut = outAddresses.filter((a: string) => a !== address && a.startsWith('thor'));
+					if (otherThorOut.length > 0) continue; // affiliate — skip
+					for (const input of action.in || []) {
+						await linkL1(input);
 					}
 				}
 			}
@@ -88,7 +102,7 @@ async function lookupAndImport(address: string) {
 						const chain = chainFromAddress(pool.assetAddress) || chainFromAsset(pool.pool);
 						await db.insert(l1Addresses).values({
 							thorAddress: address,
-							l1Address: pool.assetAddress,
+							l1Address: pool.assetAddress.startsWith('0x') ? pool.assetAddress.toLowerCase() : pool.assetAddress,
 							chain,
 							pool: pool.pool,
 						}).onConflictDoNothing();

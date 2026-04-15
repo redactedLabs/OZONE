@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { rujiraUsers, l1Addresses, complianceEntries } from '$lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, inArray } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const format = url.searchParams.get('format') || 'json';
@@ -11,9 +11,10 @@ export const GET: RequestHandler = async ({ url }) => {
 	const flagged = await db.select().from(rujiraUsers)
 		.where(eq(rujiraUsers.flagged, true));
 
-	// Get their L1 addresses
+	// Get their L1 addresses (only for flagged users, not the entire table)
 	const allL1 = flagged.length > 0
 		? await db.select().from(l1Addresses)
+			.where(inArray(l1Addresses.thorAddress, flagged.map(f => f.thorAddress)))
 		: [];
 
 	// Build L1 lookup
