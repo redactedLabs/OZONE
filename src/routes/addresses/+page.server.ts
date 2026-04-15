@@ -58,7 +58,7 @@ async function lookupAndImport(address: string) {
 				const inAddresses = new Set((action.in || []).map((io: any) => io.address).filter(Boolean));
 				const outAddresses: string[] = (action.out || []).map((io: any) => io.address).filter(Boolean);
 
-				const linkL1 = async (io: any) => {
+				const linkL1 = async (io: any, isAffiliate = false) => {
 					const addr = io.address;
 					if (!addr || addr.startsWith('thor') || addr === address) return;
 					const asset = io.coins?.[0]?.asset || '';
@@ -69,18 +69,27 @@ async function lookupAndImport(address: string) {
 						l1Address: addr.startsWith('0x') ? addr.toLowerCase() : addr,
 						chain,
 						pool: asset,
-					}).onConflictDoNothing();
+						affiliate: isAffiliate,
+					}).onConflictDoUpdate({
+						target: [l1Addresses.thorAddress, l1Addresses.l1Address, l1Addresses.chain],
+						set: { affiliate: isAffiliate }
+					});
 				};
 
 				if (inAddresses.has(address)) {
 					for (const io of [...(action.in || []), ...(action.out || [])]) {
-						await linkL1(io);
+						await linkL1(io, false);
 					}
 				} else if (outAddresses.includes(address)) {
 					const otherThorOut = outAddresses.filter((a: string) => a !== address && a.startsWith('thor'));
-					if (otherThorOut.length > 0) continue; // affiliate — skip
-					for (const input of action.in || []) {
-						await linkL1(input);
+					if (otherThorOut.length > 0) {
+						for (const io of [...(action.in || []), ...(action.out || [])]) {
+							await linkL1(io, true);
+						}
+					} else {
+						for (const input of action.in || []) {
+							await linkL1(input, false);
+						}
 					}
 				}
 			}
@@ -239,7 +248,8 @@ export const load: PageServerLoad = async ({ url }) => {
 				l1Addresses: uniqueL1s.map((l) => ({
 					address: l.l1Address,
 					chain: l.chain,
-					pool: l.pool
+					pool: l.pool,
+					affiliate: l.affiliate ?? false
 				}))
 			};
 		})

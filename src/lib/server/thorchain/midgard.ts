@@ -322,7 +322,7 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 				const inAddresses = new Set((action.in || []).map((io: any) => io.address).filter(Boolean));
 				const outAddresses: string[] = (action.out || []).map((io: any) => io.address).filter(Boolean);
 
-				const linkL1 = async (io: any) => {
+				const linkL1 = async (io: any, isAffiliate = false) => {
 					const addr = io.address;
 					if (!addr || addr.startsWith('thor')) return;
 					const asset = io.coins?.[0]?.asset || '';
@@ -333,26 +333,34 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 						thorAddress,
 						l1Address: addr.startsWith('0x') ? addr.toLowerCase() : addr,
 						chain,
-						pool: asset || `${chain}.unknown`
-					}).onConflictDoNothing();
+						pool: asset || `${chain}.unknown`,
+						affiliate: isAffiliate
+					}).onConflictDoUpdate({
+						target: [l1Addresses.thorAddress, l1Addresses.l1Address, l1Addresses.chain],
+						set: { affiliate: isAffiliate }
+					});
 					found++;
 				};
 
 				if (inAddresses.has(thorAddress)) {
-					// We initiated this action — collect all non-thor L1 addresses
+					// We initiated this action — direct links
 					for (const io of [...(action.in || []), ...(action.out || [])]) {
-						await linkL1(io);
+						await linkL1(io, false);
 					}
 				} else if (outAddresses.includes(thorAddress)) {
-					// We're in action.out — check for affiliate pattern
 					const otherThorOut = outAddresses.filter(
 						(a: string) => a !== thorAddress && a.startsWith('thor')
 					);
-					if (otherThorOut.length > 0) continue; // affiliate — skip
-
-					// Sole thor recipient — collect L1s from action.in only
-					for (const input of action.in || []) {
-						await linkL1(input);
+					if (otherThorOut.length > 0) {
+						// Multiple thor recipients — tag as affiliate, keep all L1s
+						for (const io of [...(action.in || []), ...(action.out || [])]) {
+							await linkL1(io, true);
+						}
+					} else {
+						// Sole recipient — direct link from action.in
+						for (const input of action.in || []) {
+							await linkL1(input, false);
+						}
 					}
 				}
 			}

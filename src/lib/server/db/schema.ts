@@ -39,6 +39,7 @@ export const l1Addresses = pgTable('l1_addresses', {
 	l1Address: text('l1_address').notNull(),
 	chain: text('chain').notNull(),
 	pool: text('pool'),
+	affiliate: boolean('affiliate').default(false),
 	discoveredAt: timestamp('discovered_at').defaultNow()
 }, (table) => [
 	uniqueIndex('l1_addr_unique').on(table.thorAddress, table.l1Address, table.chain)

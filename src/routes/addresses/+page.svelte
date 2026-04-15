@@ -186,44 +186,64 @@
 				</p>
 			{:else}
 				{@const flaggedAddrs = getFlaggedAddresses(selectedUser.flagReason)}
-				<div class="text-xs mb-2" style="color: var(--text-muted);">
-					Linked addresses discovered via Midgard on-chain activity:
-				</div>
-				<div class="space-y-2 max-h-80 overflow-y-auto">
-					{#each selectedUser.l1Addresses as l1}
-						{@const isFlagged = flaggedAddrs.has(l1.address.toLowerCase())}
-						<div class="flex items-center gap-3 p-3 rounded-lg" style="background: {isFlagged ? 'rgba(239,68,68,0.06)' : 'var(--bg)'}; border: 1px solid {isFlagged ? 'rgba(239,68,68,0.25)' : 'var(--app-border)'};">
-							<span
-								class="flex items-center justify-center w-8 h-8 rounded-full shrink-0"
-								style={chainColor(l1.chain)}
-							>
-								{#if chainLogo(l1.chain)}
-									<img src={chainLogo(l1.chain)} alt={l1.chain} class="w-5 h-5 rounded-full" />
-								{:else}
-									<span class="text-sm font-bold" style="color: #999;">{chainIcons[l1.chain] || '?'}</span>
+				{@const directL1s = selectedUser.l1Addresses.filter((l: any) => !l.affiliate)}
+				{@const affiliateL1s = selectedUser.l1Addresses.filter((l: any) => l.affiliate)}
+
+				{#snippet l1Row(l1: any)}
+					{@const isFlagged = flaggedAddrs.has(l1.address.toLowerCase())}
+					<div class="flex items-center gap-3 p-3 rounded-lg" style="background: {isFlagged ? 'rgba(239,68,68,0.06)' : 'var(--bg)'}; border: 1px solid {isFlagged ? 'rgba(239,68,68,0.25)' : 'var(--app-border)'};">
+						<span
+							class="flex items-center justify-center w-8 h-8 rounded-full shrink-0"
+							style={chainColor(l1.chain)}
+						>
+							{#if chainLogo(l1.chain)}
+								<img src={chainLogo(l1.chain)} alt={l1.chain} class="w-5 h-5 rounded-full" />
+							{:else}
+								<span class="text-sm font-bold" style="color: #999;">{chainIcons[l1.chain] || '?'}</span>
+							{/if}
+						</span>
+						<div class="min-w-0 flex-1">
+							<div class="flex items-center gap-2">
+								<span class="text-xs font-semibold" style="color: var(--text);">{l1.chain}</span>
+								{#if l1.pool}
+									<span class="text-xs" style="color: var(--text-faint);">via {l1.pool}</span>
 								{/if}
-							</span>
-							<div class="min-w-0 flex-1">
-								<div class="flex items-center gap-2">
-									<span class="text-xs font-semibold" style="color: var(--text);">{l1.chain}</span>
-									{#if l1.pool}
-										<span class="text-xs" style="color: var(--text-faint);">via {l1.pool}</span>
-									{/if}
-								</div>
-								<button
-									onclick={() => copyAddress(l1.address)}
-									class="font-mono text-xs break-all text-left mt-0.5"
-									style="color: var(--text-secondary);"
-								>
-									{l1.address}
-									{#if copiedAddr === l1.address}
-										<span class="ml-1" style="color: #10b981;">&#10003;</span>
-									{/if}
-								</button>
 							</div>
+							<button
+								onclick={() => copyAddress(l1.address)}
+								class="font-mono text-xs break-all text-left mt-0.5"
+								style="color: var(--text-secondary);"
+							>
+								{l1.address}
+								{#if copiedAddr === l1.address}
+									<span class="ml-1" style="color: #10b981;">&#10003;</span>
+								{/if}
+							</button>
 						</div>
-					{/each}
-				</div>
+					</div>
+				{/snippet}
+
+				{#if directL1s.length > 0}
+					<div class="text-xs mb-2" style="color: var(--text-muted);">
+						Direct L1 addresses ({directL1s.length}):
+					</div>
+					<div class="space-y-2 max-h-60 overflow-y-auto">
+						{#each directL1s as l1}
+							{@render l1Row(l1)}
+						{/each}
+					</div>
+				{/if}
+
+				{#if affiliateL1s.length > 0}
+					<div class="text-xs mb-2 {directL1s.length > 0 ? 'mt-4' : ''}" style="color: var(--text-faint);">
+						Affiliate-associated ({affiliateL1s.length}):
+					</div>
+					<div class="space-y-2 max-h-40 overflow-y-auto">
+						{#each affiliateL1s as l1}
+							{@render l1Row(l1)}
+						{/each}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</div>
@@ -315,15 +335,17 @@
 						</td>
 						<td class="px-4 py-3">
 							{#if user.l1Addresses.length > 0}
+								{@const directL1s = user.l1Addresses.filter((l: any) => !l.affiliate)}
+								{@const affiliateCount = user.l1Addresses.length - directL1s.length}
 								<button
 									onclick={() => selectedUser = user}
 									class="flex items-center gap-1.5"
 								>
-									{#each getUniqueChains(user.l1Addresses) as chain}
+									{#each getUniqueChains(directL1s) as chain}
 										<span
 											class="inline-flex items-center justify-center w-7 h-7 rounded-full transition-transform hover:scale-110"
 											style={chainColor(chain)}
-											title="{chain}: {user.l1Addresses.filter((l: any) => l.chain === chain).length} address(es)"
+											title="{chain}: {directL1s.filter((l: any) => l.chain === chain).length} address(es)"
 										>
 											{#if chainLogo(chain)}
 												<img src={chainLogo(chain)} alt={chain} class="w-4 h-4 rounded-full" />
@@ -333,7 +355,7 @@
 										</span>
 									{/each}
 									<span class="text-xs ml-1" style="color: var(--text-faint);">
-										{user.l1Addresses.length}
+										{directL1s.length}{#if affiliateCount > 0}<span style="color: var(--text-ghost);" title="{affiliateCount} affiliate-associated addresses"> +{affiliateCount}a</span>{/if}
 									</span>
 								</button>
 							{:else}
