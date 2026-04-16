@@ -5,7 +5,11 @@ import { env } from '$env/dynamic/private';
 import pLimit from 'p-limit';
 import { bech32 } from 'bech32';
 
-const MIDGARD_URL = () => env.MIDGARD_URL || 'https://gateway.liquify.com/chain/thorchain_midgard';
+// Auto-migrate stale ninerealms env values to Liquify (ninerealms is sunsetting)
+const MIDGARD_URL = () =>
+	(env.MIDGARD_URL || 'https://gateway.liquify.com/chain/thorchain_midgard')
+		.replace('https://midgard.ninerealms.com', 'https://gateway.liquify.com/chain/thorchain_midgard')
+		.replace('http://midgard.ninerealms.com', 'https://gateway.liquify.com/chain/thorchain_midgard');
 const RUJIRA_GQL = 'https://api.rujira.network/api/graphiql';
 
 /**
