@@ -55,13 +55,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const [totalL1Result] = await db
 		.select({ count: sql<number>`count(DISTINCT l1_address || ':' || chain)` })
-		.from(l1Addresses)
-		.where(sql`affiliate = false OR affiliate IS NULL`);
+		.from(l1Addresses);
 
 	const [newL1Day] = await db
 		.select({ count: sql<number>`count(DISTINCT l1_address || ':' || chain)` })
 		.from(l1Addresses)
-		.where(sql`(affiliate = false OR affiliate IS NULL) AND discovered_at > NOW() - INTERVAL '24 hours'`);
+		.where(sql`discovered_at > NOW() - INTERVAL '24 hours'`);
 
 	const lastSyncEntry = await db
 		.select()

@@ -335,17 +335,15 @@
 						</td>
 						<td class="px-4 py-3">
 							{#if user.l1Addresses.length > 0}
-								{@const directL1s = user.l1Addresses.filter((l: any) => !l.affiliate)}
-								{@const affiliateCount = user.l1Addresses.length - directL1s.length}
 								<button
 									onclick={() => selectedUser = user}
 									class="flex items-center gap-1.5"
 								>
-									{#each getUniqueChains(directL1s) as chain}
+									{#each getUniqueChains(user.l1Addresses) as chain}
 										<span
 											class="inline-flex items-center justify-center w-7 h-7 rounded-full transition-transform hover:scale-110"
 											style={chainColor(chain)}
-											title="{chain}: {directL1s.filter((l: any) => l.chain === chain).length} address(es)"
+											title="{chain}: {user.l1Addresses.filter((l: any) => l.chain === chain).length} address(es)"
 										>
 											{#if chainLogo(chain)}
 												<img src={chainLogo(chain)} alt={chain} class="w-4 h-4 rounded-full" />
@@ -355,7 +353,7 @@
 										</span>
 									{/each}
 									<span class="text-xs ml-1" style="color: var(--text-faint);">
-										{directL1s.length}{#if affiliateCount > 0}<span style="color: var(--text-ghost);" title="{affiliateCount} affiliate-associated addresses"> +{affiliateCount}a</span>{/if}
+										{user.l1Addresses.length}
 									</span>
 								</button>
 							{:else}
