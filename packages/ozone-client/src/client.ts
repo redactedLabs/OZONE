@@ -127,10 +127,24 @@ export class OzoneClient {
 		this.clock = opts.clock ?? Date.now;
 	}
 
+	private cacheTried = false;
+
 	/** Loads the cached snapshot (if any, re-verified), then tries one refresh. */
 	async init(): Promise<void> {
-		await this.loadCache().catch(() => undefined);
+		await this.loadCacheOnce();
 		await this.refresh().catch(() => undefined);
+	}
+
+	/** Loads the verified on-disk snapshot once (no-op without `cacheDir`). */
+	async loadCacheOnce(): Promise<boolean> {
+		if (this.cacheTried) return !!this.current;
+		this.cacheTried = true;
+		try {
+			await this.loadCache();
+		} catch {
+			/* no or unusable cache: the network refresh decides */
+		}
+		return !!this.current;
 	}
 
 	/** The loaded snapshot, if any. */
@@ -268,9 +282,10 @@ export class OzoneClient {
 		throw new Error(`Ozone snapshot refresh failed: ${this.lastError}`);
 	}
 
-	/** Starts periodic refreshes (timer is unref'd). */
+	/** Loads the cache and refreshes now, then periodically (timer is unref'd). */
 	start(): void {
 		if (this.timer) return;
+		void this.loadCacheOnce().then(() => this.refresh().catch(() => undefined));
 		const period = this.opts.refreshIntervalMs ?? 10 * 60 * 1000;
 		this.timer = setInterval(() => {
 			this.refresh().catch(() => undefined);
@@ -325,6 +340,8 @@ export function createOzoneSnapshotSource(clientOrOptions: OzoneClient | OzoneCl
 			return v.reference ? { status: v.status, reference: v.reference } : { status: v.status };
 		},
 		refresh: async () => {
+			// first call: the verified on-disk snapshot is available even if every mirror is down
+			await client.loadCacheOnce();
 			await client.refresh();
 		},
 		start: () => client.start(),

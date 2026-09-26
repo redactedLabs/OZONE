@@ -23,6 +23,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
+import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 import { generateSigningKey, loadPrivateKey } from '../../ozone-client/src/index.js';
 import {
 	consoleLogger,
@@ -62,6 +63,14 @@ async function main() {
 	const db = await PGlite.create(dataDir);
 	const sql = db as unknown as Sql;
 	await migrate(sql, { baseline: true });
+	// --serve: also expose the database on 127.0.0.1:54329 while the command runs
+	// (PGlite is single-process; this lets the app read it at the same time)
+	let server: PGLiteSocketServer | undefined;
+	if (args.includes('--serve')) {
+		server = new PGLiteSocketServer({ db, port: Number(process.env.PORT ?? 54329), host: '127.0.0.1', maxConnections: 10 });
+		await server.start();
+		console.error('serving postgres://postgres@127.0.0.1:54329/postgres');
+	}
 	const midgard = new Midgard({ baseUrl: process.env.MIDGARD_URL, minIntervalMs: Number(flag('interval') ?? 350), concurrency: 2 });
 	const t0 = Date.now();
 	switch (cmd) {
@@ -78,12 +87,28 @@ async function main() {
 		}
 		case 'trace': {
 			const only = flag('only');
+			// --cluster-depth N: only hack-cluster members up to depth N (and what they flag)
+			const depth = flag('cluster-depth');
+			const clusterKeys = depth
+				? new Set(
+						(
+							await sql.query<{ key: string }>(
+								`SELECT key FROM oz_entries WHERE source = 'cluster' AND removed_at IS NULL AND (meta->>'depth')::int <= $1`,
+								[Number(depth)]
+							)
+						).rows.map((r) => r.key)
+					)
+				: undefined;
 			const r = await runTraceBackfill(sql, midgard, {
 				logger: consoleLogger,
 				timeBudgetMs: Number(flag('minutes') ?? 30) * 60_000,
 				maxAddresses: Number(flag('max') ?? Infinity),
 				concurrency: Number(flag('concurrency') ?? 2),
-				filter: only ? (key, e) => key.startsWith(`${only}:`) || e.originSource === only : undefined
+				filter: clusterKeys
+					? (key, e) => clusterKeys.has(key) || clusterKeys.has(e.originKey)
+					: only
+						? (key, e) => key.startsWith(`${only}:`) || e.originSource === only
+						: undefined
 			});
 			console.log(r, `midgard requests: ${midgard.requests}`);
 			break;
@@ -127,6 +152,7 @@ async function main() {
 			console.log(readFileSync(new URL(import.meta.url), 'utf8').split('*/')[0]);
 	}
 	console.error(`done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+	await server?.stop();
 	await db.close();
 }
 

@@ -23,3 +23,4 @@ export { collectSnapshot, buildAndStoreSnapshot, latestSnapshot, snapshotPayload
 export { screenUsers, type UserScreenResult } from './screen/users.js';
 export * from './jobs.js';
 export { coverageReport, type CoverageReport } from './report.js';
+export { TWIN_CATEGORIES } from './policy.js';

@@ -108,7 +108,7 @@
 			<li><strong>Bitcoin Cash</strong>: cashaddr without the <code>bitcoincash:</code> prefix — the form THORChain uses; legacy <code>1…/3…</code> BCH addresses are converted.</li>
 			<li><strong>TRON</strong>: base58check <code>T…</code>; the hex form TronGrid returns is converted (the previous worker stored it as <code>0x…</code>, so TRON inputs never matched).</li>
 			<li><strong>XRP</strong> (classic <code>r…</code>, XRP alphabet checksum), <strong>Solana</strong> (32-byte base58), <strong>THOR / Cosmos</strong> (bech32).</li>
-			<li id="twins"><strong>Same-key twins</strong>: a TRON address and the EVM address with the same 20-byte key hash, and a pay-to-pubkey-hash address across BTC/BCH/LTC/DOGE, are controlled by the same private key. A twin of a listed address carries the listing one risk level lower.</li>
+			<li id="twins"><strong>Same-key twins</strong>: a TRON address and the EVM address with the same 20-byte key hash, and a pay-to-pubkey-hash address across BTC/BCH/LTC/DOGE, are controlled by the same private key. For sanctions, law-enforcement attributions, issuer freezes and maintainer flags (an identified holder), the twin carries the listing one risk level lower; hack-cluster and phishing addresses are single-use and are not twinned.</li>
 			<li>Lists sometimes mislabel formats (e.g. a TRON address published under the XBT ticker, USDT on Omni as bitcoin addresses); Ozone trusts the checksum-verified format and notes the mismatch. Identifiers that are not valid addresses are rejected and reported, never imported.</li>
 		</ul>
 	</section>

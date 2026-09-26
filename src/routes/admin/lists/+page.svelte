@@ -12,14 +12,18 @@
 	const CHAINS = ['BTC', 'ETH', 'AVAX', 'BASE', 'BCH', 'BSC', 'DOGE', 'GAIA', 'LTC', 'SOL', 'THOR', 'TRON', 'XRP'];
 
 	const sourceColors: Record<string, string> = {
-		OFAC: 'background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3)',
-		EU: 'background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3)',
-		HACK: 'background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3)',
-		MANUAL: 'background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3)',
-		CHAINALYSIS: 'background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3)',
-		TETHER: 'background: rgba(38,161,123,0.15); color: #26a17b; border: 1px solid rgba(38,161,123,0.3)',
-		SCAM: 'background: rgba(236,72,153,0.15); color: #ec4899; border: 1px solid rgba(236,72,153,0.3)',
-		ETH_LABELS: 'background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3)',
+		ofac_sdn: 'background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3)',
+		uk_fcdo: 'background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25)',
+		eu_fsf: 'background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3)',
+		chainalysis_oracle: 'background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3)',
+		fbi: 'background: rgba(220,38,38,0.15); color: #dc2626; border: 1px solid rgba(220,38,38,0.3)',
+		curated: 'background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3)',
+		cluster: 'background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25)',
+		tether: 'background: rgba(38,161,123,0.15); color: #26a17b; border: 1px solid rgba(38,161,123,0.3)',
+		circle: 'background: rgba(39,117,202,0.15); color: #2775ca; border: 1px solid rgba(39,117,202,0.3)',
+		ethlabels: 'background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3)',
+		scamsniffer: 'background: rgba(236,72,153,0.15); color: #ec4899; border: 1px solid rgba(236,72,153,0.3)',
+		manual: 'background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3)',
 	};
 
 	function setSource(s: string) {

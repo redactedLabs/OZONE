@@ -14,6 +14,9 @@ import { responseKey } from '$lib/server/ozone/keys';
 import { screenItems } from '$lib/server/ozone/screen';
 import { currentSnapshot } from '$lib/server/ozone/snapshot';
 import { sql } from '$lib/server/ozone/sql';
+import { globalThrottle } from '$lib/server/ozone/throttle';
+
+const allowIssue = globalThrottle(60);
 
 function generateCertId(): string {
 	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -32,6 +35,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const address = typeof body.address === 'string' ? body.address.trim() : '';
 	if (!address || address.length > 128) return json({ error: 'Missing address' }, { status: 400 });
 	const chain = typeof body.chain === 'string' ? body.chain : undefined;
+	if (!allowIssue()) return json({ error: 'Too many certificates right now, please retry in a minute' }, { status: 429 });
 
 	const res = await screenItems([{ address, chain }]);
 	const verdict = res.results[0];

@@ -9,6 +9,7 @@ import { CURATED, type ClusterSpec } from './sources/curated-data.js';
 import { SOURCES, type SourceContext, type SourceDef } from './sources/registry.js';
 import { applySourceResult, recordSourceError, type ApplyStats } from './store/entries.js';
 import { screenUsers, type UserScreenResult } from './screen/users.js';
+import { setState } from './store/trace.js';
 import type { Sql } from './types.js';
 
 export interface SyncOutcome {
@@ -116,7 +117,9 @@ export async function loadLatestIndex(sql: Sql): Promise<SnapshotIndex | undefin
 export async function screenUsersFromLatest(sql: Sql, opts: { flagAt?: 'high' | 'severe' | 'medium' } = {}): Promise<UserScreenResult | undefined> {
 	const index = await loadLatestIndex(sql);
 	if (!index) return undefined;
+	const t0 = Date.now();
 	const r = await screenUsers(sql, index, opts);
-	await logSync(sql, 'users', 'success', r.accounts, r.flagged, 0);
+	await logSync(sql, 'users', 'success', r.accounts, r.flagged, Date.now() - t0);
+	await setState(sql, 'users:last', { ...r, at: new Date().toISOString(), snapshot: index.version });
 	return r;
 }

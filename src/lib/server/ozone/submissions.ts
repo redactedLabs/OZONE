@@ -6,6 +6,7 @@
 import { randomBytes } from 'node:crypto';
 import { addressReadings } from '$ozone/index.js';
 import { sql } from './sql';
+import { globalThrottle } from './throttle';
 
 export type SubmissionKind = 'report' | 'appeal';
 
@@ -18,18 +19,10 @@ export class SubmissionError extends Error {
 	}
 }
 
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 20;
-let windowStart = 0;
-let windowCount = 0;
+const allow = globalThrottle(20);
 
 function throttle() {
-	const now = Date.now();
-	if (now - windowStart > WINDOW_MS) {
-		windowStart = now;
-		windowCount = 0;
-	}
-	if (++windowCount > MAX_PER_WINDOW) throw new SubmissionError('Too many submissions right now, please retry in a minute', 429);
+	if (!allow()) throw new SubmissionError('Too many submissions right now, please retry in a minute', 429);
 }
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

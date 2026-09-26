@@ -5,6 +5,7 @@
 import { keyTwins, parseForChain, riskFromRank, riskRank, splitKey, type Category, type Risk } from '../../../ozone-client/src/index.js';
 import { isTraceOrigin, describeHit, type IndexEntry, type TraceHit } from '../trace/tracer.js';
 import type { Sql } from '../types.js';
+import { TWIN_CATEGORIES } from '../policy.js';
 import { batchInsert } from './db.js';
 
 export async function recordHits(sql: Sql, hits: TraceHit[]): Promise<{ edges: number; traced: number }> {
@@ -133,7 +134,7 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 			...(r.entity ? { originEntity: r.entity } : {}),
 			originCategory: r.category
 		});
-		if (opts.includeTwins !== false) {
+		if (opts.includeTwins !== false && TWIN_CATEGORIES.has(r.category)) {
 			const p = parseForChain(r.address, r.chain);
 			if (p) {
 				for (const t of keyTwins(p)) {
@@ -201,7 +202,13 @@ export interface CheckTask {
  * (and twins) never checked, and traced addresses (below the hop limit, not
  * services) never checked since they were tainted. Highest risk first.
  */
-export async function pendingChecks(sql: Sql, index: Map<string, IndexEntry>, maxHops: number, limit = 1000): Promise<CheckTask[]> {
+export async function pendingChecks(
+	sql: Sql,
+	index: Map<string, IndexEntry>,
+	maxHops: number,
+	limit = 1000,
+	filter?: (key: string, e: IndexEntry) => boolean
+): Promise<CheckTask[]> {
 	const checked = new Map(
 		(await sql.query<{ key: string; status: string; checked_height: string | number }>(`SELECT key, status, checked_height FROM oz_trace_checked`)).rows.map(
 			(r) => [r.key, { status: r.status, height: Number(r.checked_height) || 0 }]
@@ -210,6 +217,7 @@ export async function pendingChecks(sql: Sql, index: Map<string, IndexEntry>, ma
 	const tasks: CheckTask[] = [];
 	for (const e of index.values()) {
 		if (e.service || e.hop >= maxHops) continue;
+		if (filter && !filter(e.key, e)) continue;
 		const ns = e.key.slice(0, e.key.indexOf(':'));
 		if (!['evm', 'btc', 'ltc', 'doge', 'bch', 'tron', 'xrp', 'sol', 'thor', 'gaia'].includes(ns)) continue; // THORChain chains only
 		const c = checked.get(e.key);

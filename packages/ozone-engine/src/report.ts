@@ -28,10 +28,14 @@ export interface CoverageReport {
 		services: number;
 	};
 	users: {
+		/** Rows in rujira_users (thor1 accounts + L1 addresses seen in THORChain actions). */
 		accounts: number;
 		thorAccounts: number;
 		linkedL1: number;
+		/** Flagged thor1 accounts (risk ≥ high). */
 		flagged: number;
+		/** Flagged non-thor rows (L1 addresses seen in THORChain actions). */
+		flaggedOther: number;
 		flaggedByRisk: Array<{ risk: string; accounts: number }>;
 	};
 	snapshot: { version: number; builtAt: string; size: number; keys: number } | null;
@@ -84,13 +88,14 @@ export async function coverageReport(sql: Sql): Promise<CoverageReport> {
 		        count(*) FILTER (WHERE status = 'service')::int AS services FROM oz_trace_checked`
 	);
 
-	const [users] = await q<{ accounts: number; thor: number; flagged: number }>(
+	const [users] = await q<{ accounts: number; thor: number; flagged: number; flagged_other: number }>(
 		`SELECT count(*)::int AS accounts, count(*) FILTER (WHERE thor_address LIKE 'thor1%')::int AS thor,
-		        count(*) FILTER (WHERE flagged)::int AS flagged FROM rujira_users`
+		        count(*) FILTER (WHERE flagged AND thor_address LIKE 'thor1%')::int AS flagged,
+		        count(*) FILTER (WHERE flagged AND thor_address NOT LIKE 'thor1%')::int AS flagged_other FROM rujira_users`
 	);
 	const [linked] = await q<{ n: number }>(`SELECT count(DISTINCT l1_address)::int AS n FROM l1_addresses WHERE affiliate IS NOT TRUE`);
 	const flaggedByRisk = await q<{ risk: string; n: number }>(
-		`SELECT coalesce(risk, 'unknown') AS risk, count(*)::int AS n FROM rujira_users WHERE flagged GROUP BY 1 ORDER BY n DESC`
+		`SELECT coalesce(risk, 'unknown') AS risk, count(*)::int AS n FROM rujira_users WHERE flagged AND thor_address LIKE 'thor1%' GROUP BY 1 ORDER BY n DESC`
 	);
 
 	const [snap] = await q<{ version: string; built_at: string; size: number; stats: { keys?: number } | string | null }>(
@@ -130,6 +135,7 @@ export async function coverageReport(sql: Sql): Promise<CoverageReport> {
 			thorAccounts: num(users?.thor),
 			linkedL1: num(linked?.n),
 			flagged: num(users?.flagged),
+			flaggedOther: num(users?.flagged_other),
 			flaggedByRisk: flaggedByRisk.map((r) => ({ risk: r.risk, accounts: num(r.n) }))
 		},
 		snapshot: snap

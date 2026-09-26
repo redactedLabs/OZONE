@@ -9,6 +9,7 @@ import { toChecksumAddress } from '../util/evm.js';
 import type { MidgardLike as Midgard } from './midgard.js';
 import { loadPoolPrices, type PriceOracle } from './prices.js';
 import { DEFAULT_TRACE_CONFIG, traceAction, type IndexEntry, type TraceConfig, type TraceHit } from './tracer.js';
+import { actionTxid, parseTxAddress } from './flows.js';
 
 /** An address with more THORChain actions than this is treated as a service and not propagated. */
 export const SERVICE_ACTIONS = 2000;
@@ -86,8 +87,13 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 	const attempted = new Set<string>();
 	for (;;) {
 		const index = await loadTraceIndex(sql);
-		let tasks = (await pendingChecks(sql, index, cfg.maxHops, 5000)).filter((t) => !attempted.has(t.key));
-		if (opts.filter) tasks = tasks.filter((t) => opts.filter!(t.key, index.get(t.key)!));
+		const tasks = await pendingChecks(
+			sql,
+			index,
+			cfg.maxHops,
+			5000,
+			(key, e) => !attempted.has(key) && (!opts.filter || opts.filter(key, e))
+		);
 		res.remaining = tasks.length;
 		if (!tasks.length || Date.now() > deadline || res.checked >= maxAddresses) break;
 		const round = tasks.slice(0, Math.min(tasks.length, maxAddresses - res.checked, 500));
@@ -122,6 +128,17 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 	return res;
 }
 
+interface PendingAction {
+	txid: string;
+	height: number;
+	since: number;
+}
+
+function isFlaggedSender(t: { address: string; coins: Array<{ asset: string }> }, lookup: (k: string) => IndexEntry | undefined): boolean {
+	const p = parseTxAddress(t as never);
+	return !!p && !!lookup(p.key);
+}
+
 export interface RealtimeResult {
 	processed: number;
 	hits: number;
@@ -149,8 +166,35 @@ export async function runRealtimeTick(
 	}
 	const { actions, complete, head } = await midgard.actionsSince(from, opts.maxPages ?? 40);
 	const index = opts.index ?? (await loadTraceIndex(sql));
-	const hits = dedupe(actions.flatMap((a) => traceAction(a, (k) => index.get(k), opts.prices, cfg)));
-	const rec = await recordHits(sql, hits);
+	const lookup = (k: string) => index.get(k);
+	const hits = dedupe(actions.flatMap((a) => traceAction(a, lookup, opts.prices, cfg)));
+
+	// Streaming swaps (and delayed outbounds) are reported as `pending` with no
+	// outputs yet: remember those that start at a flagged address and re-read
+	// them until they settle.
+	const pending = (await getState<PendingAction[]>(sql, 'trace:pending')) ?? [];
+	const now = Date.now();
+	for (const a of actions) {
+		if (a.status !== 'pending') continue;
+		if (!a.in.some((t) => isFlaggedSender(t, lookup))) continue;
+		const txid = actionTxid(a);
+		if (!txid.startsWith('H') && !pending.some((p) => p.txid === txid)) pending.push({ txid, height: Number(a.height), since: now });
+	}
+	const still: PendingAction[] = [];
+	for (const p of pending.slice(0, 25)) {
+		if (now - p.since > 48 * 3600_000) continue; // give up after two days (the daily re-read covers it)
+		const res = await midgard.actions({ txid: p.txid, limit: 10 }).catch(() => undefined);
+		const settled = res?.actions.filter((a) => a.status !== 'pending') ?? [];
+		if (!res || settled.length === 0) {
+			still.push(p);
+			continue;
+		}
+		for (const a of settled) hits.push(...traceAction(a, lookup, opts.prices, cfg));
+	}
+	still.push(...pending.slice(25));
+	await setState(sql, 'trace:pending', still);
+
+	const rec = await recordHits(sql, dedupe(hits));
 	const to = complete ? head : Math.max(from, ...actions.map((a) => Number(a.height)));
 	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { gapFrom: from }) });
 	if (!complete) {

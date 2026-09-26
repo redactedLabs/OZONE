@@ -11,50 +11,45 @@ Ozone aggregates sanctions lists, hack databases, on-chain blacklists, and commu
 ## Architecture
 
 ```
-Data Sources                    OZONE (this repo)              OZONE-WORKER
-─────────────                   ──────────────────             ─────────────
-OFAC SDN List ──┐                                              WebSocket listener
-EU Sanctions ───┤               SvelteKit Frontend             (real-time THORChain TXs)
-Tether Frozen ──┤  ──ingest──>  + API Routes         <──db──>
-ScamSniffer ────┤               + Auth (Better-Auth)           Cron-based list syncing
-Eth Labels ─────┤               + PostgreSQL (Drizzle)         (OFAC, EU, Tether, etc.)
-Chainalysis ────┤               + Three.js Globe
-Known Hacks ────┤
-Midgard ────────┘
-
-Flow: Ingest → Map L1 addresses → Screen → Flag
+Public sources (no API keys)            OZONE-WORKER (long-running)               OZONE (this repo, Vercel)
+────────────────────────────            ───────────────────────────               ─────────────────────────
+OFAC SDN · UK FCDO · EU FSF ──┐         list sync (sanity-checked, delistings)     /api/v1/screen   signed verdicts
+FBI / IC3 · curated         ──┤         Ethereum hack-cluster expansion            /api/v1/snapshot signed snapshots
+Chainalysis oracle events   ──┼──────▶  THORChain flow tracing                ──▶  /api/v1/keys     public keys
+Tether · Circle freeze events ┤          (Midgard backfill + real time)            /api/health
+eth-labels · ScamSniffer    ──┘         signed snapshot every 10 min               methodology · reports · appeals
+Midgard (THORChain history) ─────────▶  THORChain user screening                   dashboard (Svelte)
+                                              │
+                                              └──▶ relayer nodes download the snapshot, verify, screen locally
 ```
+
+The engine (`packages/ozone-engine`) and the node client (`packages/ozone-client`)
+are plain TypeScript packages: the app imports them, the worker vendors them.
+See [INTEGRATION.md](INTEGRATION.md) for node integration and the snapshot format,
+and the [methodology page](https://ozone.redacted.gg/methodology) for how verdicts are made.
 
 ### Data Sources
 
-| Source | Type | Description |
-|--------|------|-------------|
-| **OFAC SDN List** | Government | US Treasury Specially Designated Nationals |
-| **EU Sanctions** | Government | EU Consolidated Financial Sanctions List |
-| **Tether Frozen** | On-chain | USDT blacklisted addresses (ETH + TRON events) |
-| **ScamSniffer** | Community | Phishing and scam address database |
-| **Eth Labels** | Community | 170k+ labeled EVM addresses |
-| **Chainalysis** | Commercial | Sanctions screening oracle API |
-| **Known Hacks** | Curated | Bybit, Ronin, Nomad, Harmony, WazirX, KuCoin |
-| **Midgard** | Infrastructure | THORChain indexer for user & address discovery |
+| Source | Kind | What is imported |
+|--------|------|------------------|
+| **OFAC SDN** | Government | every "Digital Currency Address" identifier, all tickers; delistings tracked |
+| **UK Sanctions List (FCDO)** | Government | wallet addresses in designation texts (checksum-validated) |
+| **EU consolidated list** | Government | wallet addresses in entity remarks, listing regulation as provenance |
+| **FBI / IC3** | Law enforcement | DPRK (TraderTraitor/Lazarus) laundering addresses, e.g. the Bybit PSA |
+| **Chainalysis sanctions oracle** | On-chain | add/remove events (no API key), e.g. the Tornado Cash delisting |
+| **Tether / Circle** | On-chain | USDT freezes (ETH, TRON, AVAX), USDC blacklist (ETH, BASE, AVAX), incl. unfreezes |
+| **Hack clusters** | Derived | Ethereum fan-out of attributed hack addresses inside the laundering window (Bybit) |
+| **eth-labels / ScamSniffer** | Community | exploiter, heist and phishing labels; drainer addresses |
+| **Curated / maintainers** | Curated | verified attributions with a named primary source; maintainer flags |
+| **THORChain tracing** | Derived | recipients of value from listed addresses through THORChain, with the tx as evidence |
 
 ## Stack
 
 - **Frontend**: SvelteKit 5, Tailwind CSS 4, Three.js (globe visualization)
-- **Backend**: SvelteKit API routes, Drizzle ORM
+- **Backend**: SvelteKit API routes, Drizzle ORM (+ plain SQL in the engine)
 - **Database**: PostgreSQL
-- **Auth**: Better-Auth
-- **Deployment**: Vercel
-
-## Features
-
-- Real-time wallet screening against 8+ compliance sources
-- L1 address discovery — links THORChain addresses to BTC, ETH, SOL, etc.
-- Proof of Innocence certificates
-- Transaction history analysis
-- Public screening API
-- Interactive 3D globe showing flagged address distribution
-- Admin dashboard for compliance list management
+- **Auth**: Better-Auth (IP tracking disabled)
+- **Tests**: Vitest, PGlite (embedded Postgres) — `pnpm test`
 
 ## Getting Started
 
@@ -82,13 +77,27 @@ See `.env.example` for the full list. Required:
 - `BETTER_AUTH_URL` — App URL (e.g., `http://localhost:5173`)
 
 Optional:
-- `CHAINALYSIS_API_KEY` — Chainalysis sanctions oracle
+- `OZONE_API_SIGNING_KEY` — Ed25519 seed that signs API answers and certificates
+- `OZONE_SNAPSHOT_PUBLIC_KEYS` — the worker's snapshot key(s), published at `/api/v1/keys`
+- `OZONE_SYNC_IN_APP=1` — run list sync in the app's cron (only without the worker)
+- `OZONE_SNAPSHOT_SIGNING_KEY` — only if the app itself publishes snapshots
 - `CRON_SECRET` — Protects sync endpoints
 - `MIDGARD_URL` — THORChain Midgard endpoint
 
+Engine locally (embedded Postgres, never a remote DB):
+
+```bash
+npx tsx packages/ozone-engine/scripts/ozone.ts sync        # all lists
+npx tsx packages/ozone-engine/scripts/ozone.ts cluster     # hack-cluster expansion
+npx tsx packages/ozone-engine/scripts/ozone.ts trace --minutes 30
+npx tsx packages/ozone-engine/scripts/ozone.ts snapshot && npx tsx packages/ozone-engine/scripts/ozone.ts stats
+npx tsx packages/ozone-engine/scripts/evaluate.ts          # quality gates + coverage before/after
+npx tsx packages/ozone-engine/scripts/serve-db.ts          # serve it on 127.0.0.1:54329 for `pnpm dev`
+```
+
 ## Database Schema
 
-Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`). Run `pnpm db:push` to apply.
+Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migration `packages/ozone-engine/migrations/0001_ozone_next.sql` (apply with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
 
 ### Core tables
 

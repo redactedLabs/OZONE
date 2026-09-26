@@ -37,6 +37,7 @@ export type Category =
 	| 'scam'
 	| 'manual' // added by an Ozone maintainer with a written reason
 	| 'traced' // received value from a listed address through THORChain
+	| 'linked' // THORChain account linked (Midgard history) to a listed L1 address
 	| 'key_twin'; // same private key as a listed address on a sibling chain
 
 export interface TraceInfo {

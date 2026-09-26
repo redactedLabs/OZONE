@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const format = url.searchParams.get('format') || 'json';
 	const rows = (
 		await sql.query<Row>(
-			`SELECT thor_address, flag_reason, risk, flag_detail, screened_at FROM rujira_users WHERE flagged ORDER BY thor_address`
+			`SELECT thor_address, flag_reason, risk, flag_detail, screened_at FROM rujira_users WHERE flagged AND thor_address LIKE 'thor1%' ORDER BY thor_address`
 		)
 	).rows;
 	const result = rows.map((u) => ({

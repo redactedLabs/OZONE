@@ -147,4 +147,27 @@ describe('quality gates on real-data fixtures', async () => {
 		expect(by.get(affiliate)?.flagged).toBe(false);
 		expect(by.get(cleanUser)?.flagged).toBe(false);
 	});
+
+	it('publishes linked accounts in the next snapshot, without a feedback loop', async () => {
+		const linkedUser = 'thor1fns25sytpf2gsdlg76g45620u5axm4mkrypqrh';
+		const next = async () => {
+			const s = await publishSnapshot(sql, key);
+			const row = await sql.query<{ manifest: unknown; payload: Uint8Array }>(`SELECT manifest, payload FROM oz_snapshots WHERE version = $1`, [s.version]);
+			return decodePayload(verifyManifest(row.rows[0].manifest, [key.publicKey]), new Uint8Array(row.rows[0].payload));
+		};
+		let idx = await next();
+		let v = idx.screen(linkedUser, 'THOR');
+		expect(v.status).toBe('flagged');
+		expect(v.reasons.map((r) => [r.category, r.code])).toEqual([['linked', 'LINKED_OFAC_SDN']]);
+		// screening again from that snapshot does not duplicate or self-sustain the reason
+		await screenUsers(sql, idx);
+		const detail = await sql.query<{ flag_detail: unknown[] }>(`SELECT flag_detail FROM rujira_users WHERE thor_address = $1`, [linkedUser]);
+		expect(detail.rows[0].flag_detail).toHaveLength(1);
+		// the link disappears → the account is clean after the next cycle
+		await sql.query(`DELETE FROM l1_addresses WHERE thor_address = $1`, [linkedUser]);
+		await screenUsers(sql, idx);
+		idx = await next();
+		v = idx.screen(linkedUser, 'THOR');
+		expect(v.status).toBe('clean');
+	});
 });

@@ -257,6 +257,31 @@ describe('OzoneClient', () => {
 		expect(source.lookup({ address: 'not-an-address', chain: 'BTC' })).toEqual({ status: 'unsupported_chain' });
 	});
 
+	it('relayer adapter: the verified disk cache serves while Ozone is down; start() loads immediately', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'ozone-adapter-'));
+		dirs.push(dir);
+		const v1 = build(1_790_000_000);
+		const snaps = new Map([['1790000000', v1]]);
+		const state = { down: false, latest: '1790000000' };
+		const { fetchImpl } = server(snaps, state);
+		const opts = { trustedKeys: trusted, manifestUrls: ['https://ozone.example/api/v1/snapshot'], cacheDir: dir, fetch: fetchImpl };
+		// a first node process fills the cache
+		await createOzoneSnapshotSource(opts).refresh();
+		// Ozone goes down; a restarted node still screens from the verified cache
+		state.down = true;
+		const restarted = createOzoneSnapshotSource(opts);
+		await expect(restarted.refresh()).rejects.toThrow(/refresh failed/);
+		expect(restarted.info()?.version).toBe('1790000000');
+		expect(restarted.lookup({ address: '0x098b716b8aaf21512996dc57eb0615e2383e2f96', chain: 'ETH' }).status).toBe('flagged');
+		// start() alone (the node's provider only calls start) loads without waiting for the first interval
+		state.down = false;
+		const started = createOzoneSnapshotSource({ ...opts, cacheDir: undefined });
+		started.start();
+		for (let i = 0; i < 50 && !started.info(); i++) await new Promise((r) => setTimeout(r, 10));
+		expect(started.info()?.version).toBe('1790000000');
+		started.stop();
+	});
+
 	it('refuses plain-http remote mirrors and empty key sets', () => {
 		expect(() => new OzoneClient({ trustedKeys: trusted, manifestUrls: ['http://evil.example/snap'] })).toThrowError(/https/);
 		expect(() => new OzoneClient({ trustedKeys: [] })).toThrowError(/trusted key/);

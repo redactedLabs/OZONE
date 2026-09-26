@@ -11,7 +11,7 @@ interface Detail {
 
 export const load: PageServerLoad = async () => {
 	const flagged = await sql.query<{ thor_address: string; flag_reason: string | null; screened_at: string | null; risk: string | null; flag_detail: Detail[] | null }>(
-		`SELECT thor_address, flag_reason, screened_at, risk, flag_detail FROM rujira_users WHERE flagged ORDER BY thor_address`
+		`SELECT thor_address, flag_reason, screened_at, risk, flag_detail FROM rujira_users WHERE flagged AND thor_address LIKE 'thor1%' ORDER BY thor_address`
 	);
 	const [counts] = (
 		await sql.query<{ total: number; thor: number }>(

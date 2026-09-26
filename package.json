@@ -17,6 +17,7 @@
   "type": "module",
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@sveltejs/adapter-vercel": "^6.3.3",
     "@sveltejs/kit": "2",
     "@sveltejs/vite-plugin-svelte": "^5.1.1",

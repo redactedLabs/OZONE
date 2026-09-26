@@ -213,6 +213,27 @@ describe('trace store + backfill against an embedded Postgres', async () => {
 		expect(t.rows[0]).toMatchObject({ hop: 1, risk: 'high' });
 	});
 
+	it('real-time follower: a streaming swap reported as pending is re-read until it settles', async () => {
+		const pendingSwap = action({
+			height: 30000002,
+			status: 'pending',
+			in: [{ address: EXPLOITER_65, asset: 'ETH.ETH', amount: 50, txID: 'STREAMTX1' }],
+			out: []
+		});
+		const settled = { ...pendingSwap, status: 'success', out: [{ address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4', coins: [{ asset: 'BTC.BTC', amount: String(1.5e8) }], txID: '' }], metadata: { swap: { outPriceUSD: '90000' } } } as MidgardAction;
+		const m = new FakeMidgard([pendingSwap]);
+		const t1 = await runRealtimeTick(sql, m, { prices });
+		expect(t1.hits).toBe(0);
+		// the swap settles; the follower has already moved past its height
+		const m2 = new FakeMidgard([settled]);
+		(m2 as unknown as { actions: (p: Record<string, unknown>) => Promise<{ actions: MidgardAction[] }> }).actions = async (p) =>
+			p.txid === 'STREAMTX1' ? { actions: [settled] } : { actions: [settled] };
+		const t2 = await runRealtimeTick(sql, m2, { prices });
+		expect(t2.hits).toBe(1);
+		const row = await sql.query(`SELECT hop, risk FROM oz_traced WHERE key = 'btc:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'`);
+		expect(row.rows[0]).toMatchObject({ hop: 1, risk: 'high' });
+	});
+
 	it('pending checks: highest risk first, never beyond the hop limit', async () => {
 		const index = await loadTraceIndex(sql);
 		const tasks = await pendingChecks(sql, index, DEFAULT_TRACE_CONFIG.maxHops);

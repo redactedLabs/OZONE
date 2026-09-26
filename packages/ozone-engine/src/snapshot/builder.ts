@@ -20,6 +20,7 @@ import {
 import { DERIVED_SOURCES, SOURCES } from '../sources/registry.js';
 import { allEntries } from '../store/entries.js';
 import { isoOf } from '../store/db.js';
+import { TWIN_CATEGORIES } from '../policy.js';
 import type { Sql } from '../types.js';
 
 export const GENERATOR = 'ozone-engine/1.0.0';
@@ -43,6 +44,7 @@ export interface CollectedSnapshot {
 }
 
 const lower = (r: Risk): Risk => riskFromRank(Math.max(riskRank('low'), riskRank(r) - 1));
+
 
 export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {}): Promise<CollectedSnapshot> {
 	const withHistory = opts.history !== false;
@@ -86,7 +88,9 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 	let twins = 0;
 	if (opts.twins !== false) {
 		for (const e of entries) {
-			if (e.removed_at) continue;
+			// only strong listings: a twin of a medium-risk (phishing) entry would be
+			// low risk — never flagged by any sensible policy, just snapshot weight
+			if (e.removed_at || !TWIN_CATEGORIES.has(e.category)) continue;
 			const p = parseForChain(e.address, e.chain);
 			if (!p) continue;
 			for (const t of keyTwins(p)) {
@@ -179,6 +183,31 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 	}
 	if (tracedCount) sourceCounts.set('thorchain_trace', tracedCount);
 
+	// THORChain accounts linked to listed L1 addresses (computed by the user screening)
+	let linked = 0;
+	const users = await sql.query<{ thor_address: string; flag_detail: Array<{ via: string; code: string; source: string; risk: Risk; text: string }> | string | null }>(
+		`SELECT thor_address, flag_detail FROM rujira_users WHERE flag_detail IS NOT NULL AND thor_address LIKE 'thor1%'`
+	);
+	for (const u of users.rows) {
+		const detail = typeof u.flag_detail === 'string' ? JSON.parse(u.flag_detail) : u.flag_detail;
+		let any = false;
+		for (const d of detail ?? []) {
+			if (!d.code?.startsWith('LINKED_')) continue;
+			add(`thor:${u.thor_address}`, {
+				code: d.code,
+				source: 'thorchain_links',
+				category: 'linked',
+				risk: d.risk,
+				text: d.text,
+				chain: 'THOR',
+				refId: d.via
+			});
+			any = true;
+		}
+		if (any) linked++;
+	}
+	if (linked) sourceCounts.set('thorchain_links', linked);
+
 	// source descriptors (only sources referenced by reasons or known)
 	const dbSources = await sql.query<{ id: string; last_success_at: string | null; last_version: string | null }>(
 		`SELECT id, last_success_at, last_version FROM oz_sources`
@@ -214,6 +243,7 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 		listed: listedKeys.size,
 		traced: tracedCount,
 		twins,
+		linkedAccounts: linked,
 		keys: records.length
 	};
 	return { records, sources, stats };

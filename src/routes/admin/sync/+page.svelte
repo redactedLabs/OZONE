@@ -30,11 +30,17 @@
 
 	const syncTypeMap: Record<string, { name: string; triggerType: string; color: string; dbSource?: string }> = {
 		MIDGARD: { name: 'Members', triggerType: 'members', color: '#818cf8' },
-		OFAC: { name: 'OFAC SDN', triggerType: 'ofac', color: '#ef4444', dbSource: 'OFAC' },
-		EU: { name: 'EU Sanctions', triggerType: 'eu', color: '#3b82f6', dbSource: 'EU' },
-		HACK: { name: 'Known Hacks', triggerType: 'hacks', color: '#f59e0b', dbSource: 'HACK' },
-		TETHER: { name: 'Tether Frozen', triggerType: 'tether', color: '#26a17b', dbSource: 'TETHER' },
-		SCREEN: { name: 'Screening', triggerType: 'screening', color: '#6366f1', dbSource: 'SCREEN' },
+		'OZ:ofac_sdn': { name: 'OFAC SDN', triggerType: 'ofac', color: '#ef4444', dbSource: 'ofac_sdn' },
+		'OZ:uk_fcdo': { name: 'UK Sanctions', triggerType: 'uk', color: '#f87171', dbSource: 'uk_fcdo' },
+		'OZ:eu_fsf': { name: 'EU Sanctions', triggerType: 'eu', color: '#3b82f6', dbSource: 'eu_fsf' },
+		'OZ:fbi': { name: 'FBI / IC3', triggerType: 'fbi', color: '#dc2626', dbSource: 'fbi' },
+		'OZ:chainalysis_oracle': { name: 'Sanctions oracle', triggerType: 'oracle', color: '#10b981', dbSource: 'chainalysis_oracle' },
+		'OZ:curated': { name: 'Curated', triggerType: 'hacks', color: '#f59e0b', dbSource: 'curated' },
+		'OZ:tether': { name: 'Tether freezes', triggerType: 'tether', color: '#26a17b', dbSource: 'tether' },
+		'OZ:circle': { name: 'Circle blacklist', triggerType: 'circle', color: '#2775ca', dbSource: 'circle' },
+		'OZ:ethlabels': { name: 'eth-labels', triggerType: 'community', color: '#fb923c', dbSource: 'ethlabels' },
+		'OZ:scamsniffer': { name: 'ScamSniffer', triggerType: 'community', color: '#ec4899', dbSource: 'scamsniffer' },
+		'OZ:users': { name: 'User screening', triggerType: 'screening', color: '#6366f1' },
 		L1_DISCOVERY: { name: 'L1 Discovery', triggerType: 'l1-batch', color: '#10b981' },
 	};
 

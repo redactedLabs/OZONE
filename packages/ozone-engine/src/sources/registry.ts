@@ -260,6 +260,13 @@ export const DERIVED_SOURCES = [
 		description: 'Addresses funded by a hack cluster within its laundering window (value threshold, hop limit, services excluded).'
 	},
 	{
+		id: 'thorchain_links',
+		name: 'Linked THORChain accounts',
+		kind: 'derived' as const,
+		url: 'https://ozone.redacted.gg/methodology#users',
+		description: 'Monitored thor1 accounts whose Midgard history links them to a listed L1 address (one risk level lower; hubs and affiliate links ignored).'
+	},
+	{
 		id: 'key_twin',
 		name: 'Same-key addresses',
 		kind: 'derived' as const,

@@ -79,6 +79,9 @@ export async function screenUsers(sql: Sql, snap: SnapshotIndex, opts: UserScree
 	for (const thor of users) {
 		const reasons: UserVerdict['reasons'] = [];
 		for (const r of verdictReasons(thor)) {
+			// linked reasons in the snapshot come from the previous run of this
+			// function: recompute them from the links instead (no feedback loop)
+			if (r.category === 'linked') continue;
 			reasons.push({ via: thor, code: r.code, source: r.source, risk: r.risk, text: r.text });
 		}
 		const directMax = reasons.reduce((m, r) => Math.max(m, riskRank(r.risk)), 0);
@@ -106,7 +109,6 @@ export async function screenUsers(sql: Sql, snap: SnapshotIndex, opts: UserScree
 
 	// write back atomically: readers never see a half-updated flag set
 	await withTransaction(sql, async (tx) => {
-		await tx.query(`UPDATE rujira_users SET flagged = false, flag_reason = NULL, risk = NULL, flag_detail = NULL, screened_at = now()`);
 		await tx.query(`CREATE TEMP TABLE IF NOT EXISTS oz_user_verdicts (thor text PRIMARY KEY, flagged boolean, reason text, risk text, detail jsonb)`);
 		await tx.query(`DELETE FROM oz_user_verdicts`);
 		await batchInsert(
@@ -125,9 +127,16 @@ export async function screenUsers(sql: Sql, snap: SnapshotIndex, opts: UserScree
 				JSON.stringify(u.reasons)
 			])
 		);
+		// clear accounts that no longer have any reason (touch only those rows)
 		await tx.query(
-			`UPDATE rujira_users u SET flagged = v.flagged, flag_reason = v.reason, risk = v.risk, flag_detail = v.detail
-			 FROM oz_user_verdicts v WHERE u.thor_address = v.thor`
+			`UPDATE rujira_users SET flagged = false, flag_reason = NULL, risk = NULL, flag_detail = NULL, screened_at = now()
+			 WHERE (flagged OR flag_detail IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM oz_user_verdicts v WHERE v.thor = rujira_users.thor_address)`
+		);
+		// set the current verdicts (only rows whose verdict changed)
+		await tx.query(
+			`UPDATE rujira_users u SET flagged = v.flagged, flag_reason = v.reason, risk = v.risk, flag_detail = v.detail, screened_at = now()
+			 FROM oz_user_verdicts v WHERE u.thor_address = v.thor
+			   AND (u.flagged IS DISTINCT FROM v.flagged OR u.risk IS DISTINCT FROM v.risk OR u.flag_detail::text IS DISTINCT FROM v.detail::text)`
 		);
 		await tx.query(`DROP TABLE IF EXISTS oz_user_verdicts`);
 	});
