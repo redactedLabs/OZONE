@@ -119,8 +119,10 @@ Verification:
    where canonical JSON = keys sorted by UTF-16 code units, no whitespace,
    `undefined` members dropped (RFC 8785 style); verify with the pinned
    Ed25519 key whose id equals `signature.keyId`;
-2. download `payload.url` (relative to the manifest URL), check its size and
-   SHA-256 against the manifest;
+2. download `payload.url` (relative to the manifest URL) — or, when the
+   manifest lists `payload.parts` (large payloads; some hosts cap response
+   sizes), every part in order, checking each part's size and SHA-256 — and
+   check the total size and SHA-256 against the manifest;
 3. refuse a `version` lower than the one you hold (rollback) and a different
    `sha256` for the same version (equivocation);
 4. gunzip → JSON `format: "ozone.snapshot.v1"`, same `version`/`builtAt`.
@@ -159,7 +161,8 @@ cursor.
 ## 6. Mirrors
 
 Any static host can serve a snapshot: `latest.json` (the manifest) next to a
-`snapshot/<version>` file. Export one with
+`snapshot/<version>` file (and `snapshot/<version>.<n>` parts if the manifest
+lists parts). Export one with
 `npx tsx packages/ozone-engine/scripts/ozone.ts export <dir>`, or copy what
 a node cached (`<cacheDir>/manifest.json`, `payload-<version>.json.gz`).
 Authenticity comes from the signature, so nodes can mirror for each other.

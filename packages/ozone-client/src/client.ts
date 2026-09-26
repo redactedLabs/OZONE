@@ -11,6 +11,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parsePublicKey, type PublicKeyInfo } from './crypto.js';
+import { sha256Hex } from './encoding.js';
 import {
 	decodePayload,
 	SnapshotError,
@@ -234,6 +235,25 @@ export class OzoneClient {
 		}
 	}
 
+	/** The payload bytes, from one URL or from parts (each part hash-checked). */
+	private async fetchPayload(manifest: SnapshotManifestV1, manifestUrl: string): Promise<Uint8Array> {
+		const limit = this.opts.maxPayloadBytes ?? 64 * 1024 * 1024;
+		if (manifest.payload.size > limit) throw new SnapshotError('too_large', 'Snapshot larger than maxPayloadBytes');
+		const parts = manifest.payload.parts;
+		if (!parts?.length) return this.fetchWithTimeout(new URL(manifest.payload.url, manifestUrl).toString(), limit);
+		const out = new Uint8Array(manifest.payload.size);
+		let offset = 0;
+		for (const part of parts) {
+			const bytes = await this.fetchWithTimeout(new URL(part.url, manifestUrl).toString(), part.size);
+			if (bytes.length !== part.size || sha256Hex(bytes) !== part.sha256) {
+				throw new SnapshotError('hash_mismatch', 'Snapshot part hash mismatch');
+			}
+			out.set(bytes, offset);
+			offset += bytes.length;
+		}
+		return out;
+	}
+
 	/**
 	 * Fetches the newest manifest from the first mirror that answers with a
 	 * valid one; downloads and verifies the payload when it is newer.
@@ -260,8 +280,7 @@ export class OzoneClient {
 					this.opts.onEvent?.({ type: 'unchanged', version: manifest.version });
 					return false;
 				}
-				const payloadUrl = new URL(manifest.payload.url, url).toString();
-				const payload = await this.fetchWithTimeout(payloadUrl, this.opts.maxPayloadBytes ?? 64 * 1024 * 1024);
+				const payload = await this.fetchPayload(manifest, url);
 				const index = decodePayload(manifest, payload);
 				this.accept(index, 'network');
 				this.lastRefreshAt = this.clock();

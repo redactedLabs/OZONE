@@ -5,7 +5,7 @@
  * THORNode 3.20.3, 2026-09):
  * - the `address` filter is case-sensitive: EVM senders are stored
  *   lower-case, but memo destinations keep the case the user typed (usually
- *   EIP-55). EVM addresses are therefore queried in both forms;
+ *   EIP-55). Forward tracing queries the sender form (see queryForms);
  * - multi-address queries (`address=a,b`) time out at the gateway, so every
  *   address is queried on its own;
  * - pagination is by `nextPageToken` (newest first).

@@ -96,7 +96,17 @@ export interface SnapshotManifestV1 {
 	format: typeof MANIFEST_FORMAT;
 	version: number;
 	builtAt: string;
-	payload: { sha256: string; size: number; encoding: 'gzip'; url: string };
+	payload: {
+		sha256: string;
+		size: number;
+		encoding: 'gzip';
+		url: string;
+		/**
+		 * Present when the payload is served in parts (hosts with a response
+		 * size limit): download all, check each hash, concatenate in order.
+		 */
+		parts?: Array<{ url: string; size: number; sha256: string }>;
+	};
 	counts: { keys: number; listed: number; traced: number; reasons: number };
 	sources: Array<{ id: string; entries: number; lastSuccessAt?: string }>;
 	/** Previous snapshot (version + payload hash), for audit chains. */
@@ -148,6 +158,18 @@ export function verifyManifest(manifest: unknown, trusted: PublicKeyInfo[]): Sna
 		typeof m.payload.url !== 'string'
 	) {
 		throw new SnapshotError('bad_manifest', 'Invalid payload descriptor');
+	}
+	if (m.payload.parts !== undefined) {
+		const parts = m.payload.parts;
+		if (
+			!Array.isArray(parts) ||
+			parts.length === 0 ||
+			parts.length > 64 ||
+			parts.some((p) => !isObj(p) || typeof p.url !== 'string' || !Number.isSafeInteger(p.size) || typeof p.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(p.sha256)) ||
+			parts.reduce((n, p) => n + p.size, 0) !== m.payload.size
+		) {
+			throw new SnapshotError('bad_manifest', 'Invalid payload parts');
+		}
 	}
 	if (!m.signature) throw new SnapshotError('bad_signature', 'Manifest is not signed');
 	if (!trusted.some((k) => k.keyId === m.signature?.keyId)) {

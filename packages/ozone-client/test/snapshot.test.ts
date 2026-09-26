@@ -282,6 +282,29 @@ describe('OzoneClient', () => {
 		started.stop();
 	});
 
+	it('downloads a payload served in parts and rejects a corrupted part', async () => {
+		const snap = buildSnapshot({ version: 1_790_000_000, builtAt: new Date(1_790_000_000_000).toISOString(), sources: SOURCES, records: records(), payloadUrl: './s/1790000000', partSize: 200 }, key);
+		expect(snap.manifest.payload.parts!.length).toBeGreaterThan(1);
+		let corrupt = false;
+		const fetchImpl = (async (input: string | URL | Request) => {
+			const u = new URL(String(input));
+			if (u.pathname.endsWith('/latest.json')) return new Response(JSON.stringify(snap.manifest));
+			const m = /\/s\/1790000000\.(\d+)$/.exec(u.pathname);
+			if (!m) return new Response('no', { status: 404 });
+			const p = snap.manifest.payload.parts![Number(m[1])];
+			const off = snap.manifest.payload.parts!.slice(0, Number(m[1])).reduce((n, x) => n + x.size, 0);
+			const bytes = new Uint8Array(snap.payload.subarray(off, off + p.size));
+			if (corrupt && m[1] === '1') bytes[0] ^= 1;
+			return new Response(bytes.buffer as ArrayBuffer);
+		}) as typeof fetch;
+		const c = new OzoneClient({ trustedKeys: trusted, manifestUrls: ['https://mirror.example/ozone/latest.json'], fetch: fetchImpl });
+		expect(await c.refresh()).toBe(true);
+		expect(c.screen('0x098b716b8aaf21512996dc57eb0615e2383e2f96').status).toBe('flagged');
+		corrupt = true;
+		const c2 = new OzoneClient({ trustedKeys: trusted, manifestUrls: ['https://mirror.example/ozone/latest.json'], fetch: fetchImpl });
+		await expect(c2.refresh()).rejects.toThrow(/refresh failed/);
+	});
+
 	it('refuses plain-http remote mirrors and empty key sets', () => {
 		expect(() => new OzoneClient({ trustedKeys: trusted, manifestUrls: ['http://evil.example/snap'] })).toThrowError(/https/);
 		expect(() => new OzoneClient({ trustedKeys: [] })).toThrowError(/trusted key/);

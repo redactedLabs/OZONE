@@ -144,8 +144,14 @@ async function main() {
 			if (!latest) throw new Error('no snapshot');
 			mkdirSync(join(dir, 'snapshot'), { recursive: true });
 			writeFileSync(join(dir, 'latest.json'), JSON.stringify(latest.manifest, null, 2));
-			writeFileSync(join(dir, 'snapshot', String(latest.version)), (await snapshotPayload(sql, latest.version))!);
-			console.log(`wrote ${dir}/latest.json and snapshot/${latest.version}`);
+			const payload = (await snapshotPayload(sql, latest.version))!;
+			writeFileSync(join(dir, 'snapshot', String(latest.version)), payload);
+			let off = 0;
+			(latest.manifest.payload.parts ?? []).forEach((p, i) => {
+				writeFileSync(join(dir, 'snapshot', `${latest.version}.${i}`), payload.subarray(off, off + p.size));
+				off += p.size;
+			});
+			console.log(`wrote ${dir}/latest.json and snapshot/${latest.version}${latest.manifest.payload.parts ? ` (+${latest.manifest.payload.parts.length} parts)` : ''}`);
 			break;
 		}
 		default:

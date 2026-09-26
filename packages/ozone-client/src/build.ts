@@ -31,6 +31,12 @@ export interface BuildInput {
 	stats?: Record<string, number>;
 	/** Payload URL written into the manifest (relative to the manifest URL). Default `./<version>`. */
 	payloadUrl?: string;
+	/**
+	 * Split the payload into parts of at most this many bytes when it is
+	 * larger (for hosts with a response size limit, e.g. 4.5 MB on Vercel).
+	 * Part URLs are `<payloadUrl>.<index>` (static-host friendly).
+	 */
+	partSize?: number;
 	prev?: { version: number; sha256: string };
 }
 
@@ -157,6 +163,14 @@ export function buildSnapshot(input: BuildInput, signingKey?: PrivateKeyInfo): B
 		...(input.stats ? { stats: input.stats } : {})
 	};
 	const payload = new Uint8Array(gzipSync(Buffer.from(canonicalJson(json), 'utf8'), { level: 9 }));
+	const payloadUrl = input.payloadUrl ?? `./${input.version}`;
+	const parts: Array<{ url: string; size: number; sha256: string }> = [];
+	if (input.partSize && payload.length > input.partSize) {
+		for (let off = 0, i = 0; off < payload.length; off += input.partSize, i++) {
+			const chunk = payload.subarray(off, Math.min(payload.length, off + input.partSize));
+			parts.push({ url: `${payloadUrl}.${i}`, size: chunk.length, sha256: sha256Hex(chunk) });
+		}
+	}
 	const unsigned: SnapshotManifestV1 = {
 		format: MANIFEST_FORMAT,
 		version: input.version,
@@ -165,7 +179,8 @@ export function buildSnapshot(input: BuildInput, signingKey?: PrivateKeyInfo): B
 			sha256: sha256Hex(payload),
 			size: payload.length,
 			encoding: 'gzip',
-			url: input.payloadUrl ?? `./${input.version}`
+			url: payloadUrl,
+			...(parts.length ? { parts } : {})
 		},
 		counts: { keys: records.length, listed, traced, reasons: reasonCount },
 		sources: input.sources.map((src) => ({

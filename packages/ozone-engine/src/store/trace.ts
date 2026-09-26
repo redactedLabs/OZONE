@@ -181,10 +181,19 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 	return index;
 }
 
-/** Midgard query strings for a key (EVM: lower-case and EIP-55; BCH: with and without prefix). */
-export function queryForms(key: string, checksum: (a: string) => string): string[] {
+/**
+ * Midgard query strings for a key. Midgard's address filter is
+ * case-sensitive: EVM *senders* are stored lower-case (as observed on
+ * chain) while memo *destinations* keep the case the user typed (usually
+ * EIP-55). Forward tracing only needs the actions an address *sends*, so the
+ * canonical sender form is enough by default; `allForms` also returns the
+ * destination spellings (EIP-55, `bitcoincash:` prefix) for full-history
+ * lookups.
+ */
+export function queryForms(key: string, checksum: (a: string) => string, allForms = false): string[] {
 	const k = splitKey(key);
 	if (!k) return [];
+	if (!allForms) return [k.address];
 	if (k.namespace === 'evm') return [...new Set([k.address, checksum(k.address)])];
 	if (k.namespace === 'bch') return [k.address, `bitcoincash:${k.address}`];
 	return [k.address];

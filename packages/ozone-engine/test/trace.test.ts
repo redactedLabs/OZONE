@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { afterAll, describe, expect, it } from 'vitest';
 import { applySourceResult } from '../src/store/entries.js';
-import { loadTraceIndex, pendingChecks, recordHits } from '../src/store/trace.js';
+import { loadTraceIndex, pendingChecks, queryForms, recordHits } from '../src/store/trace.js';
+import { toChecksumAddress } from '../src/util/evm.js';
 import { extractFlows } from '../src/trace/flows.js';
 import { runRealtimeTick, runTraceBackfill } from '../src/trace/jobs.js';
 import type { MidgardAction } from '../src/trace/midgard.js';
@@ -147,7 +148,7 @@ describe('trace store + backfill against an embedded Postgres', async () => {
 		...extra
 	});
 
-	it('backfills history: queries EVM seeds in both cases, flags hop 1, then follows hop 2', async () => {
+	it('backfills history: queries the sender form, flags hop 1, then follows hop 2', async () => {
 		const res = emptyResult();
 		res.entries.push(entry(`evm:${EXPLOITER_65}`, EXPLOITER_65));
 		await applySourceResult(sql, { id: 'ethlabels', name: 'eth-labels', kind: 'community' }, res);
@@ -161,8 +162,13 @@ describe('trace store + backfill against an embedded Postgres', async () => {
 		const r = await runTraceBackfill(sql, midgard);
 		expect(r.errors).toBe(0);
 		expect(r.traced).toBe(2);
-		// the checksummed form was queried too (Midgard is case-sensitive)
-		expect(midgard.requests.some((q) => q !== q.toLowerCase() && q.toLowerCase() === EXPLOITER_65)).toBe(true);
+		// senders are stored lower-case by Midgard: that form is what forward tracing needs
+		expect(midgard.requests).toContain(EXPLOITER_65);
+		expect(queryForms(`evm:${EXPLOITER_65}`, toChecksumAddress, true)).toEqual([EXPLOITER_65, toChecksumAddress(EXPLOITER_65)]);
+		expect(queryForms('bch:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a', toChecksumAddress, true)).toEqual([
+			'qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a',
+			'bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a'
+		]);
 
 		const traced = await sql.query<{ key: string; hop: number; risk: string; first_txid: string }>(`SELECT key, hop, risk, first_txid FROM oz_traced ORDER BY hop`);
 		expect(traced.rows.map((t) => [t.key, t.hop, t.risk])).toEqual([

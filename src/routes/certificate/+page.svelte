@@ -337,6 +337,7 @@
 					<p class="text-xs font-mono mb-4" style="color: var(--text-muted);">{address}</p>
 					<p class="text-sm mb-6" style="color: var(--text-secondary);">
 						Risk <strong>{result.risk}</strong> — {result.matches.length} {result.matches.length === 1 ? 'reason' : 'reasons'}. The certificate {certId} records this result.
+						All evidence: <a href="/api/v1/address/{encodeURIComponent(address)}" target="_blank" rel="noopener" style="color: var(--app-accent);">listings and THORChain flows</a>.
 						If you believe this is wrong, <a href="/submit?kind=appeal&address={encodeURIComponent(address)}" style="color: var(--app-accent);">file an appeal</a>.
 					</p>
 					<div class="space-y-2 text-left max-w-md mx-auto">

@@ -259,7 +259,7 @@ export interface StoredSnapshot {
 export async function buildAndStoreSnapshot(
 	sql: Sql,
 	key: PrivateKeyInfo,
-	opts: SnapshotBuildOptions & { keep?: number } = {}
+	opts: SnapshotBuildOptions & { keep?: number; partSize?: number } = {}
 ): Promise<StoredSnapshot> {
 	const now = opts.now ?? new Date();
 	const prev = await sql.query<{ version: string; sha256: string }>(`SELECT version, sha256 FROM oz_snapshots ORDER BY version DESC LIMIT 1`);
@@ -276,6 +276,8 @@ export async function buildAndStoreSnapshot(
 			records: collected.records,
 			stats: collected.stats,
 			payloadUrl: `./snapshot/${version}`,
+			// Vercel functions answer at most 4.5 MB: larger payloads are served in parts
+			partSize: opts.partSize ?? 3_500_000,
 			...(prev.rows[0] ? { prev: { version: prevVersion, sha256: prev.rows[0].sha256 } } : {})
 		},
 		key

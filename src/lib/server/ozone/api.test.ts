@@ -116,6 +116,36 @@ describe('API routes', () => {
 		await expect(other.refresh()).rejects.toThrow();
 	});
 
+	it('address explanation lists every listing with provenance', async () => {
+		const { GET } = await import('../../../routes/api/v1/address/[address]/+server');
+		const res = await call(GET as Handler, {
+			url: '/api/v1/address/0x098B716B8Aaf21512996dC57EB0615e2383E2f96',
+			params: { address: '0x098B716B8Aaf21512996dC57EB0615e2383E2f96' }
+		});
+		const body = await res.json();
+		expect(body.verdict.status).toBe('flagged');
+		expect(body.listings[0]).toMatchObject({ source: 'ofac_sdn', entity: 'LAZARUS GROUP', ref_url: 'https://sanctionssearch.ofac.treas.gov/Details.aspx?id=27307' });
+		const bad = await call(GET as Handler, { url: '/api/v1/address/nope', params: { address: 'nope' } });
+		expect(bad.status).toBe(400);
+	});
+
+	it('serves large payloads in parts (host response limits) that the client reassembles', async () => {
+		await publishSnapshot(holder.sql!, snapKey, { partSize: 1024 });
+		const manifestRoute = await import('../../../routes/api/v1/snapshot/+server');
+		const payloadRoute = await import('../../../routes/api/v1/snapshot/[version]/+server');
+		const manifest = await (await call(manifestRoute.GET as Handler, { url: '/api/v1/snapshot' })).json();
+		expect(manifest.payload.parts.length).toBeGreaterThan(1);
+		const fakeFetch = (async (input: string | URL | Request) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/snapshot') return call(manifestRoute.GET as Handler, { url: url.toString() });
+			return call(payloadRoute.GET as Handler, { url: url.toString(), params: { version: url.pathname.split('/').pop()! } });
+		}) as typeof fetch;
+		const client = new OzoneClient({ trustedKeys: [snapKey.publicKey.spec], manifestUrls: ['https://ozone.test/api/v1/snapshot'], fetch: fakeFetch });
+		await client.refresh();
+		expect(client.info()?.version).toBe(String(manifest.version));
+		expect(client.screen('0x098b716b8aaf21512996dc57eb0615e2383e2f96').status).toBe('flagged');
+	});
+
 	it('health reports snapshot age and sources', async () => {
 		const { GET } = await import('../../../routes/api/health/+server');
 		const res = await call(GET as Handler, { url: '/api/health' });
