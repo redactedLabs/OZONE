@@ -3,7 +3,7 @@ import pg from 'pg';
 import * as schema from './schema';
 import { env } from '$env/dynamic/private';
 
-const pool = new pg.Pool({
+export const pool = new pg.Pool({
 	connectionString: env.DATABASE_URL
 });
 

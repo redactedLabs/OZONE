@@ -1,0 +1,172 @@
+/**
+ * Tracing jobs: history backfill (per flagged address, highest risk first)
+ * and the real-time follower (new THORChain actions since a cursor).
+ */
+import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recordHits, setState } from '../store/trace.js';
+import type { Logger, Sql } from '../types.js';
+import { silentLogger } from '../types.js';
+import { toChecksumAddress } from '../util/evm.js';
+import type { MidgardLike as Midgard } from './midgard.js';
+import { loadPoolPrices, type PriceOracle } from './prices.js';
+import { DEFAULT_TRACE_CONFIG, traceAction, type IndexEntry, type TraceConfig, type TraceHit } from './tracer.js';
+
+/** An address with more THORChain actions than this is treated as a service and not propagated. */
+export const SERVICE_ACTIONS = 2000;
+
+export interface BackfillOptions {
+	cfg?: TraceConfig;
+	prices?: PriceOracle;
+	logger?: Logger;
+	/** Stop after this many addresses (per call). */
+	maxAddresses?: number;
+	/** Stop after this long (ms). */
+	timeBudgetMs?: number;
+	/** Only check keys matching this predicate (e.g. a single incident). */
+	filter?: (key: string, e: IndexEntry) => boolean;
+	/** Parallel address checks (each is rate-limited by the Midgard client). */
+	concurrency?: number;
+}
+
+export interface BackfillResult {
+	checked: number;
+	actions: number;
+	hits: number;
+	traced: number;
+	services: number;
+	errors: number;
+	remaining: number;
+}
+
+function dedupe(hits: TraceHit[]): TraceHit[] {
+	const seen = new Set<string>();
+	return hits.filter((h) => {
+		const id = `${h.txid}|${h.fromKey}|${h.toKey}`;
+		if (seen.has(id)) return false;
+		seen.add(id);
+		return true;
+	});
+}
+
+export async function checkAddress(
+	midgard: Midgard,
+	key: string,
+	fromHeight: number,
+	lookup: (key: string) => IndexEntry | undefined,
+	prices: PriceOracle | undefined,
+	cfg: TraceConfig
+): Promise<{ hits: TraceHit[]; actions: number; maxHeight: number; service: boolean }> {
+	const hits: TraceHit[] = [];
+	let actions = 0;
+	let maxHeight = fromHeight;
+	let service = false;
+	const seenActions = new Set<string>();
+	for (const form of queryForms(key, toChecksumAddress)) {
+		let n = 0;
+		for await (const a of midgard.actionsForAddress(form, { fromHeight, maxPages: SERVICE_ACTIONS / 50 + 1 })) {
+			n++;
+			const id = `${a.height}|${a.type}|${a.in[0]?.txID ?? ''}|${a.out[0]?.address ?? ''}`;
+			if (seenActions.has(id)) continue;
+			seenActions.add(id);
+			actions++;
+			maxHeight = Math.max(maxHeight, Number(a.height));
+			hits.push(...traceAction(a, lookup, prices, cfg));
+		}
+		if (n >= SERVICE_ACTIONS) service = true;
+	}
+	return { hits: dedupe(hits), actions, maxHeight, service };
+}
+
+export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: BackfillOptions = {}): Promise<BackfillResult> {
+	const cfg = opts.cfg ?? DEFAULT_TRACE_CONFIG;
+	const log = opts.logger ?? silentLogger;
+	const prices = opts.prices ?? (await loadPoolPrices(midgard).catch(() => undefined));
+	const deadline = Date.now() + (opts.timeBudgetMs ?? Infinity);
+	const maxAddresses = opts.maxAddresses ?? Infinity;
+	const res: BackfillResult = { checked: 0, actions: 0, hits: 0, traced: 0, services: 0, errors: 0, remaining: 0 };
+	const attempted = new Set<string>();
+	for (;;) {
+		const index = await loadTraceIndex(sql);
+		let tasks = (await pendingChecks(sql, index, cfg.maxHops, 5000)).filter((t) => !attempted.has(t.key));
+		if (opts.filter) tasks = tasks.filter((t) => opts.filter!(t.key, index.get(t.key)!));
+		res.remaining = tasks.length;
+		if (!tasks.length || Date.now() > deadline || res.checked >= maxAddresses) break;
+		const round = tasks.slice(0, Math.min(tasks.length, maxAddresses - res.checked, 500));
+		for (const t of round) attempted.add(t.key);
+		const lookup = (k: string) => index.get(k);
+		let cursor = 0;
+		const worker = async () => {
+			while (cursor < round.length && Date.now() <= deadline) {
+				const task = round[cursor++];
+				try {
+					const r = await checkAddress(midgard, task.key, task.fromHeight, lookup, prices, cfg);
+					if (r.hits.length) {
+						const rec = await recordHits(sql, r.hits);
+						res.hits += rec.edges;
+						res.traced += rec.traced;
+						log.info(`trace ${task.key}: ${r.actions} actions, ${r.hits.length} flows flagged`);
+					}
+					res.actions += r.actions;
+					res.checked++;
+					if (r.service) res.services++;
+					await markChecked(sql, task.key, r.service ? 'service' : 'done', { height: r.maxHeight, actions: r.actions });
+				} catch (e) {
+					res.errors++;
+					await markChecked(sql, task.key, 'error', { error: (e as Error).message });
+					log.warn(`trace ${task.key} failed: ${(e as Error).message}`);
+				}
+			}
+		};
+		await Promise.all(Array.from({ length: Math.max(1, opts.concurrency ?? 2) }, worker));
+		if (Date.now() > deadline) break;
+	}
+	return res;
+}
+
+export interface RealtimeResult {
+	processed: number;
+	hits: number;
+	traced: number;
+	from: number;
+	to: number;
+	complete: boolean;
+}
+
+/** Processes THORChain actions newer than the stored cursor. */
+export async function runRealtimeTick(
+	sql: Sql,
+	midgard: Midgard,
+	opts: { cfg?: TraceConfig; prices?: PriceOracle; maxPages?: number; index?: Map<string, IndexEntry> } = {}
+): Promise<RealtimeResult> {
+	const cfg = opts.cfg ?? DEFAULT_TRACE_CONFIG;
+	const state = await getState<{ height: number }>(sql, 'trace:realtime');
+	let from = state?.height ?? 0;
+	if (!from) {
+		// first run: start at the current head (history is the backfill's job)
+		const head = await midgard.actions({ limit: 1 });
+		from = Number(head.actions[0]?.height ?? 0);
+		await setState(sql, 'trace:realtime', { height: from });
+		return { processed: 0, hits: 0, traced: 0, from, to: from, complete: true };
+	}
+	const { actions, complete, head } = await midgard.actionsSince(from, opts.maxPages ?? 40);
+	const index = opts.index ?? (await loadTraceIndex(sql));
+	const hits = dedupe(actions.flatMap((a) => traceAction(a, (k) => index.get(k), opts.prices, cfg)));
+	const rec = await recordHits(sql, hits);
+	const to = complete ? head : Math.max(from, ...actions.map((a) => Number(a.height)));
+	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { gapFrom: from }) });
+	if (!complete) {
+		// the follower fell behind: make every flagged address re-read its history from `from`
+		await sql.query(`UPDATE oz_trace_checked SET status = 'pending' WHERE status = 'done'`);
+	}
+	return { processed: actions.length, hits: rec.edges, traced: rec.traced, from, to, complete };
+}
+
+/** Marks every checked address for an incremental re-read (e.g. daily). */
+export async function scheduleRecheck(sql: Sql, olderThanMs: number): Promise<number> {
+	const r = await sql.query<{ n: number }>(
+		`WITH u AS (UPDATE oz_trace_checked SET status = 'pending'
+		   WHERE status IN ('done','error') AND checked_at < now() - ($1::text || ' milliseconds')::interval RETURNING 1)
+		 SELECT count(*)::int AS n FROM u`,
+		[String(olderThanMs)]
+	);
+	return r.rows[0]?.n ?? 0;
+}

@@ -7,6 +7,7 @@ const PROTECTED_ROUTES = [
 	'/api/sync/members',
 	'/api/sync/addresses',
 	'/api/sync/compliance',
+	'/api/cron',
 	'/api/admin',
 	'/admin',
 ];

@@ -1,0 +1,308 @@
+[
+{
+"address": "0x09278b36863be4ccd3d0c22d643e8062d7a11377",
+"chainId": 1,
+"label": "bybit-exploit",
+"nameTag": "Bybit Exploiter 33"
+},
+{
+"address": "0x0a3b4bde9116a950a036204bf0d7a16d285f8995",
+"chainId": 1,
+"label": "bybit-exploit",
+"nameTag": "Bybit Exploiter 56"
+},
+{
+"address": "0x0c014567daff377c36e032a2593f9f1177f77750",
+"chainId": 1,
+"label": "bybit-exploit",
+"nameTag": "Bybit Exploiter 58"
+},
+{
+"address": "0x0e8c1e2881f35ef20343264862a242fb749d6b35",
+"chainId": 1,
+"label": "bybit-exploit",
+"nameTag": "Bybit Exploiter 14"
+},
+{
+"address": "0x000000000000be0ab658f92dddac29d6df19a3be",
+"chainId": 10,
+"label": "exploit",
+"nameTag": "Exactly Protocol Exploiter 4"
+},
+{
+"address": "0x00000000002088951336d7972746a135f2956417",
+"chainId": 10,
+"label": "exploit",
+"nameTag": "Exactly Protocol Exploiter 3"
+},
+{
+"address": "0x155da45d374a286d383839b1ef27567a15e67528",
+"chainId": 10,
+"label": "exploit",
+"nameTag": "HundredFinance Exploiter"
+},
+{
+"address": "0x3747dbbcb5c07786a4c59883e473a2e38f571af9",
+"chainId": 10,
+"label": "exploit",
+"nameTag": "Exactly Protocol Exploiter"
+},
+{
+"address": "0x03ccb56ffc86ef711545f44303ceeb44f7dfd1ed",
+"chainId": 56,
+"label": "heist",
+"nameTag": "Fake_Phishing139"
+},
+{
+"address": "0x0acc0e5faa09cb1976237c3a9af3d3d4b2f35fa5",
+"chainId": 56,
+"label": "heist",
+"nameTag": "bZx PrivKey Exploiter 2"
+},
+{
+"address": "0x0d6e286a7cfd25e0c01fee9756765d8033b32c71",
+"chainId": 56,
+"label": "heist",
+"nameTag": "PolyNetwork Exploiter"
+},
+{
+"address": "0x0e61b4aec4d8fe53fb2de64e268bf20b5e6b0e07",
+"chainId": 56,
+"label": "heist",
+"nameTag": "Jumpn: JUT Token"
+},
+{
+"address": "0x0000000000d67e5d5f991a40f04ed40fa3b150df",
+"chainId": 10,
+"label": "phish-hack",
+"nameTag": "Fake_Phishing62"
+},
+{
+"address": "0x0000028989b636b15f5e164e039814ff61000000",
+"chainId": 10,
+"label": "phish-hack",
+"nameTag": "Fake_Phishing47"
+},
+{
+"address": "0x00000734f1ba0bd1d0317a6dd519ca712ce00000",
+"chainId": 10,
+"label": "phish-hack",
+"nameTag": "Fake_Phishing51"
+},
+{
+"address": "0x00000952c5165e391ed0f8adffcfaf45f3b80000",
+"chainId": 10,
+"label": "phish-hack",
+"nameTag": "Fake_Phishing59"
+},
+{
+"address": "0x139ae647499d762b2c589670be7546298c66f821",
+"chainId": 56,
+"label": "scam",
+"nameTag": "Fake_Phishing454"
+},
+{
+"address": "0xa24155e615136363c8c5af4ecde325948621a0af",
+"chainId": 56,
+"label": "scam",
+"nameTag": "Fake_Phishing462"
+},
+{
+"address": "0xac2eeb78f25ac8f19e3097a9dbab102c27dffa8e",
+"chainId": 56,
+"label": "scam",
+"nameTag": "Fake_Phishing459"
+},
+{
+"address": "0xb524a9a21702813f8ea7a79c16afcb5fb4660544",
+"chainId": 56,
+"label": "scam",
+"nameTag": "Fake_Phishing1723"
+},
+{
+"address": "0x04dba1194ee10112fe6c3207c0687def0e78bacf",
+"chainId": 1,
+"label": "ofac-sanctioned",
+"nameTag": "OFAC Blocked: 0x04D...aCf"
+},
+{
+"address": "0x08723392ed15743cc38513c4925f5e6be5c17243",
+"chainId": 1,
+"label": "ofac-sanctioned",
+"nameTag": "OFAC Blocked: 0x087...243"
+},
+{
+"address": "0x08b2efdcdb8822efe5ad0eae55517cf5dc544251",
+"chainId": 1,
+"label": "ofac-sanctioned",
+"nameTag": "OFAC Blocked: 0x08b...251"
+},
+{
+"address": "0x098b716b8aaf21512996dc57eb0615e2383e2f96",
+"chainId": 1,
+"label": "ofac-sanctioned",
+"nameTag": "Ronin Bridge Exploiter"
+},
+{
+"address": "0x03893a7c7463ae47d46bc7f091665f1893656003",
+"chainId": 1,
+"label": "ofac-sanctions-lists",
+"nameTag": "Tornado.Cash: 50,000 cDAI 2"
+},
+{
+"address": "0x07687e702b410fa43f4cb4af7fa097918ffd2730",
+"chainId": 1,
+"label": "ofac-sanctions-lists",
+"nameTag": "Tornado.Cash: 10,000 DAI 2"
+},
+{
+"address": "0x0836222f2b2b24a3f36f98668ed8f0b38d1a872f",
+"chainId": 1,
+"label": "ofac-sanctions-lists",
+"nameTag": "Tornado.Cash: 1,000 USDT"
+},
+{
+"address": "0x08723392ed15743cc38513c4925f5e6be5c17243",
+"chainId": 1,
+"label": "ofac-sanctions-lists",
+"nameTag": null
+},
+{
+"address": "0x00d5ec4cdf59374b2a47e842b799027356eac02b",
+"chainId": 1,
+"label": "tornado-cash",
+"nameTag": "Tornado.Cash: Team 2 Vesting"
+},
+{
+"address": "0x03893a7c7463ae47d46bc7f091665f1893656003",
+"chainId": 1,
+"label": "tornado-cash",
+"nameTag": "Tornado.Cash: 50,000 cDAI 2"
+},
+{
+"address": "0x07687e702b410fa43f4cb4af7fa097918ffd2730",
+"chainId": 1,
+"label": "tornado-cash",
+"nameTag": "Tornado.Cash: 10,000 DAI 2"
+},
+{
+"address": "0x0836222f2b2b24a3f36f98668ed8f0b38d1a872f",
+"chainId": 1,
+"label": "tornado-cash",
+"nameTag": "Tornado.Cash: 1,000 USDT"
+},
+{
+"address": "0x0e8cf9bead36ee59a63a16672d024888b057f864",
+"chainId": 1,
+"label": "cpimp-attack",
+"nameTag": "Compromised: 0x0e8...864"
+},
+{
+"address": "0x1346b4d6867a382b02b19a8d131d9b96b18585f2",
+"chainId": 1,
+"label": "cpimp-attack",
+"nameTag": "Compromised: 0x134...5f2"
+},
+{
+"address": "0x2dd7ab5b274b77f85302badd591f65d1771b3e3e",
+"chainId": 1,
+"label": "cpimp-attack",
+"nameTag": "Compromised: 0x2dd...e3e"
+},
+{
+"address": "0x31fa60d6ff9f8ae536e790ebf885435be9053116",
+"chainId": 1,
+"label": "cpimp-attack",
+"nameTag": "Compromised: 0x31f...116"
+},
+{
+"address": "0x0000000000000000000000000000000000000000",
+"chainId": 1,
+"label": "blocked",
+"nameTag": "Null: 0x000...000"
+},
+{
+"address": "0x0000000000000000000000000000000000000001",
+"chainId": 1,
+"label": "blocked",
+"nameTag": "Null: 0x000...001"
+},
+{
+"address": "0x0000000000000000000000000000000000000018",
+"chainId": 1,
+"label": "blocked",
+"nameTag": null
+},
+{
+"address": "0x0000000000000000000000000000000000000018",
+"chainId": 1,
+"label": "blocked",
+"nameTag": null
+},
+{
+"address": "0x72a53cdbbcc1b9efa39c834a540550e23463aacb",
+"chainId": 10,
+"label": "exchange",
+"nameTag": "Crypto.com"
+},
+{
+"address": "0xacd03d601e5bb1b275bb94076ff46ed9d753435a",
+"chainId": 10,
+"label": "exchange",
+"nameTag": "Binance 1"
+},
+{
+"address": "0x01c952174c24e1210d26961d456a77a39e1f0bb0",
+"chainId": 56,
+"label": "exchange",
+"nameTag": "Binance Hot Wallet 10"
+},
+{
+"address": "0x0211f3cedbef3143223d3acf0e589747933e8527",
+"chainId": 56,
+"label": "exchange",
+"nameTag": "mexc.com 2"
+},
+{
+"address": "0x00768bc9f9a2347579ad331e80e9b80c76f4c891",
+"chainId": 1,
+"label": "filament-exploit",
+"nameTag": "Filament Exploiter 48"
+},
+{
+"address": "0x0083a444502df7e3bb6516c0cfd92a60b6bfecd8",
+"chainId": 1,
+"label": "filament-exploit",
+"nameTag": "Filament Exploiter 45"
+},
+{
+"address": "0x057a3b930702c30e73c309b38a39fd54b468fd83",
+"chainId": 1,
+"label": "filament-exploit",
+"nameTag": "Filament Exploiter 23"
+},
+{
+"address": "0x05d3db345dd039673e2d0ce57e3da9ae4ce8e131",
+"chainId": 1,
+"label": "filament-exploit",
+"nameTag": "Filament Exploiter 95"
+},
+{
+"address": "0x363908df2b0890e7e5c1e403935133094287d7d1",
+"chainId": 1,
+"label": "bybit-exploit",
+"nameTag": "Fake_Phishing936357"
+},
+{
+"address": "0x70ea8c85608bee0b18fb5c547b95f28335d63eea",
+"chainId": 1,
+"label": "bybit-exploit",
+"nameTag": "Bybit Exploiter 75"
+},
+{
+"address": "0xb21e59b3d4e4d6c5247325dc5fbedbc89afc69f4",
+"chainId": 1,
+"label": "bybit-exploit",
+"nameTag": "Bybit Exploiter 65"
+}
+]

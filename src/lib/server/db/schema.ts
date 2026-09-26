@@ -1,13 +1,22 @@
 import {
 	pgTable,
 	serial,
+	bigserial,
+	bigint,
 	text,
 	timestamp,
 	boolean,
 	integer,
 	jsonb,
+	numeric,
+	customType,
+	index,
+	unique,
 	uniqueIndex
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' });
 
 export const complianceEntries = pgTable('compliance_entries', {
 	id: serial('id').primaryKey(),
@@ -30,7 +39,10 @@ export const rujiraUsers = pgTable('rujira_users', {
 	screenedAt: timestamp('screened_at'),
 	l1FetchedAt: timestamp('l1_fetched_at'),
 	flagged: boolean('flagged').default(false),
-	flagReason: text('flag_reason')
+	flagReason: text('flag_reason'),
+	// ozone-next: risk level and structured reasons (see packages/ozone-engine/src/screen/users.ts)
+	risk: text('risk'),
+	flagDetail: jsonb('flag_detail')
 });
 
 export const l1Addresses = pgTable('l1_addresses', {
@@ -80,6 +92,11 @@ export const certificates = pgTable('certificates', {
 	flagged: boolean('flagged').default(false),
 	sourcesChecked: integer('sources_checked').default(8),
 	issuedAt: timestamp('issued_at').defaultNow(),
+	// ozone-next: server-computed verdict + signed certificate document
+	chain: text('chain'),
+	risk: text('risk'),
+	snapshotVersion: bigint('snapshot_version', { mode: 'number' }),
+	document: jsonb('document')
 });
 
 // Shareable transaction reports
@@ -168,4 +185,166 @@ export const privacySnapshots = pgTable('privacy_snapshots', {
 	cumulativeVolumeUsd: text('cumulative_volume_usd'),
 	cumulativeVolumeAssets: jsonb('cumulative_volume_assets').$type<Array<{ asset: string; amount: number }>>(),
 	createdAt: timestamp('created_at').defaultNow()
+});
+
+// ---------------------------------------------------------------------------
+// ozone-next tables. The SQL source of truth (idempotent, additive) is
+// packages/ozone-engine/migrations/0001_ozone_next.sql; these definitions keep
+// `drizzle-kit push` and typed queries in sync with it.
+// ---------------------------------------------------------------------------
+
+export const ozSources = pgTable('oz_sources', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	kind: text('kind').notNull(),
+	url: text('url'),
+	lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+	lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+	lastError: text('last_error'),
+	lastVersion: text('last_version'),
+	activeCount: integer('active_count').notNull().default(0),
+	removedCount: integer('removed_count').notNull().default(0),
+	rejectedCount: integer('rejected_count').notNull().default(0),
+	notes: jsonb('notes'),
+	state: jsonb('state')
+});
+
+export const ozEntries = pgTable(
+	'oz_entries',
+	{
+		id: bigserial('id', { mode: 'number' }).primaryKey(),
+		source: text('source').notNull(),
+		key: text('key').notNull(),
+		chain: text('chain').notNull(),
+		address: text('address').notNull(),
+		category: text('category').notNull(),
+		risk: text('risk').notNull(),
+		code: text('code').notNull(),
+		entity: text('entity'),
+		reason: text('reason').notNull(),
+		refUrl: text('ref_url'),
+		refId: text('ref_id'),
+		listedAt: timestamp('listed_at', { withTimezone: true }),
+		firstSeen: timestamp('first_seen', { withTimezone: true }).notNull().defaultNow(),
+		lastSeen: timestamp('last_seen', { withTimezone: true }).notNull().defaultNow(),
+		removedAt: timestamp('removed_at', { withTimezone: true }),
+		meta: jsonb('meta')
+	},
+	(t) => [
+		unique('oz_entries_source_key').on(t.source, t.key),
+		index('oz_entries_key_idx').on(t.key),
+		index('oz_entries_active_idx').on(t.source).where(sql`removed_at IS NULL`)
+	]
+);
+
+export const ozTraceEdges = pgTable(
+	'oz_trace_edges',
+	{
+		id: bigserial('id', { mode: 'number' }).primaryKey(),
+		txid: text('txid').notNull(),
+		fromKey: text('from_key').notNull(),
+		fromAddress: text('from_address').notNull(),
+		fromChain: text('from_chain').notNull(),
+		toKey: text('to_key').notNull(),
+		toChain: text('to_chain').notNull(),
+		toAddress: text('to_address').notNull(),
+		action: text('action').notNull(),
+		relation: text('relation').notNull(),
+		height: bigint('height', { mode: 'number' }),
+		ts: timestamp('ts', { withTimezone: true }),
+		amount: text('amount'),
+		usd: numeric('usd'),
+		hop: integer('hop').notNull(),
+		risk: text('risk').notNull(),
+		originKey: text('origin_key').notNull(),
+		originSource: text('origin_source').notNull(),
+		originEntity: text('origin_entity'),
+		originRisk: text('origin_risk').notNull(),
+		originCategory: text('origin_category').notNull(),
+		reason: text('reason').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		unique('oz_trace_edges_unique').on(t.txid, t.fromKey, t.toKey),
+		index('oz_trace_edges_to_idx').on(t.toKey),
+		index('oz_trace_edges_from_idx').on(t.fromKey),
+		index('oz_trace_edges_ts_idx').on(t.ts)
+	]
+);
+
+export const ozTraced = pgTable('oz_traced', {
+	key: text('key').primaryKey(),
+	chain: text('chain').notNull(),
+	address: text('address').notNull(),
+	hop: integer('hop').notNull(),
+	risk: text('risk').notNull(),
+	usd: numeric('usd'),
+	originKey: text('origin_key').notNull(),
+	originSource: text('origin_source').notNull(),
+	originEntity: text('origin_entity'),
+	originRisk: text('origin_risk').notNull(),
+	originCategory: text('origin_category').notNull(),
+	firstTxid: text('first_txid').notNull(),
+	firstHeight: bigint('first_height', { mode: 'number' }),
+	firstTs: timestamp('first_ts', { withTimezone: true }),
+	edges: integer('edges').notNull().default(1),
+	service: boolean('service').notNull().default(false),
+	suppressed: boolean('suppressed').notNull().default(false),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const ozTraceChecked = pgTable('oz_trace_checked', {
+	key: text('key').primaryKey(),
+	checkedHeight: bigint('checked_height', { mode: 'number' }).notNull().default(0),
+	checkedAt: timestamp('checked_at', { withTimezone: true }),
+	actions: integer('actions').notNull().default(0),
+	status: text('status').notNull().default('pending'),
+	error: text('error')
+});
+
+export const ozState = pgTable('oz_state', {
+	id: text('id').primaryKey(),
+	value: jsonb('value').notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const ozSnapshots = pgTable('oz_snapshots', {
+	version: bigint('version', { mode: 'number' }).primaryKey(),
+	builtAt: timestamp('built_at', { withTimezone: true }).notNull(),
+	sha256: text('sha256').notNull(),
+	size: integer('size').notNull(),
+	manifest: jsonb('manifest').notNull(),
+	payload: bytea('payload').notNull(),
+	stats: jsonb('stats'),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const ozSubmissions = pgTable(
+	'oz_submissions',
+	{
+		id: bigserial('id', { mode: 'number' }).primaryKey(),
+		publicId: text('public_id').notNull().unique(),
+		kind: text('kind').notNull(),
+		address: text('address').notNull(),
+		chain: text('chain'),
+		key: text('key'),
+		message: text('message').notNull(),
+		evidence: text('evidence'),
+		contact: text('contact'),
+		status: text('status').notNull().default('open'),
+		resolution: text('resolution'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+		resolvedBy: text('resolved_by')
+	},
+	(t) => [index('oz_submissions_status_idx').on(t.status, t.createdAt)]
+);
+
+export const ozOverrides = pgTable('oz_overrides', {
+	key: text('key').primaryKey(),
+	action: text('action').notNull().default('suppress'),
+	reason: text('reason').notNull(),
+	createdBy: text('created_by'),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	active: boolean('active').notNull().default(true)
 });

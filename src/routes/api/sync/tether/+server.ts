@@ -1,22 +1,13 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { syncTether } from '$lib/server/compliance/tether';
+import { runSources, syncInApp } from '$lib/server/ozone/jobs';
 
-// Allow up to 300s for TRON pagination (Vercel Pro max)
 export const config = { maxDuration: 300 };
 
-async function runTetherSync() {
-	const start = Date.now();
-	try {
-		const result = await syncTether();
-		return json({ duration: Date.now() - start, result });
-	} catch (e) {
-		return json({ duration: Date.now() - start, error: String(e) }, { status: 500 });
-	}
+async function run() {
+	if (!syncInApp()) return json({ skipped: 'stablecoin freeze sync runs in OZONE-WORKER' }, { status: 202 });
+	return json(await runSources(['tether']));
 }
 
-// GET for Vercel Cron
-export const GET: RequestHandler = async () => runTetherSync();
-
-// POST for manual trigger
-export const POST: RequestHandler = async () => runTetherSync();
+export const GET: RequestHandler = async () => run();
+export const POST: RequestHandler = async () => run();

@@ -29,7 +29,9 @@
 			variant: 'default' as const,
 			links: [
 				{ label: 'Addresses', href: '/addresses' },
-				{ label: 'Sanctioned List', href: '/banned' },
+				{ label: 'Listed Addresses', href: '/banned' },
+				{ label: 'Methodology', href: '/methodology' },
+				{ label: 'Report / Appeal', href: '/submit' },
 			]
 		},
 		{
@@ -39,6 +41,7 @@
 				{ label: 'Open Source', href: '/open-source' },
 				{ label: 'API', href: '/api-docs' },
 				...(isAdmin ? [{ label: 'Compliance Lists', href: '/admin/lists' }] : []),
+				...(isAdmin ? [{ label: 'Reports & Appeals', href: '/admin/submissions' }] : []),
 				...(isAdmin ? [{ label: 'Settings', href: '/admin/settings' }] : []),
 				...(isOwner ? [{ label: 'Live Logs', href: '/admin/logs' }] : []),
 				...(isOwner ? [{ label: 'Sync', href: '/admin/sync' }] : []),

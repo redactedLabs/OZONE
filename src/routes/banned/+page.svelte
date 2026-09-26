@@ -4,15 +4,34 @@
 	let { data } = $props();
 
 	const sourceColors: Record<string, string> = {
-		OFAC: 'background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3)',
-		EU: 'background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3)',
-		HACK: 'background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3)',
-		MANUAL: 'background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3)',
-		CHAINALYSIS: 'background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3)',
-		TETHER: 'background: rgba(38,161,123,0.15); color: #26a17b; border: 1px solid rgba(38,161,123,0.3)',
-		SCAM: 'background: rgba(236,72,153,0.15); color: #ec4899; border: 1px solid rgba(236,72,153,0.3)',
-		ETH_LABELS: 'background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3)',
+		ofac_sdn: 'background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3)',
+		uk_fcdo: 'background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25)',
+		eu_fsf: 'background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3)',
+		chainalysis_oracle: 'background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3)',
+		fbi: 'background: rgba(220,38,38,0.15); color: #dc2626; border: 1px solid rgba(220,38,38,0.3)',
+		curated: 'background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3)',
+		cluster: 'background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25)',
+		tether: 'background: rgba(38,161,123,0.15); color: #26a17b; border: 1px solid rgba(38,161,123,0.3)',
+		circle: 'background: rgba(39,117,202,0.15); color: #2775ca; border: 1px solid rgba(39,117,202,0.3)',
+		ethlabels: 'background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3)',
+		scamsniffer: 'background: rgba(236,72,153,0.15); color: #ec4899; border: 1px solid rgba(236,72,153,0.3)',
+		manual: 'background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3)',
 	};
+	const riskColors: Record<string, string> = {
+		severe: '#ef4444',
+		high: '#f97316',
+		medium: '#f59e0b',
+		low: '#94a3b8',
+		info: '#64748b'
+	};
+
+	function toggleHistory() {
+		const url = new URL(window.location.href);
+		if (data.history) url.searchParams.delete('history');
+		else url.searchParams.set('history', '1');
+		url.searchParams.set('page', '1');
+		goto(url.toString());
+	}
 
 	let searchValue = $state(data.search || '');
 
@@ -58,18 +77,21 @@
 </script>
 
 <svelte:head>
-	<title>Sanctioned Addresses — OFAC, EU, Tether Frozen List | Ozone</title>
-	<meta name="description" content="Browse thousands of sanctioned and blacklisted crypto addresses. OFAC SDN, EU sanctions, Tether frozen, known hacks, ScamSniffer. Updated every 30 minutes. Free compliance database for THORChain & Rujira." />
-	<meta property="og:title" content="Sanctioned Crypto Addresses — Ozone" />
-	<meta property="og:description" content="thousands of sanctioned addresses from OFAC, EU, Tether, hack databases. Free & updated every 30 min." />
+	<title>Listed Addresses — OFAC, UK, EU, FBI, Tether, Circle | Ozone</title>
+	<meta name="description" content="Every address Ozone lists, with its source and provenance: OFAC SDN, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack clusters, exploiter and phishing lists. Delisted addresses kept as history." />
+	<meta property="og:title" content="Listed Crypto Addresses — Ozone" />
+	<meta property="og:description" content="Sanctions, law-enforcement attributions, stablecoin freezes and hack lists — with provenance for every entry." />
 	<meta property="og:url" content="https://ozone.redacted.gg/banned" />
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
 	<div class="mb-6">
-		<h1 class="text-2xl font-bold" style="color: var(--text);">Sanctioned Addresses</h1>
+		<h1 class="text-2xl font-bold" style="color: var(--text);">Listed Addresses</h1>
 		<p class="text-sm mt-1" style="color: var(--text-muted);">
-			{data.totalAll.toLocaleString()} flagged addresses across all compliance sources
+			{data.totalAll.toLocaleString()} distinct addresses currently listed by at least one source.
+			{#if data.history}Showing <strong>history</strong>: delisted / unfrozen entries, which no longer flag.{/if}
+			Addresses flagged by THORChain tracing are not listed here — screen them on the <a href="/certificate" style="color: var(--app-accent);">certificate page</a> or via the <a href="/api-docs" style="color: var(--app-accent);">API</a>.
+			<a href="/methodology" style="color: var(--app-accent);">Methodology</a>.
 		</p>
 	</div>
 
@@ -82,7 +104,7 @@
 		{#each Object.entries(data.sourceCounts) as [src, cnt]}
 			<button onclick={() => setSource(src)}
 				class="source-tab" class:active={data.source === src}>
-				<span class="inline-block rounded px-1.5 py-0.5 text-[10px] mr-1" style={sourceColors[src] || ''}>{src}</span>
+				<span class="inline-block rounded px-1.5 py-0.5 text-[10px] mr-1" style={sourceColors[src] || ''}>{data.sourceNames[src] ?? src}</span>
 				<span class="tab-count">{(cnt as number).toLocaleString()}</span><span class="tab-count-mobile">{compact(cnt as number)}</span>
 			</button>
 		{/each}
@@ -98,6 +120,7 @@
 			onkeydown={(e) => { if (e.key === 'Enter') doSearch(); }}
 		/>
 		<button onclick={doSearch} class="rounded-lg px-3 py-2 text-sm font-medium text-white" style="background: var(--app-accent);">Search</button>
+		<button onclick={toggleHistory} class="source-tab" class:active={data.history}>{data.history ? 'Current' : 'History'}</button>
 	</div>
 
 	<!-- Entries Table -->
@@ -108,11 +131,11 @@
 					<th class="px-4 py-3 font-medium" style="color: var(--text-muted);">Source</th>
 					<th class="px-4 py-3 font-medium" style="color: var(--text-muted);">Address</th>
 					<th class="px-4 py-3 font-medium" style="color: var(--text-muted);">Chain</th>
-					<th class="px-4 py-3 font-medium" style="color: var(--text-muted);">Entity</th>
-					<th class="px-4 py-3 font-medium" style="color: var(--text-muted);">Reason</th>
+					<th class="px-4 py-3 font-medium" style="color: var(--text-muted);">Risk</th>
+					<th class="px-4 py-3 font-medium" style="color: var(--text-muted);">Entity / reason</th>
 					<th class="px-4 py-3 font-medium" style="color: var(--text-muted);">
 						<button onclick={toggleSort} class="sort-btn">
-							Added {data.sort === 'newest' ? '↓' : '↑'}
+							Listed {data.sort === 'newest' ? '↓' : '↑'}
 						</button>
 					</th>
 				</tr>
@@ -121,7 +144,7 @@
 				{#each data.entries as entry}
 					<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 						<td class="px-4 py-3">
-							<span class="inline-block rounded px-2 py-0.5 text-[10px] font-semibold" style={sourceColors[entry.source] || ''}>{entry.source}</span>
+							<span class="inline-block rounded px-2 py-0.5 text-[10px] font-semibold" style={sourceColors[entry.source] || ''}>{entry.sourceName}</span>
 						</td>
 						<td class="px-4 py-3">
 							<button
@@ -137,10 +160,17 @@
 							</button>
 						</td>
 						<td class="px-4 py-3 text-xs" style="color: var(--text-muted);">{entry.chain || '--'}</td>
-						<td class="px-4 py-3 text-xs" style="color: var(--text);">{truncate(entry.entityName || '--', 30)}</td>
-						<td class="px-4 py-3 text-xs" style="color: var(--text-muted);">{truncate(entry.reason || '--', 40)}</td>
-						<td class="px-4 py-3 text-xs" style="color: var(--text-muted);">
-							{entry.addedAt ? new Date(entry.addedAt).toLocaleDateString() : '--'}
+						<td class="px-4 py-3 text-xs font-semibold" style="color: {riskColors[entry.risk] ?? 'var(--text-muted)'};">{entry.removedAt ? 'history' : entry.risk}</td>
+						<td class="px-4 py-3 text-xs" style="color: var(--text);" title={entry.reason}>
+							<div>{truncate(entry.entityName || '--', 36)}</div>
+							<div style="color: var(--text-muted);">
+								{truncate(entry.reason || '', 60)}
+								{#if entry.ref}<a href={entry.ref} target="_blank" rel="noopener" style="color: var(--app-accent);"> source&nbsp;&#8599;</a>{/if}
+							</div>
+						</td>
+						<td class="px-4 py-3 text-xs" style="color: var(--text-muted);" title={`First seen by Ozone ${new Date(entry.addedAt).toLocaleDateString()}${entry.removedAt ? ` · removed ${new Date(entry.removedAt).toLocaleDateString()}` : ''}`}>
+							{new Date(entry.listedAt ?? entry.addedAt).toLocaleDateString()}
+							{#if entry.removedAt}<div style="color: #10b981;">removed {new Date(entry.removedAt).toLocaleDateString()}</div>{/if}
 						</td>
 					</tr>
 				{/each}
@@ -155,11 +185,11 @@
 	{#if data.total > data.perPage}
 		<div class="mt-4 flex items-center justify-center gap-2">
 			{#if data.page > 1}
-				<a href="?source={data.source}&search={data.search}&sort={data.sort}&page={data.page - 1}" class="page-btn">Previous</a>
+				<a href="?source={data.source}&search={data.search}&sort={data.sort}&page={data.page - 1}{data.history ? '&history=1' : ''}" class="page-btn">Previous</a>
 			{/if}
 			<span class="text-sm" style="color: var(--text-muted);">Page {data.page} of {Math.ceil(data.total / data.perPage)}</span>
 			{#if data.page * data.perPage < data.total}
-				<a href="?source={data.source}&search={data.search}&sort={data.sort}&page={data.page + 1}" class="page-btn">Next</a>
+				<a href="?source={data.source}&search={data.search}&sort={data.sort}&page={data.page + 1}{data.history ? '&history=1' : ''}" class="page-btn">Next</a>
 			{/if}
 		</div>
 	{/if}

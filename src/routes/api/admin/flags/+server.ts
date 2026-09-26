@@ -1,8 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
-import { manualFlags, complianceEntries, l1Addresses, rujiraUsers } from '$lib/server/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { manualFlags } from '$lib/server/db/schema';
+import { eq, desc } from 'drizzle-orm';
+import { parseListedAddress } from '$ozone/index.js';
 
 // GET all manual flags
 export const GET: RequestHandler = async () => {
@@ -33,67 +34,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Address and reason are required' }, { status: 400 });
 	}
 
-	// Normalize
-	const normalizedAddr = ['ETH', 'BSC', 'ARB', 'BASE', 'AVAX'].includes(chain)
-		? address.toLowerCase()
-		: address;
+	// Validate + normalize (checksums; EVM lower-case, bech32 lower-case, base58 exact)
+	const parsed = parseListedAddress(address, chain);
+	if (!parsed) return json({ error: 'Not a valid address for a supported chain' }, { status: 400 });
+	const normalizedAddr = parsed.parsed.address;
 
-	// Insert into manual_flags
 	const [flag] = await db.insert(manualFlags).values({
 		address: normalizedAddr,
-		chain: chain || null,
+		chain: parsed.parsed.chain,
 		reason,
 		addedBy: locals.user.email,
 	}).returning();
 
-	// Also add to compliance_entries for screening
-	await db.insert(complianceEntries).values({
-		address: normalizedAddr,
-		chain: chain || null,
-		source: 'MANUAL',
-		entityName: reason,
-		reason: `Manual flag by ${locals.user.email}`
-	});
-
-	// Immediately screen: check if any user has this L1 address
-	const matchedL1s = await db
-		.select()
-		.from(l1Addresses)
-		.where(eq(l1Addresses.l1Address, normalizedAddr));
-
-	let flaggedUsers = 0;
-	for (const l1 of matchedL1s) {
-		await db
-			.update(rujiraUsers)
-			.set({
-				flagged: true,
-				flagReason: `MANUAL: ${reason} (${normalizedAddr.slice(0, 16)}...)`,
-				screenedAt: new Date()
-			})
-			.where(eq(rujiraUsers.thorAddress, l1.thorAddress));
-		flaggedUsers++;
-	}
-
-	// Also check if the address itself is a thor user
-	const directMatch = await db
-		.select()
-		.from(rujiraUsers)
-		.where(eq(rujiraUsers.thorAddress, normalizedAddr))
-		.limit(1);
-
-	if (directMatch.length > 0) {
-		await db
-			.update(rujiraUsers)
-			.set({
-				flagged: true,
-				flagReason: `MANUAL: ${reason}`,
-				screenedAt: new Date()
-			})
-			.where(eq(rujiraUsers.thorAddress, normalizedAddr));
-		flaggedUsers++;
-	}
-
-	return json({ id: flag.id, address: normalizedAddr, chain, reason, flaggedUsers });
+	// Maintainer flags enter the next snapshot (built by the worker every few
+	// minutes) and from there every verdict, node and user screening.
+	return json({ id: flag.id, address: normalizedAddr, chain: parsed.parsed.chain, reason, key: parsed.parsed.key });
 };
 
 // DELETE remove a manual flag
@@ -108,13 +63,8 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 	// Get the flag first to remove from compliance_entries too
 	const [flag] = await db.select().from(manualFlags).where(eq(manualFlags.id, id));
 	if (flag) {
+		// soft delete: the next snapshot no longer contains it
 		await db.update(manualFlags).set({ active: false }).where(eq(manualFlags.id, id));
-		await db.delete(complianceEntries).where(
-			and(
-				eq(complianceEntries.address, flag.address),
-				eq(complianceEntries.source, 'MANUAL')
-			)
-		);
 	}
 
 	return json({ success: true });

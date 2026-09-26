@@ -50,7 +50,7 @@
 </script>
 
 <svelte:head>
-	<title>Screening — Redacted Compliance</title>
+	<title>Flagged THORChain Users — Ozone</title>
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
@@ -58,7 +58,7 @@
 		<div>
 			<h1 class="text-2xl font-bold text-[var(--text)]">Screening Results</h1>
 			<p class="mt-1 text-sm text-[var(--text-muted)]">
-				{data.flaggedCount} flagged of {data.totalUsers} total users
+				{data.flaggedCount} flagged THORChain users (risk ≥ high) of {data.totalUsers.toLocaleString()} monitored thor1 accounts · <a href="/methodology#users" style="color: var(--app-accent);">how accounts are flagged</a>
 			</p>
 		</div>
 		<button
@@ -73,7 +73,7 @@
 	<div class="mb-6 grid grid-cols-3 gap-4">
 		<div class="rounded-xl border border-[var(--app-border)] bg-[var(--bg-card)] p-4">
 			<div class="text-2xl font-bold text-[var(--text)]">{data.totalUsers}</div>
-			<div class="text-sm text-[var(--text-muted)]">Total Screened</div>
+			<div class="text-sm text-[var(--text-muted)]">Accounts Screened</div>
 		</div>
 		<div class="rounded-xl border border-[var(--danger)]/20 bg-[var(--bg-card)] p-4">
 			<div class="text-2xl font-bold text-[var(--danger)]">{data.flaggedCount}</div>

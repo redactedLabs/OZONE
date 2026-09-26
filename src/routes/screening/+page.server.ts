@@ -1,62 +1,51 @@
 import type { PageServerLoad } from './$types';
-import { db } from '$lib/server/db';
-import { rujiraUsers, l1Addresses, complianceEntries } from '$lib/server/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { sql } from '$lib/server/ozone/sql';
+
+interface Detail {
+	via: string;
+	code: string;
+	source: string;
+	risk: string;
+	text: string;
+}
 
 export const load: PageServerLoad = async () => {
-	// Get all flagged users with their details
-	const flaggedUsers = await db
-		.select()
-		.from(rujiraUsers)
-		.where(eq(rujiraUsers.flagged, true))
-		.orderBy(desc(rujiraUsers.screenedAt));
-
-	const results = await Promise.all(
-		flaggedUsers.map(async (user) => {
-			const l1s = await db
-				.select()
-				.from(l1Addresses)
-				.where(eq(l1Addresses.thorAddress, user.thorAddress));
-
-			// Find which L1 addresses matched compliance entries
-			const matchDetails = [];
-			for (const l1 of l1s) {
-				const normalized =
-					l1.chain === 'ETH' ? l1.l1Address.toLowerCase() : l1.l1Address;
-
-				const matches = await db
-					.select()
-					.from(complianceEntries)
-					.where(eq(complianceEntries.address, normalized));
-
-				for (const match of matches) {
-					matchDetails.push({
-						l1Address: l1.l1Address,
-						chain: l1.chain,
-						source: match.source,
-						entityName: match.entityName,
-						reason: match.reason
-					});
-				}
-			}
-
-			return {
-				thorAddress: user.thorAddress,
-				flagReason: user.flagReason,
-				screenedAt: user.screenedAt?.toISOString() || null,
-				l1Count: l1s.length,
-				matches: matchDetails
-			};
-		})
+	const flagged = await sql.query<{ thor_address: string; flag_reason: string | null; screened_at: string | null; risk: string | null; flag_detail: Detail[] | null }>(
+		`SELECT thor_address, flag_reason, screened_at, risk, flag_detail FROM rujira_users WHERE flagged ORDER BY thor_address`
+	);
+	const [counts] = (
+		await sql.query<{ total: number; thor: number }>(
+			`SELECT count(*)::int AS total, count(*) FILTER (WHERE thor_address LIKE 'thor1%')::int AS thor FROM rujira_users`
+		)
+	).rows;
+	const l1Counts = new Map(
+		(
+			await sql.query<{ thor_address: string; n: number }>(
+				`SELECT thor_address, count(*)::int AS n FROM l1_addresses WHERE thor_address = ANY($1::text[]) GROUP BY thor_address`,
+				[flagged.rows.map((r) => r.thor_address)]
+			)
+		).rows.map((r) => [r.thor_address, r.n])
 	);
 
-	// Also get clean users count for stats
-	const allUsers = await db.select().from(rujiraUsers);
+	const results = flagged.rows.map((u) => ({
+		thorAddress: u.thor_address,
+		flagReason: u.flag_reason,
+		risk: u.risk,
+		screenedAt: u.screened_at ? new Date(u.screened_at).toISOString() : null,
+		l1Count: l1Counts.get(u.thor_address) ?? 0,
+		matches: (u.flag_detail ?? []).map((d) => ({
+			l1Address: d.via,
+			chain: d.via === u.thor_address ? 'THOR' : 'linked',
+			source: d.source,
+			entityName: d.code,
+			reason: d.text
+		}))
+	}));
 
 	return {
 		results,
-		totalUsers: allUsers.length,
-		flaggedCount: flaggedUsers.length,
-		cleanCount: allUsers.length - flaggedUsers.length
+		totalUsers: counts?.thor ?? 0,
+		flaggedCount: results.length,
+		cleanCount: (counts?.thor ?? 0) - results.length
 	};
 };

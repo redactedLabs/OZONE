@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { rujiraUsers, l1Addresses, complianceEntries, syncLog } from '$lib/server/db/schema';
+import { rujiraUsers, l1Addresses, ozEntries, syncLog } from '$lib/server/db/schema';
 import { desc, sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -37,16 +37,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	// Compliance stats
 	const [complianceTotal] = await db
-		.select({ count: sql<number>`count(*)` })
-		.from(complianceEntries);
+		.select({ count: sql<number>`count(DISTINCT key)` })
+		.from(ozEntries)
+		.where(sql`removed_at IS NULL`);
 
 	const complianceBySource = await db
 		.select({
-			source: complianceEntries.source,
+			source: ozEntries.source,
 			count: sql<number>`count(*)`
 		})
-		.from(complianceEntries)
-		.groupBy(complianceEntries.source)
+		.from(ozEntries)
+		.where(sql`removed_at IS NULL`)
+		.groupBy(ozEntries.source)
 		.orderBy(sql`count(*) DESC`);
 
 	// Flagged users

@@ -1,0 +1,33 @@
+{
+	"about": "Quality gates. Every positive names the list (or trace) that must produce it; every negative is a well-known address that must stay clean. Used by the fixture test (fixture sources) and by scripts/evaluate.ts (live lists).",
+	"positives": [
+		{ "address": "0x098B716B8Aaf21512996dC57EB0615e2383E2f96", "chain": "ETH", "why": "OFAC SDN — Lazarus Group (Ronin exploiter)", "source": "ofac_sdn" },
+		{ "address": "TUCsTq7TofTCJRRoHk6RvhMoS2mJLm5Yzq", "chain": "TRON", "why": "OFAC SDN — TRON address published under the XBT ticker", "source": "ofac_sdn" },
+		{ "address": "qpf2cphc5dkuclkqur7lhj2yuqq9pk3hmukle77vhq", "chain": "BCH", "why": "OFAC SDN — BCH cashaddr", "source": "ofac_sdn", "live": true },
+		{ "address": "DHzAVdEoL3PjGeLWNdEJwwMA1CeQ9J9Cpo", "chain": "DOGE", "why": "OFAC SDN — DOGE (missed by the old parser's ID table)", "source": "ofac_sdn", "live": true },
+		{ "address": "bnb136ns6lfw4zs5hg4n85vdthaad7hq5m4gtkgf23", "chain": "BNB", "why": "OFAC SDN — BNB Beacon (missed by the old parser's ID table)", "source": "ofac_sdn", "live": true },
+		{ "address": "rnXyVQzgxZe7TR1EPzTkGj2jxH4LMJYh66", "chain": "XRP", "why": "OFAC SDN — XRP", "source": "ofac_sdn", "live": true },
+		{ "address": "Fc1EwQUZyTEagaDvA1utHXCcZNyG1x2PLt2DfNu1cJdH", "chain": "SOL", "why": "OFAC SDN — SOL", "source": "ofac_sdn", "live": true },
+		{ "address": "LaizKtS5DUhPuP1nTQcc83MS7HwK6vk85z", "chain": "LTC", "why": "OFAC SDN — LTC", "source": "ofac_sdn", "live": true },
+		{ "address": "TJqUC56SDZ373JYRurzXtMcor2HQvN9BaU", "chain": "TRON", "why": "UK Sanctions List — EXMO", "source": "uk_fcdo" },
+		{ "address": "3Lpoy53K625zVeE47ZasiG5jGkAxJ27kh1", "chain": "BTC", "why": "UK Sanctions List — Garantex", "source": "uk_fcdo" },
+		{ "address": "0x002471b8A185f9980708d0eAEC5B289714F56f8d", "chain": "ETH", "why": "EU list — Garantex", "source": "eu_fsf" },
+		{ "address": "TNZxGWCwvsHr6JxQxzoeDXV597Yf7Zb7nV", "chain": "TRON", "why": "EU list — Grinex (address split by a space in the official text)", "source": "eu_fsf" },
+		{ "address": "0x51E9d833Ecae4E8D9D8Be17300AEE6D3398C135D", "chain": "ETH", "why": "FBI PSA I-022625-PSA — Bybit / TraderTraitor", "source": "fbi" },
+		{ "address": "0xb21e59b3d4e4d6c5247325dc5fbedbc89afc69f4", "chain": "ETH", "why": "Etherscan label Bybit Exploiter 65", "source": "ethlabels" },
+		{ "address": "19qs8FPxK6VfkqHL7TPZDhw3r2rJPU6yhE", "chain": "BTC", "why": "THORChain trace — received 1.21 BTC from Bybit Exploiter 65 (ETH→BTC swap, 2025-02-25)", "source": "thorchain_trace" },
+		{ "address": "3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG", "chain": "BTC", "why": "FBI 2023-08-22 DPRK bitcoin address", "source": "curated" },
+		{ "address": "0x1ea3eb07180e408d2742821aa7d94f6c06064fcd", "chain": "ETH", "why": "Tether-frozen (USDT blacklist, Ethereum)", "source": "tether", "live": true }
+	],
+	"negatives": [
+		{ "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "chain": "BTC", "why": "Bitcoin genesis address" },
+		{ "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "chain": "ETH", "why": "vitalik.eth" },
+		{ "address": "0x28C6c06298d514Db089934071355E5743bf21d60", "chain": "ETH", "why": "Binance 14 hot wallet" },
+		{ "address": "thor1dl7un46w7l7f3ewrnrm6nq58nerjtp0dradjtd", "chain": "THOR", "why": "THORChain affiliate_collector module (the old screener's false positive)" },
+		{ "address": "thor1xmaggkcln5m5fnha2780xrdrulmplvfrz6wj3l", "chain": "THOR", "why": "Interface affiliate address (the old screener's other false positive)" },
+		{ "address": "qz00tejklu8p5nd03aw0zhtjy2uty8jypgd888wy9f", "chain": "BCH", "why": "Ordinary THORChain BCH swapper" },
+		{ "address": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", "chain": "XRP", "why": "XRP genesis account" },
+		{ "address": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", "chain": "BTC", "why": "BIP-173 example address" },
+		{ "address": "0x8589427373D6D84E98730D7795D8f6f8731FDA16", "chain": "ETH", "why": "Tornado Cash — delisted by OFAC on 2025-03-21: history only, never flagged" }
+	]
+}

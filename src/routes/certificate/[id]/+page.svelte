@@ -27,8 +27,19 @@
 				<p class="text-xs font-mono mb-2" style="color: var(--text-muted);">{data.address}</p>
 				<p class="text-xs font-mono mb-4" style="color: var(--text-faint);">Certificate {data.certId}</p>
 				<p class="text-sm" style="color: var(--text-secondary);">
-					This address was flagged during compliance screening on {data.issuedAt ? new Date(data.issuedAt).toLocaleDateString() : 'unknown date'}.
+					This address was flagged (risk {data.risk ?? 'high'}) during compliance screening on {data.issuedAt ? new Date(data.issuedAt).toLocaleDateString() : 'unknown date'}{data.snapshotVersion ? ` against snapshot v${data.snapshotVersion}` : ''}.
 				</p>
+				{#if data.reasons.length}
+					<div class="space-y-2 text-left max-w-md mx-auto mt-4">
+						{#each data.reasons as r}
+							<div class="rounded-xl p-3 text-[11px]" style="background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); color: var(--text-muted);">
+								<span class="font-bold" style="color: #ef4444;">{r.source}</span> · {r.text}
+								{#if r.ref}<a href={r.ref} target="_blank" rel="noopener" style="color: var(--app-accent);"> source&nbsp;&#8599;</a>{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
+				{#if data.signedBy}<p class="text-[10px] mt-3" style="color: var(--text-faint);">Signed by Ozone key {data.signedBy}</p>{/if}
 			</div>
 		</div>
 	{:else}

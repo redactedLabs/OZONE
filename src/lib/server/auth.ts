@@ -27,5 +27,9 @@ export const auth = betterAuth({
 	session: {
 		expiresIn: 60 * 60 * 24 * 7, // 7 days
 		updateAge: 60 * 60 * 24 // 1 day
+	},
+	// Ozone stores no IP addresses — not even for admin sessions.
+	advanced: {
+		ipAddress: { disableIpTracking: true }
 	}
 });

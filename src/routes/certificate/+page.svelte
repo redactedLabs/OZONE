@@ -14,16 +14,15 @@
 	let certUrl = $state('');
 
 	const SCAN_STEPS = [
-		{ label: 'Resolving address', detail: 'Looking up THORChain identity...' },
-		{ label: 'Discovering L1 addresses', detail: 'Pulling linked BTC, ETH, SOL deposit addresses...' },
-		{ label: 'OFAC SDN List', detail: 'Screening against US Treasury sanctions...' },
-		{ label: 'EU Sanctions', detail: 'Checking European Union consolidated list...' },
-		{ label: 'Known Exploits', detail: 'Cross-referencing exploit & hack databases...' },
-		{ label: 'Tether Frozen', detail: 'Checking USDT blacklist (ETH + TRON)...' },
-		{ label: 'Phishing Database', detail: 'Scanning ScamSniffer + Eth Labels...' },
-		{ label: 'Chainalysis Oracle', detail: 'Querying sanctions screening oracle...' },
-		{ label: 'L1 Cross-check', detail: 'Back-checking all linked addresses against all lists...' },
-		{ label: 'Issuing certificate', detail: 'Compiling compliance report...' },
+		{ label: 'Validating address', detail: 'Checksum and chain detection (THOR, BTC, ETH, BSC, BASE, AVAX, GAIA, LTC, BCH, DOGE, TRON, XRP, SOL)...' },
+		{ label: 'Sanctions lists', detail: 'OFAC SDN, UK Sanctions List, EU consolidated list, on-chain sanctions oracle...' },
+		{ label: 'Law-enforcement attributions', detail: 'FBI / IC3 DPRK laundering addresses...' },
+		{ label: 'Stablecoin freezes', detail: 'Tether (ETH, TRON, AVAX) and Circle (ETH, BASE, AVAX) blacklists...' },
+		{ label: 'Hack & exploit clusters', detail: 'Bybit cluster, labelled exploiters, curated attributions...' },
+		{ label: 'Phishing lists', detail: 'ScamSniffer and phishing labels...' },
+		{ label: 'THORChain flow tracing', detail: 'Value received from listed addresses through THORChain (up to 3 hops)...' },
+		{ label: 'Same-key addresses', detail: 'TRON/EVM and BTC/BCH/LTC/DOGE key twins...' },
+		{ label: 'Issuing signed certificate', detail: 'Signing the verdict with Ozone\'s key...' },
 	];
 
 	async function startScan() {
@@ -32,55 +31,44 @@
 		scanStep = 0;
 		result = null;
 		l1Count = 0;
-
 		const addr = address.trim();
 
-		// Step 0: Resolve
-		scanStep = 0;
-		await new Promise(r => setTimeout(r, 500));
+		// One request: Ozone screens the address itself and signs the certificate.
+		const request = fetch('/api/certificate', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ address: addr })
+		})
+			.then(async (r) => ({ ok: r.ok, body: await r.json() }))
+			.catch(() => ({ ok: false, body: { error: 'Network error' } }));
 
-		// Step 1: Pull L1 addresses live (triggers Midgard lookup if needed)
-		scanStep = 1;
-		try {
-			// This triggers the search which auto-imports from Midgard
-			const searchRes = await fetch(`/api/screen?address=${encodeURIComponent(addr)}`);
-			// We'll use the result later, but the search triggers L1 discovery
-			await searchRes.json();
-		} catch { /* continue */ }
-		await new Promise(r => setTimeout(r, 600));
-
-		// Steps 2-8: Animate through compliance checks
-		for (let i = 2; i < SCAN_STEPS.length - 1; i++) {
+		for (let i = 0; i < SCAN_STEPS.length - 1; i++) {
 			scanStep = i;
-			await new Promise(r => setTimeout(r, 500 + Math.random() * 300));
+			await new Promise((r) => setTimeout(r, 300 + Math.random() * 200));
 		}
-
-		// Final API call — screen with all L1s now discovered
-		try {
-			const res = await fetch(`/api/screen?address=${encodeURIComponent(addr)}`);
-			result = await res.json();
-		} catch {
-			result = { error: 'Screening failed', flagged: false, matches: [] };
-		}
-
-		// Issue certificate via API
 		scanStep = SCAN_STEPS.length - 1;
-		try {
-			const certRes = await fetch('/api/certificate', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ address: addr, flagged: result?.flagged || false }),
-			});
-			const certData = await certRes.json();
-			certId = certData.certId;
-			certDate = certData.issuedAt?.split('T')[0] || new Date().toISOString().split('T')[0];
-			certUrl = `/certificate/${certId}`;
-		} catch {
-			certId = 'OZ-ERROR';
-			certDate = new Date().toISOString().split('T')[0];
+		const { ok, body } = await request;
+		if (!ok) {
+			result = { error: body.error ?? 'Screening failed', flagged: false, matches: [] };
+			certId = '';
+			phase = 'done';
+			return;
 		}
-
-		await new Promise(r => setTimeout(r, 600));
+		const verdict = body.verdict;
+		result = {
+			flagged: body.flagged,
+			risk: verdict.risk,
+			matches: verdict.reasons
+				.filter((r: any) => !r.removedAt)
+				.map((r: any) => ({ source: r.source, entityName: r.entity ?? r.code, reason: r.text, ref: r.ref, risk: r.risk })),
+			history: verdict.reasons.filter((r: any) => r.removedAt),
+			snapshot: verdict.snapshot,
+			signed: !!body.certificate?.signature
+		};
+		certId = body.certId;
+		certDate = body.issuedAt?.split('T')[0] || new Date().toISOString().split('T')[0];
+		certUrl = `/certificate/${certId}`;
+		await new Promise((r) => setTimeout(r, 400));
 		phase = 'done';
 	}
 
@@ -139,7 +127,7 @@
 				<input
 					type="text"
 					bind:value={address}
-					placeholder="Enter thor1... address"
+					placeholder="thor1…, bc1…, 0x…, T…, r… — any THORChain chain"
 					class="cert-input flex-1 rounded-xl px-4 py-3 text-sm font-mono"
 					onkeydown={(e) => { if (e.key === 'Enter') startScan(); }}
 				/>
@@ -153,7 +141,7 @@
 				</button>
 			</div>
 			<p class="text-[10px] mt-3 text-center" style="color: var(--text-faint);">
-				Screens against OFAC, EU sanctions, Tether blacklist, known hacks, ScamSniffer, Chainalysis, and more.
+				Screens against OFAC, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack and phishing lists, plus THORChain flow tracing. <a href="/methodology" style="color: var(--app-accent);">Methodology</a>
 			</p>
 		</div>
 
@@ -162,9 +150,9 @@
 			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">How it works</h2>
 			<div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
 				{#each [
-					{ num: '01', title: 'Enter Address', desc: 'Paste any thor1... address. We resolve it and discover all linked deposit addresses via Midgard.' },
-					{ num: '02', title: 'Screen', desc: 'Every address is checked against 8 compliance databases — OFAC, EU sanctions, Chainalysis, known hacks, and more.' },
-					{ num: '03', title: 'Issue Certificate', desc: 'If clear, a permanent certificate is issued with a unique ID. If flagged, you see exactly which database matched.' },
+					{ num: '01', title: 'Enter Address', desc: 'Paste any address on a THORChain chain. Its format and checksum decide the chain.' },
+					{ num: '02', title: 'Screen', desc: 'Checked against every list Ozone ingests and against THORChain flow tracing — the same signed snapshot relayer nodes use.' },
+					{ num: '03', title: 'Issue Certificate', desc: 'Ozone signs the verdict. If flagged, you see every reason with its source and evidence — and can appeal.' },
 					{ num: '04', title: 'Share', desc: 'Every certificate gets a permanent link you can share with anyone — tax advisor, lawyer, counterparty, or regulator.' },
 				] as step}
 					<div class="cert-card rounded-xl p-5">
@@ -239,13 +227,13 @@
 			<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 				{#each [
 					{ name: 'OFAC SDN', org: 'US Treasury', color: '#ef4444' },
+					{ name: 'UK Sanctions', org: 'FCDO', color: '#ef4444' },
 					{ name: 'EU Sanctions', org: 'European Union', color: '#3b82f6' },
-					{ name: 'Known Hacks', org: 'Curated list', color: '#f59e0b' },
-					{ name: 'Tether Frozen', org: 'On-chain', color: '#10b981' },
-					{ name: 'ScamSniffer', org: 'Community', color: '#6366f1' },
-					{ name: 'Eth Labels', org: '170k+ addresses', color: '#a855f7' },
-					{ name: 'Chainalysis', org: 'Oracle API', color: '#ec4899' },
-					{ name: 'Manual Flags', org: 'Redacted team', color: '#22d3ee' },
+					{ name: 'FBI / IC3', org: 'DPRK attributions', color: '#dc2626' },
+					{ name: 'Tether & Circle', org: 'Issuer freezes (on-chain)', color: '#10b981' },
+					{ name: 'Hack clusters', org: 'Bybit, exploiters, curated', color: '#f59e0b' },
+					{ name: 'ScamSniffer', org: 'Phishing / drainers', color: '#6366f1' },
+					{ name: 'THORChain tracing', org: 'Flows from listed addresses', color: '#22d3ee' },
 				] as db}
 					<div class="cert-card rounded-xl p-4 text-center">
 						<div class="text-xs font-semibold mb-0.5" style="color: var(--text);">{db.name}</div>
@@ -316,7 +304,7 @@
 							{/if}
 						</div>
 						{#if i < scanStep}
-							<span class="text-[9px] font-mono" style="color: #10b981;">PASS</span>
+							<span class="text-[9px] font-mono" style="color: var(--text-faint);">checked</span>
 						{/if}
 					</div>
 				{/each}
@@ -332,7 +320,12 @@
 			<button onclick={reset} class="text-xs mb-4" style="color: var(--text-muted);">&#8592; Screen another address</button>
 		</div>
 
-		{#if result.flagged}
+		{#if result.error}
+			<div class="cert-card rounded-2xl p-6 sm:p-8 text-center" data-win-title="Screening failed">
+				<h2 class="text-xl font-bold mb-2" style="color: #f59e0b;">No verdict</h2>
+				<p class="text-sm" style="color: var(--text-secondary);">{result.error}. No certificate was issued.</p>
+			</div>
+		{:else if result.flagged}
 			<!-- FLAGGED -->
 			<div class="cert-card rounded-2xl overflow-hidden" style="border-color: rgba(239,68,68,0.3);">
 				<div class="p-1" style="background: linear-gradient(90deg, #ef4444, #dc2626);"></div>
@@ -343,7 +336,8 @@
 					<h2 class="text-xl font-bold mb-1" style="color: #ef4444;">Address Flagged</h2>
 					<p class="text-xs font-mono mb-4" style="color: var(--text-muted);">{address}</p>
 					<p class="text-sm mb-6" style="color: var(--text-secondary);">
-						This address matched {result.matches.length} compliance {result.matches.length === 1 ? 'entry' : 'entries'} and cannot receive a certificate.
+						Risk <strong>{result.risk}</strong> — {result.matches.length} {result.matches.length === 1 ? 'reason' : 'reasons'}. The certificate {certId} records this result.
+						If you believe this is wrong, <a href="/submit?kind=appeal&address={encodeURIComponent(address)}" style="color: var(--app-accent);">file an appeal</a>.
 					</p>
 					<div class="space-y-2 text-left max-w-md mx-auto">
 						{#each result.matches as match}
@@ -353,7 +347,7 @@
 									<span class="text-xs" style="color: var(--text);">{match.entityName || 'Match found'}</span>
 								</div>
 								{#if match.reason}
-									<div class="text-[10px] mt-1" style="color: var(--text-muted);">{match.reason}</div>
+									<div class="text-[10px] mt-1" style="color: var(--text-muted);">{match.reason}{#if match.ref}&nbsp;<a href={match.ref} target="_blank" rel="noopener" style="color: var(--app-accent);">source&nbsp;&#8599;</a>{/if}</div>
 								{/if}
 							</div>
 						{/each}
@@ -389,8 +383,10 @@
 						</div>
 
 						<p class="text-xs text-center leading-relaxed" style="color: var(--text-secondary);">
-							has been screened against all compliance databases maintained by Redacted Ozone
-							and <span style="color: #10b981; font-weight: 600;">no matches were found</span> as of the date below.
+							has been screened against every list and THORChain trace in Ozone snapshot v{result.snapshot?.version}
+							and <span style="color: #10b981; font-weight: 600;">nothing at risk "high" or above was found</span> as of the date below.
+							{#if result.matches.length}<br /><span style="color: var(--text-muted);">Lower-risk notes: {result.matches.map((m: any) => m.reason).join(' · ')}</span>{/if}
+							{#if result.signed}<br /><span style="color: var(--text-faint);">Signed with Ozone's key — verify via /api/certificate?id={certId}.</span>{/if}
 						</p>
 					</div>
 
@@ -405,8 +401,8 @@
 							<div class="text-xs font-mono mt-0.5" style="color: var(--text);">{certDate}</div>
 						</div>
 						<div class="rounded-lg p-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--app-border);">
-							<div class="text-[10px]" style="color: var(--text-faint);">Databases Checked</div>
-							<div class="text-xs font-mono mt-0.5" style="color: var(--text);">8 sources</div>
+							<div class="text-[10px]" style="color: var(--text-faint);">Snapshot</div>
+							<div class="text-xs font-mono mt-0.5" style="color: var(--text);">v{result.snapshot?.version}</div>
 						</div>
 						<div class="rounded-lg p-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--app-border);">
 							<div class="text-[10px]" style="color: var(--text-faint);">Result</div>
@@ -418,7 +414,7 @@
 					<div class="mb-6">
 						<div class="text-[10px] mb-2" style="color: var(--text-faint);">SOURCES VERIFIED</div>
 						<div class="flex flex-wrap gap-1.5">
-							{#each ['OFAC SDN', 'EU Sanctions', 'Known Hacks', 'Tether Frozen', 'ScamSniffer', 'Eth Labels', 'Chainalysis', 'Manual Flags'] as src}
+							{#each ['OFAC SDN', 'UK Sanctions', 'EU Sanctions', 'FBI attributions', 'Tether freezes', 'Circle blacklist', 'Hack clusters', 'Exploiter labels', 'ScamSniffer', 'THORChain tracing'] as src}
 								<span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px]" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15); color: #10b981;">
 									&#10003; {src}
 								</span>

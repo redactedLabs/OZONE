@@ -1,63 +1,60 @@
+/**
+ * GET /api/flagged[?format=csv] — THORChain accounts Ozone currently flags
+ * (risk ≥ high), with the reasons. Listed and traced addresses themselves
+ * are in the signed snapshot (/api/v1/snapshot).
+ */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
-import { rujiraUsers, l1Addresses, complianceEntries } from '$lib/server/db/schema';
-import { eq, sql, inArray } from 'drizzle-orm';
+import { sql } from '$lib/server/ozone/sql';
+import { coverage } from '$lib/server/ozone/stats';
+
+interface Row {
+	thor_address: string;
+	flag_reason: string | null;
+	risk: string | null;
+	flag_detail: Array<{ via: string; code: string; source: string; risk: string; text: string }> | null;
+	screened_at: string | null;
+}
 
 export const GET: RequestHandler = async ({ url }) => {
 	const format = url.searchParams.get('format') || 'json';
-
-	// Get all flagged users
-	const flagged = await db.select().from(rujiraUsers)
-		.where(eq(rujiraUsers.flagged, true));
-
-	// Get their L1 addresses (only for flagged users, not the entire table)
-	const allL1 = flagged.length > 0
-		? await db.select().from(l1Addresses)
-			.where(inArray(l1Addresses.thorAddress, flagged.map(f => f.thorAddress)))
-		: [];
-
-	// Build L1 lookup
-	const l1Map = new Map<string, Array<{ address: string; chain: string }>>();
-	for (const l1 of allL1) {
-		const list = l1Map.get(l1.thorAddress) || [];
-		list.push({ address: l1.l1Address, chain: l1.chain });
-		l1Map.set(l1.thorAddress, list);
-	}
-
-	const result = flagged.map(u => ({
-		thorAddress: u.thorAddress,
-		flagReason: u.flagReason,
-		flaggedAt: u.screenedAt?.toISOString() || null,
-		linkedAddresses: l1Map.get(u.thorAddress) || [],
+	const rows = (
+		await sql.query<Row>(
+			`SELECT thor_address, flag_reason, risk, flag_detail, screened_at FROM rujira_users WHERE flagged ORDER BY thor_address`
+		)
+	).rows;
+	const result = rows.map((u) => ({
+		thorAddress: u.thor_address,
+		risk: u.risk,
+		flagReason: u.flag_reason,
+		reasons: u.flag_detail ?? [],
+		flaggedAt: u.screened_at ? new Date(u.screened_at).toISOString() : null
 	}));
 
-	// Stats
-	const [totalCompliance] = await db.select({ count: sql<number>`count(*)` }).from(complianceEntries);
-
-	const response = {
-		meta: {
-			generated: new Date().toISOString(),
-			totalFlagged: result.length,
-			totalComplianceEntries: Number(totalCompliance.count),
-			sources: ['OFAC', 'EU', 'HACK', 'TETHER', 'SCAM', 'ETH_LABELS', 'CHAINALYSIS', 'MANUAL'],
-		},
-		flaggedAddresses: result,
-	};
-
 	if (format === 'csv') {
-		const lines = ['thor_address,flag_reason,flagged_at,linked_addresses'];
-		for (const f of result) {
-			const linked = f.linkedAddresses.map(l => `${l.chain}:${l.address}`).join('|');
-			lines.push(`"${f.thorAddress}","${(f.flagReason || '').replace(/"/g, '""')}","${f.flaggedAt || ''}","${linked}"`);
-		}
+		const q = (s: string) => `"${s.replace(/"/g, '""')}"`;
+		const lines = ['thor_address,risk,flag_reason,flagged_at'];
+		for (const f of result) lines.push([q(f.thorAddress), q(f.risk ?? ''), q(f.flagReason ?? ''), q(f.flaggedAt ?? '')].join(','));
 		return new Response(lines.join('\n'), {
 			headers: {
 				'Content-Type': 'text/csv',
-				'Content-Disposition': `attachment; filename="redacted-flagged-${new Date().toISOString().split('T')[0]}.csv"`,
-			},
+				'Content-Disposition': `attachment; filename="ozone-flagged-thorchain-users-${new Date().toISOString().split('T')[0]}.csv"`
+			}
 		});
 	}
 
-	return json(response);
+	const c = await coverage();
+	return json({
+		meta: {
+			generated: new Date().toISOString(),
+			totalFlagged: result.length,
+			flaggedThorUsers: result.length,
+			listedAddresses: c.listed.addresses,
+			tracedAddresses: c.traced.addresses,
+			sources: c.listed.bySource.map((s) => s.source),
+			snapshot: c.snapshot,
+			note: 'Flagged THORChain accounts only. Listed and traced addresses are in the signed snapshot at /api/v1/snapshot.'
+		},
+		flaggedAddresses: result
+	});
 };

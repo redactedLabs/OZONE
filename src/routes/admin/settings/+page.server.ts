@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { user, syncLog, complianceEntries } from '$lib/server/db/schema';
+import { user, syncLog, ozSources } from '$lib/server/db/schema';
 import { desc, sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -19,17 +19,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.from(syncLog)
 		.groupBy(syncLog.type);
 
-	const complianceBySource = await db
-		.select({
-			source: complianceEntries.source,
-			count: sql<number>`count(*)`
-		})
-		.from(complianceEntries)
-		.groupBy(complianceEntries.source);
-
+	const sources = await db.select().from(ozSources);
 	const complianceCounts: Record<string, number> = {};
-	for (const r of complianceBySource) {
-		complianceCounts[r.source] = Number(r.count);
+	for (const r of sources) {
+		complianceCounts[r.id] = r.activeCount;
+		complianceCounts[`OZ:${r.id}`] = r.activeCount;
 	}
 
 	return {

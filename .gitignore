@@ -6,3 +6,7 @@ build
 .env.local
 .DS_Store
 *.db
+
+# local engine runs (embedded Postgres, dev keys)
+.ozone-local
+packages/*/dist

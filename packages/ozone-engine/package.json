@@ -1,0 +1,11 @@
+{
+  "name": "@redacted/ozone-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ozone ingestion, THORChain flow tracing and snapshot publishing (shared by the OZONE app and OZONE-WORKER).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@noble/hashes": "^1.8.0"
+  }
+}

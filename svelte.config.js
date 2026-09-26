@@ -10,7 +10,11 @@ const config = {
 		}),
 		alias: {
 			$components: 'src/lib/components',
-			$server: 'src/lib/server'
+			$server: 'src/lib/server',
+			// Ozone client (snapshot verification + local screening) and engine
+			// (ingestion, THORChain tracing, snapshot publishing) — plain TS packages
+			$ozone: 'packages/ozone-client/src',
+			$engine: 'packages/ozone-engine/src'
 		}
 	}
 };

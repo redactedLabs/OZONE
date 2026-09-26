@@ -280,59 +280,53 @@
 		</div>
 	</div>
 
-	<!-- Line 1: Stats boxes -->
+	<!-- Line 1: Stats boxes (one meaning per number — see /methodology) -->
 	<div class="relative z-20 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
 		<div class="dash-box stat-hover rounded-xl p-4 relative group">
 			<div class="flex items-baseline gap-2">
-				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: var(--stat-indigo);">{data.stats.totalUsers.toLocaleString('en-US')}</div>
+				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: var(--stat-indigo);">{data.stats.monitoredThorAccounts.toLocaleString('en-US')}</div>
 			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Monitored Wallets</div>
-			{#if data.stats.newUsersDay > 0}
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">THORChain Accounts</div>
+			{#if data.stats.newAccountsDay > 0}
 				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newUsersDay)}</span>
+					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newAccountsDay)}</span>
 					<span class="today-label" style="color: var(--text-faint);">1d</span>
 				</div>
 			{/if}
-			<div class="stat-tip">All THORChain & Rujira addresses actively monitored. Sourced from Midgard LPs, Rujira League, on-chain actions, and live WebSocket events.</div>
+			<div class="stat-tip">thor1 accounts Ozone monitors (Rujira League, Midgard LPs, live transactions). Each is screened directly and through its {data.stats.linkedL1.toLocaleString('en-US')} linked L1 addresses. Any other address can be screened on demand.</div>
 		</div>
 		<div class="dash-box stat-hover rounded-xl p-4 relative group">
 			<div class="flex items-baseline gap-2">
-				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">{data.stats.totalL1.toLocaleString('en-US')}</div>
+				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #f59e0b;">{data.stats.listedAddresses.toLocaleString('en-US')}</div>
 			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Linked L1 Addresses</div>
-			{#if data.stats.newL1Day > 0}
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Listed Addresses</div>
+			{#if data.stats.newListedDay > 0}
 				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newL1Day)}</span>
+					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newListedDay)}</span>
 					<span class="today-label" style="color: var(--text-faint);">1d</span>
 				</div>
 			{/if}
-			<div class="stat-tip">Linked L1 addresses (BTC, ETH, DOGE, etc.) discovered from on-chain activity — swaps, sends, LP deposits, withdrawals. Used for cross-chain compliance screening.</div>
+			<div class="stat-tip">Distinct addresses currently on at least one of {data.stats.sources} lists: OFAC, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack clusters, exploiter and phishing lists. Delisted addresses are kept as history and no longer flag.</div>
 		</div>
 		<div class="dash-box stat-hover rounded-xl p-4 relative group">
 			<div class="flex items-baseline gap-2">
-				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedUsers.toLocaleString('en-US')}</div>
+				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">{data.stats.tracedAddresses.toLocaleString('en-US')}</div>
 			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Blocked</div>
-			{#if data.stats.newBlockedDay > 0}
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Traced via THORChain</div>
+			{#if data.stats.newTracedDay > 0}
 				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: #ef4444;">+{compact(data.stats.newBlockedDay)}</span>
+					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newTracedDay)}</span>
 					<span class="today-label" style="color: var(--text-faint);">1d</span>
 				</div>
 			{/if}
-			<div class="stat-tip">Wallets with linked L1 addresses (BTC, ETH, etc.) matching sanctioned or blacklisted entities. These addresses are restricted from Rujira services.</div>
+			<div class="stat-tip">Addresses that received value from a listed address through THORChain — swaps (incl. L1→L1 and streaming), sends, LP withdrawals, THORNames — up to 3 hops, with amount thresholds. Each carries the THORChain transaction as evidence.</div>
 		</div>
 		<div class="dash-box stat-hover rounded-xl p-4 relative group">
 			<div class="flex items-baseline gap-2">
-				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #f59e0b;">{data.stats.totalListEntries.toLocaleString('en-US')}</div>
+				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedThorUsers.toLocaleString('en-US')}</div>
 			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">AML Watchlist</div>
-			{#if data.stats.newListEntriesDay > 0}
-				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newListEntriesDay)}</span>
-					<span class="today-label" style="color: var(--text-faint);">1d</span>
-				</div>
-			{/if}
-			<div class="stat-tip">Total addresses across all compliance sources: OFAC SDN, EU Sanctions, Known Hacks, Tether Frozen, ScamSniffer, and manual flags. Auto-synced every 30 min.</div>
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Flagged THORChain Users</div>
+			<div class="stat-tip">Monitored thor1 accounts at risk "high" or above: listed or traced themselves, or linked to a listed L1 address. Fee collectors and module accounts are never flagged through links.</div>
 		</div>
 	</div>
 
@@ -429,9 +423,11 @@
 			<!-- Bottom pill -->
 			<div class="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5" style="background: var(--globe-pill-bg); backdrop-filter: blur(12px); border: 1px solid var(--border);">
 				<span class="inline-block h-2 w-2 rounded-full animate-pulse" style="background: #10b981;"></span>
-				<span class="text-[10px] font-mono" style="color: #10b981;">{data.stats.totalL1.toLocaleString('en-US')} L1 linked</span>
+				<span class="text-[10px] font-mono" style="color: #f59e0b;">{compact(data.stats.listedAddresses)} listed</span>
 				<span class="text-[10px]" style="color: var(--text-ghost);">·</span>
-				<span class="text-[10px] font-mono" style="color: #ef4444;">{data.stats.flaggedUsers.toLocaleString('en-US')} blocked</span>
+				<span class="text-[10px] font-mono" style="color: #10b981;">{compact(data.stats.tracedAddresses)} traced</span>
+				<span class="text-[10px]" style="color: var(--text-ghost);">·</span>
+				<span class="text-[10px] font-mono" style="color: #ef4444;">{data.stats.flaggedThorUsers.toLocaleString('en-US')} flagged users</span>
 			</div>
 		</div>
 	</div>
@@ -439,8 +435,8 @@
 	<!-- Sync status bar -->
 	<div class="dash-box rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3" data-win-title="Sync Status">
 		<p class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-secondary);">
-			Every address screened against OFAC, EU sanctions, known hacks, Tether frozen wallets, and thousands of flagged entities.
-			<a href="https://docs.redacted.money/using-redacted/compliance" target="_blank" rel="noopener" style="color: var(--app-accent); text-decoration: none;"> Learn more &#8599;</a>
+			Addresses on every THORChain chain are screened against OFAC, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack and phishing lists — and traced through THORChain.
+			<a href="/methodology" style="color: var(--app-accent); text-decoration: none;"> Methodology &#8599;</a>
 		</p>
 		<div class="flex items-center gap-3 shrink-0">
 			<div class="flex items-center gap-1.5">
@@ -542,7 +538,7 @@
 				</div>
 				<h3 class="text-lg sm:text-xl font-bold mb-2" style="color: var(--text);">Ozone API</h3>
 				<p class="text-xs sm:text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
-					One endpoint. Every sanctions list. Screen any address in real-time — zero auth, zero cost. Integrate compliance checks into your app in minutes.
+					Batch-screen any address on any THORChain chain. Every answer is signed and names its sources and the THORChain transactions behind a trace — or download the signed snapshot and screen locally.
 				</p>
 				<div class="flex flex-wrap gap-2">
 					<a href="/api-docs" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all" style="background: var(--app-accent);">Documentation</a>
@@ -550,7 +546,7 @@
 				</div>
 			</div>
 			<div class="p-4 sm:p-5 flex items-center">
-				<pre class="api-preview rounded-xl p-4 w-full text-[10px] sm:text-[11px] overflow-x-auto"><code style="color: var(--text-muted);">{@html `<span style="color: #10b981;">GET</span> <span style="color: var(--stat-indigo);">/api/screen?address=thor1...</span>\n\n<span style="color: var(--text-faint);">{"address":"thor1abc...xyz",</span>\n <span style="color: var(--text-faint);">"flagged":</span><span style="color: #ef4444;">true</span><span style="color: var(--text-faint);">,</span>\n <span style="color: var(--text-faint);">"matches":[{"source":</span><span style="color: #f59e0b;">"OFAC"</span><span style="color: var(--text-faint);">,</span>\n   <span style="color: var(--text-faint);">"entityName":</span><span style="color: #f59e0b;">"Lazarus Group"</span><span style="color: var(--text-faint);">}]}</span>`}</code></pre>
+				<pre class="api-preview rounded-xl p-4 w-full text-[10px] sm:text-[11px] overflow-x-auto"><code style="color: var(--text-muted);">{@html `<span style="color: #10b981;">POST</span> <span style="color: var(--stat-indigo);">/api/v1/screen</span>\n<span style="color: var(--text-faint);">{"addresses":["19qs8FPx…yhE"]}</span>\n\n<span style="color: var(--text-faint);">{"status":</span><span style="color: #ef4444;">"flagged"</span><span style="color: var(--text-faint);">,"risk":</span><span style="color: #f59e0b;">"high"</span><span style="color: var(--text-faint);">,</span>\n <span style="color: var(--text-faint);">"reasons":[{"code":</span><span style="color: #f59e0b;">"TRACE_SWAP"</span><span style="color: var(--text-faint);">,</span>\n  <span style="color: var(--text-faint);">"text":"Received 1.21 BTC from</span>\n  <span style="color: var(--text-faint);">Bybit Exploiter 65 via THORChain…"}],</span>\n <span style="color: var(--text-faint);">"signature":{"alg":"ed25519",…}}</span>`}</code></pre>
 			</div>
 		</div>
 	</div>

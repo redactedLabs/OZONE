@@ -8,14 +8,16 @@
 	});
 
 	const dataSources = [
-		{ name: 'OFAC SDN List', org: 'US Treasury', url: 'https://sanctionslist.ofac.treas.gov/', desc: 'Specially Designated Nationals and Blocked Persons', type: 'Government' },
-		{ name: 'EU Sanctions', org: 'European Union', url: 'https://www.eeas.europa.eu/eeas/european-union-sanctions_en', desc: 'EU Consolidated Financial Sanctions List', type: 'Government' },
-		{ name: 'Tether Frozen', org: 'Tether / On-chain', url: 'https://etherscan.io/address/0xdac17f958d2ee523a2206206994597c13d831ec7', desc: 'USDT blacklisted addresses on ETH + TRON (on-chain events)', type: 'On-chain' },
-		{ name: 'ScamSniffer', org: 'ScamSniffer', url: 'https://github.com/scamsniffer', desc: 'Phishing and scam address database', type: 'Community' },
-		{ name: 'Eth Labels', org: 'dawsbot', url: 'https://github.com/dawsbot/eth-labels', desc: '170k+ labeled EVM addresses — exploits, heists, phishing', type: 'Community' },
-		{ name: 'Chainalysis', org: 'Chainalysis', url: 'https://www.chainalysis.com/', desc: 'Sanctions screening oracle API', type: 'Commercial' },
-		{ name: 'Known Hacks', org: 'Redacted Team', url: '#', desc: 'Curated list: Bybit, Ronin, Nomad, Harmony, WazirX, KuCoin', type: 'Curated' },
-		{ name: 'Midgard', org: 'THORChain / Liquify', url: 'https://gateway.liquify.com/chain/thorchain_midgard/v2/doc', desc: 'THORChain indexer — user discovery and L1 address mapping', type: 'Infrastructure' },
+		{ name: 'OFAC SDN List', org: 'US Treasury', url: 'https://sanctionslistservice.ofac.treas.gov/', desc: 'Every "Digital Currency Address" identifier, all tickers; delistings tracked', type: 'Government' },
+		{ name: 'UK Sanctions List', org: 'FCDO', url: 'https://www.gov.uk/government/publications/the-uk-sanctions-list', desc: 'Wallet addresses in designation texts, checksum-validated', type: 'Government' },
+		{ name: 'EU Sanctions', org: 'European Union', url: 'https://data.europa.eu/data/datasets/consolidated-list-of-persons-groups-and-entities-subject-to-eu-financial-sanctions', desc: 'EU Financial Sanctions Files, with the listing regulation as provenance', type: 'Government' },
+		{ name: 'FBI / IC3', org: 'FBI', url: 'https://www.ic3.gov/PSA/2025/PSA250226', desc: 'DPRK (TraderTraitor / Lazarus) laundering addresses, e.g. the Bybit PSA', type: 'Government' },
+		{ name: 'Sanctions oracle', org: 'Chainalysis (on-chain)', url: 'https://etherscan.io/address/0x40C57923924B5c5c5455c48D93317139ADDaC8fb', desc: 'Oracle events incl. delistings (Tornado Cash, 2025-03-21) — no API key', type: 'On-chain' },
+		{ name: 'Tether & Circle', org: 'Stablecoin issuers (on-chain)', url: 'https://etherscan.io/address/0xdac17f958d2ee523a2206206994597c13d831ec7', desc: 'USDT freezes (ETH, TRON, AVAX) and USDC blacklist (ETH, BASE, AVAX), freeze and unfreeze', type: 'On-chain' },
+		{ name: 'Labelled exploiters', org: 'eth-labels', url: 'https://github.com/dawsbot/eth-labels', desc: 'Etherscan exploiter / heist / phishing labels (stale OFAC tags and victims excluded)', type: 'Community' },
+		{ name: 'ScamSniffer', org: 'ScamSniffer', url: 'https://github.com/scamsniffer/scam-database', desc: 'Phishing and wallet-drainer addresses', type: 'Community' },
+		{ name: 'Curated attributions', org: 'Ozone maintainers', url: 'https://github.com/redactedLabs/OZONE/blob/main/packages/ozone-engine/src/sources/curated-data.ts', desc: 'Verified entries with a named primary source; hack-cluster expansion (Bybit)', type: 'Curated' },
+		{ name: 'Midgard', org: 'THORChain / Liquify', url: 'https://gateway.liquify.com/chain/thorchain_midgard/v2/doc', desc: 'THORChain history for flow tracing (backfill + real time)', type: 'Infrastructure' },
 	];
 
 	const typeColors: Record<string, string> = {
@@ -28,7 +30,7 @@
 	};
 
 	const submissionSteps = [
-		{ num: '01', title: 'Open an Issue', desc: 'Click "Report Address" to open a pre-filled GitHub Issue with all the fields we need.' },
+		{ num: '01', title: 'Submit', desc: 'Use /submit (no account, nothing about you stored) or open a pre-filled GitHub Issue.' },
 		{ num: '02', title: 'Provide Evidence', desc: 'Include the wallet address, chain, incident details, and links to transactions or reports.' },
 		{ num: '03', title: 'Team Reviews', desc: 'Our compliance team verifies the submission against on-chain data and public sources.' },
 		{ num: '04', title: 'Added to Screening', desc: 'Verified addresses are added to the compliance database and screened across all Rujira users.' },
