@@ -38,6 +38,14 @@ export interface ApplyStats {
 	rejected: number;
 }
 
+/** Shape kept in `oz_sources.state` (unused before this). */
+interface SourceState {
+	/** Active-count observations, newest last, trimmed to the last 7 days. */
+	activeHistory?: Array<{ at: string; active: number }>;
+}
+
+const HISTORY_WINDOW_MS = 7 * 24 * 3600_000;
+
 export async function ensureSource(sql: Sql, s: SourceMeta): Promise<void> {
 	await sql.query(
 		`INSERT INTO oz_sources (id, name, kind, url) VALUES ($1,$2,$3,$4)
@@ -72,10 +80,23 @@ export async function applySourceResult(sql: Sql, s: SourceMeta, res: ParseResul
 	if (s.minEntries !== undefined && newActive < s.minEntries) {
 		throw new SanityError(`${s.id}: only ${newActive} active entries (minimum ${s.minEntries}); sync refused`);
 	}
+
+	// The drop-ratio floor is the highest active count seen in the last 7
+	// days (kept in oz_sources.state), not just the immediately previous
+	// sync: anchoring to only the previous sync lets repeated small drops —
+	// each individually under maxDropRatio — ratchet the list down far below
+	// its real size, one truncated/forged response at a time.
+	const stateRow = await sql.query<{ state: SourceState | string | null }>(`SELECT state FROM oz_sources WHERE id = $1`, [s.id]);
+	const rawState = stateRow.rows[0]?.state;
+	const state: SourceState = typeof rawState === 'string' ? JSON.parse(rawState) : (rawState ?? {});
+	const cutoff = now.getTime() - HISTORY_WINDOW_MS;
+	const recentHistory = (state.activeHistory ?? []).filter((h) => Date.parse(h.at) >= cutoff);
+	const floor = recentHistory.reduce((m, h) => Math.max(m, h.active), prevActive);
+
 	const maxDrop = s.maxDropRatio ?? 0.25;
-	if (prevActive > 0 && newActive < prevActive * (1 - maxDrop)) {
+	if (floor > 0 && newActive < floor * (1 - maxDrop)) {
 		throw new SanityError(
-			`${s.id}: active entries would drop from ${prevActive} to ${newActive} (> ${Math.round(maxDrop * 100)}%); sync refused`
+			`${s.id}: active entries would drop from ${floor} (7-day peak) to ${newActive} (> ${Math.round(maxDrop * 100)}%); sync refused`
 		);
 	}
 
@@ -139,9 +160,10 @@ export async function applySourceResult(sql: Sql, s: SourceMeta, res: ParseResul
 		[s.id]
 	);
 	const { active, removed } = counts.rows[0] ?? { active: 0, removed: 0 };
+	const newHistory = [...recentHistory, { at: now.toISOString(), active }].slice(-60);
 	await sql.query(
 		`UPDATE oz_sources SET last_success_at = $2, last_error = NULL, last_version = $3, active_count = $4,
-		   removed_count = $5, rejected_count = $6, notes = $7 WHERE id = $1`,
+		   removed_count = $5, rejected_count = $6, notes = $7, state = $8 WHERE id = $1`,
 		[
 			s.id,
 			now,
@@ -149,7 +171,8 @@ export async function applySourceResult(sql: Sql, s: SourceMeta, res: ParseResul
 			active,
 			removed,
 			res.rejected.length,
-			JSON.stringify({ notes: res.notes.slice(0, 50), rejected: res.rejected.slice(0, 50) })
+			JSON.stringify({ notes: res.notes.slice(0, 50), rejected: res.rejected.slice(0, 50) }),
+			JSON.stringify({ activeHistory: newHistory } satisfies SourceState)
 		]
 	);
 	return { source: s.id, active, inserted, updated, removed: gone.length, reactivated, rejected: res.rejected.length };

@@ -58,6 +58,45 @@ describe('entry store: delistings and sanity checks', async () => {
 	});
 });
 
+describe('entry store: the drop-ratio floor anchors to the 7-day peak, not just the previous sync', async () => {
+	const { db, sql } = await memoryDb();
+	afterAll(() => db.close());
+	const day = 24 * 3600_000;
+	const t0 = new Date('2026-01-01T00:00:00Z');
+	const seedEntries = (count: number) => {
+		const r = emptyResult();
+		for (let i = 1; i <= count; i++) r.entries.push(e(addr(i)));
+		return r;
+	};
+
+	it('cannot be ratcheted down by several individually-small drops', async () => {
+		// day 0: a real baseline of 1000 active entries
+		await applySourceResult(sql, src, seedEntries(1000), t0);
+		// day 1: an 8% drop (within maxDropRatio 0.1) — allowed on its own
+		const s1 = await applySourceResult(sql, src, seedEntries(920), new Date(t0.getTime() + day));
+		expect(s1.active).toBe(920);
+
+		// day 2: a further drop to 850. Compared only to the previous sync
+		// (920), this is a ~7.6% drop — under the old logic it would have
+		// passed, silently taking the list to 850/1000 = 15% below its real
+		// (7-day) peak. The floor now anchors to that peak, so it is refused.
+		await expect(applySourceResult(sql, src, seedEntries(850), new Date(t0.getTime() + 2 * day))).rejects.toThrowError(SanityError);
+
+		// a milder drop (910, still >= 90% of the 1000 peak) is accepted
+		const s2 = await applySourceResult(sql, src, seedEntries(910), new Date(t0.getTime() + 2 * day));
+		expect(s2.active).toBe(910);
+	});
+
+	it('a peak older than 7 days no longer anchors the floor', async () => {
+		// day 11: every recorded observation (1000 @ day 0, 920 @ day 1, 910 @
+		// day 2) is now more than 7 days old, so the floor falls back to the
+		// current active count (910) alone — a drop far below the original
+		// 1000 is judged against 910, not held to the stale peak forever.
+		const s = await applySourceResult(sql, src, seedEntries(850), new Date(t0.getTime() + 11 * day));
+		expect(s.active).toBe(850);
+	});
+});
+
 describe('event-sourced lists', () => {
 	const ev = (kind: 'add' | 'remove', address: string, chain: string, time: number) => ({
 		kind,

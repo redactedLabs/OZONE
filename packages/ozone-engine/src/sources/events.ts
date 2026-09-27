@@ -60,8 +60,15 @@ export interface RawLog {
 	logIndex: number;
 	timeStamp: number;
 	transactionHash: string;
+	address: string;
 	topics: string[];
 	data: string;
+}
+
+export interface LogsResult {
+	logs: RawLog[];
+	/** Logs the endpoint returned whose emitting address or topics[0] did not match what was requested. */
+	dropped: number;
 }
 
 const limiters = new Map<string, RateLimiter>();
@@ -87,11 +94,14 @@ export async function fetchLogsExplorer(
 	address: string,
 	topic0: string,
 	opts: HttpOptions & { fromBlock?: number; logger?: Logger; maxPages?: number } = {}
-): Promise<RawLog[]> {
+): Promise<LogsResult> {
 	const out: RawLog[] = [];
 	const seen = new Set<string>();
+	let dropped = 0;
 	let fromBlock = opts.fromBlock ?? 0;
 	const maxPages = opts.maxPages ?? 500;
+	const wantAddress = address.toLowerCase();
+	const wantTopic0 = topic0.toLowerCase();
 	for (let page = 0; page < maxPages; page++) {
 		const url = `${api.api}?module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=latest&address=${address}&topic0=${topic0}`;
 		const body = await limiterFor(url).run(() => httpJson<{ status?: string; message?: string; result?: unknown }>(url, { retries: 5, ...opts }));
@@ -107,6 +117,7 @@ export async function fetchLogsExplorer(
 				logIndex: hexOrDec(r.logIndex),
 				timeStamp: hexOrDec(r.timeStamp),
 				transactionHash: String(r.transactionHash ?? ''),
+				address: String(r.address ?? ''),
 				topics: ((r.topics as Array<string | null>) ?? []).filter((t): t is string => !!t),
 				data: String(r.data ?? '0x')
 			};
@@ -114,8 +125,14 @@ export async function fetchLogsExplorer(
 			maxBlock = Math.max(maxBlock, log.blockNumber);
 			if (seen.has(id)) continue;
 			seen.add(id);
-			out.push(log);
 			added++;
+			// The endpoint is untrusted: never accept a log for a different
+			// contract or event than what was requested, however it slipped in.
+			if (log.address.toLowerCase() !== wantAddress || (log.topics[0] ?? '').toLowerCase() !== wantTopic0) {
+				dropped++;
+				continue;
+			}
+			out.push(log);
 		}
 		// Explorers cap a page (Blockscout 1000, Routescan 100): continue from
 		// the last block seen (inclusive) until a page adds nothing new.
@@ -128,7 +145,7 @@ export async function fetchLogsExplorer(
 		}
 	}
 	out.sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex);
-	return out;
+	return { logs: out, dropped };
 }
 
 
@@ -136,6 +153,7 @@ interface RpcLog {
 	blockNumber: string;
 	logIndex: string;
 	transactionHash: string;
+	address?: string;
 	topics: string[];
 	data: string;
 	blockTimestamp?: string;
@@ -164,7 +182,7 @@ export async function fetchLogsRpc(
 	address: string,
 	topic0: string,
 	opts: HttpOptions & { fromBlock?: number; logger?: Logger } = {}
-): Promise<RawLog[]> {
+): Promise<LogsResult> {
 	const head = parseInt(
 		(await rpcCall<{ result?: string }>(url, { jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }, opts)).result ?? '0x0',
 		16
@@ -203,18 +221,32 @@ export async function fetchLogsRpc(
 			if (bn && r.result?.timestamp) ts.set(bn, parseInt(r.result.timestamp, 16));
 		}
 	}
-	const logs = out.map((l) => ({
+	const logs: RawLog[] = out.map((l) => ({
 		blockNumber: parseInt(l.blockNumber, 16),
 		logIndex: parseInt(l.logIndex, 16),
 		timeStamp: l.blockTimestamp ? parseInt(l.blockTimestamp, 16) : (ts.get(l.blockNumber) ?? 0),
 		transactionHash: l.transactionHash,
+		address: l.address ?? '',
 		topics: l.topics,
 		data: l.data
 	}));
-	if (logs.some((l) => !l.timeStamp)) throw new Error(`${url}: missing block timestamps`);
-	logs.sort((x, y) => x.blockNumber - y.blockNumber || x.logIndex - y.logIndex);
-	opts.logger?.info(`rpc ${new URL(url).host}: ${logs.length} logs in ${calls} getLogs calls`);
-	return logs;
+	// The node is untrusted: never accept a log for a different contract or
+	// event than what was requested, however it slipped in.
+	const wantAddress = address.toLowerCase();
+	const wantTopic0 = topic0.toLowerCase();
+	const matched: RawLog[] = [];
+	let dropped = 0;
+	for (const log of logs) {
+		if (log.address.toLowerCase() !== wantAddress || (log.topics[0] ?? '').toLowerCase() !== wantTopic0) {
+			dropped++;
+			continue;
+		}
+		matched.push(log);
+	}
+	if (matched.some((l) => !l.timeStamp)) throw new Error(`${url}: missing block timestamps`);
+	matched.sort((x, y) => x.blockNumber - y.blockNumber || x.logIndex - y.logIndex);
+	opts.logger?.info(`rpc ${new URL(url).host}: ${matched.length} logs in ${calls} getLogs calls`);
+	return { logs: matched, dropped };
 }
 
 /** RPC endpoints first, the explorer API as fallback. */
@@ -223,7 +255,7 @@ export async function fetchLogs(
 	address: string,
 	topic0: string,
 	opts: HttpOptions & { fromBlock?: number; logger?: Logger; maxPages?: number } = {}
-): Promise<RawLog[]> {
+): Promise<LogsResult> {
 	for (const url of api.rpc ?? []) {
 		try {
 			return await fetchLogsRpc(url, address, topic0, opts);
@@ -359,14 +391,16 @@ export const CIRCLE_EVM: EvmFreezeContract[] = [
 export const TETHER_TRON_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 export const TRONGRID = 'https://api.trongrid.io';
 
-async function evmFreezeEvents(c: EvmFreezeContract, opts: HttpOptions & { logger?: Logger }): Promise<FreezeEvent[]> {
+async function evmFreezeEvents(c: EvmFreezeContract, opts: HttpOptions & { logger?: Logger }): Promise<{ events: FreezeEvent[]; dropped: number }> {
 	const api = LOG_APIS[c.chain];
 	const out: FreezeEvent[] = [];
+	let dropped = 0;
 	for (const [kind, topic] of [
 		['add', c.add],
 		['remove', c.remove]
 	] as const) {
-		const logs = await fetchLogs(api, c.contract, topic, opts);
+		const { logs, dropped: d } = await fetchLogs(api, c.contract, topic, opts);
+		dropped += d;
 		for (const l of logs) {
 			const address = c.where === 'topic' ? (l.topics[1] ? wordToAddress(l.topics[1]) : '') : wordToAddress(l.data);
 			if (!address || address === '0x0000000000000000000000000000000000000000') continue;
@@ -380,9 +414,9 @@ async function evmFreezeEvents(c: EvmFreezeContract, opts: HttpOptions & { logge
 				order: l.blockNumber * 100_000 + l.logIndex
 			});
 		}
-		opts.logger?.info(`${c.chain} ${c.contract.slice(0, 10)} ${kind}: ${logs.length} events`);
+		opts.logger?.info(`${c.chain} ${c.contract.slice(0, 10)} ${kind}: ${logs.length} events${d ? ` (${d} dropped: contract/topic mismatch)` : ''}`);
 	}
-	return out;
+	return { events: out, dropped };
 }
 
 /** TronGrid contract events, oldest first (fingerprint pagination, time-window fallback). */
@@ -390,13 +424,15 @@ export async function tronEvents(
 	contract: string,
 	eventName: string,
 	opts: HttpOptions & { logger?: Logger; maxPages?: number } = {}
-): Promise<Array<{ user: string; time: number; tx: string; index: number; block: number }>> {
+): Promise<{ events: Array<{ user: string; time: number; tx: string; index: number; block: number }>; dropped: number }> {
 	const out: Array<{ user: string; time: number; tx: string; index: number; block: number }> = [];
 	const seen = new Set<string>();
 	const limiter = limiterFor(TRONGRID);
 	const maxPages = opts.maxPages ?? 1000;
+	const wantContract = contract.toLowerCase();
 	let minTs = 0;
 	let fingerprint: string | undefined;
+	let dropped = 0;
 	for (let page = 0; page < maxPages; page++) {
 		let url = `${TRONGRID}/v1/contracts/${contract}/events?event_name=${eventName}&limit=200&order_by=block_timestamp,asc`;
 		if (fingerprint) url += `&fingerprint=${encodeURIComponent(fingerprint)}`;
@@ -417,8 +453,17 @@ export async function tronEvents(
 			lastTs = Math.max(lastTs, time);
 			if (!user || seen.has(id)) continue;
 			seen.add(id);
-			out.push({ user, time: Math.floor(time / 1000), tx, index, block: Number(ev.block_number ?? 0) });
 			added++;
+			// TronGrid is untrusted: never accept an event for a different
+			// contract or event name than what was requested, however it
+			// slipped in.
+			const evName = String(ev.event_name ?? '');
+			const evContract = String(ev.contract_address ?? '').toLowerCase();
+			if (evName !== eventName || evContract !== wantContract) {
+				dropped++;
+				continue;
+			}
+			out.push({ user, time: Math.floor(time / 1000), tx, index, block: Number(ev.block_number ?? 0) });
 		}
 		if (data.length < 200) break;
 		if (body.meta?.fingerprint) {
@@ -430,8 +475,8 @@ export async function tronEvents(
 			minTs = lastTs;
 		}
 	}
-	opts.logger?.info(`TRON ${contract.slice(0, 8)} ${eventName}: ${out.length} events`);
-	return out;
+	opts.logger?.info(`TRON ${contract.slice(0, 8)} ${eventName}: ${out.length} events${dropped ? ` (${dropped} dropped: contract/event mismatch)` : ''}`);
+	return { events: out, dropped };
 }
 
 export const TETHER_SPEC: EventSourceSpec = {
@@ -469,14 +514,24 @@ export const ORACLE_SPEC: EventSourceSpec = {
 
 export const CHAINALYSIS_ORACLE = '0x40C57923924B5c5c5455c48D93317139ADDaC8fb';
 
+const dropNote = (dropped: number): string[] =>
+	dropped ? [`${dropped} upstream log(s)/event(s) dropped: emitting contract, topic0 or event name did not match what was requested`] : [];
+
 export async function syncTether(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
 	const events: FreezeEvent[] = [];
-	for (const c of TETHER_EVM) events.push(...(await evmFreezeEvents(c, opts)));
+	let dropped = 0;
+	for (const c of TETHER_EVM) {
+		const r = await evmFreezeEvents(c, opts);
+		events.push(...r.events);
+		dropped += r.dropped;
+	}
 	for (const [kind, name] of [
 		['add', 'AddedBlackList'],
 		['remove', 'RemovedBlackList']
 	] as const) {
-		for (const e of await tronEvents(TETHER_TRON_CONTRACT, name, opts)) {
+		const r = await tronEvents(TETHER_TRON_CONTRACT, name, opts);
+		dropped += r.dropped;
+		for (const e of r.events) {
 			events.push({
 				kind,
 				address: e.user, // hex 0x… → converted to T… by parseForChain('TRON')
@@ -491,26 +546,35 @@ export async function syncTether(opts: HttpOptions & { logger?: Logger } = {}): 
 	const res = emptyResult();
 	res.entries = foldEvents(events, TETHER_SPEC);
 	res.version = `events:${events.length}`;
+	res.notes.push(...dropNote(dropped));
 	return res;
 }
 
 export async function syncCircle(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
 	const events: FreezeEvent[] = [];
-	for (const c of CIRCLE_EVM) events.push(...(await evmFreezeEvents(c, opts)));
+	let dropped = 0;
+	for (const c of CIRCLE_EVM) {
+		const r = await evmFreezeEvents(c, opts);
+		events.push(...r.events);
+		dropped += r.dropped;
+	}
 	const res = emptyResult();
 	res.entries = foldEvents(events, CIRCLE_SPEC);
 	res.version = `events:${events.length}`;
+	res.notes.push(...dropNote(dropped));
 	return res;
 }
 
 export async function syncChainalysisOracle(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
 	const api = LOG_APIS.ETH;
 	const events: FreezeEvent[] = [];
+	let dropped = 0;
 	for (const [kind, topic] of [
 		['add', TOPICS.SanctionedAddressesAdded],
 		['remove', TOPICS.SanctionedAddressesRemoved]
 	] as const) {
-		const logs = await fetchLogs(api, CHAINALYSIS_ORACLE, topic, opts);
+		const { logs, dropped: d } = await fetchLogs(api, CHAINALYSIS_ORACLE, topic, opts);
+		dropped += d;
 		for (const l of logs) {
 			decodeAddressArray(l.data).forEach((address, i) =>
 				events.push({
@@ -528,5 +592,6 @@ export async function syncChainalysisOracle(opts: HttpOptions & { logger?: Logge
 	const res = emptyResult();
 	res.entries = foldEvents(events, ORACLE_SPEC);
 	res.version = `events:${events.length}`;
+	res.notes.push(...dropNote(dropped));
 	return res;
 }
