@@ -239,8 +239,9 @@ async function traceSmallTransferTotals(
 	if (!due.length) return { traced: 0, skipped: 0 };
 
 	// Where each recipient already stands, and how many recipients every
-	// (origin, hop) already has traced on small-transfer totals alone (traced
-	// there without any edge from that origin at that hop).
+	// (origin, hop) already has followed on small-transfer totals alone
+	// (traced there, with no edge from anyone at that hop or closer that
+	// would have made it a traced key anyway).
 	const current = new Map(
 		(
 			await sql.query<{ key: string; hop: number }>(`SELECT key, hop FROM oz_traced WHERE key = ANY($1::text[])`, [[...new Set(due.map((x) => x.t.toKey))]])
@@ -254,7 +255,7 @@ async function traceSmallTransferTotals(
 				`SELECT t.origin_key, t.hop, count(*)::int AS n
 				 FROM oz_traced t
 				 JOIN unnest($1::text[], $2::int[]) AS p(origin_key, hop) ON p.origin_key = t.origin_key AND p.hop = t.hop
-				 WHERE NOT EXISTS (SELECT 1 FROM oz_trace_edges e WHERE e.to_key = t.key AND e.origin_key = t.origin_key AND e.hop = t.hop)
+				 WHERE NOT EXISTS (SELECT 1 FROM oz_trace_edges e WHERE e.to_key = t.key AND e.hop <= t.hop)
 				 GROUP BY t.origin_key, t.hop`,
 				[[...pairs.values()].map((p) => p.originKey), [...pairs.values()].map((p) => p.hop)]
 			)

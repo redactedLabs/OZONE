@@ -420,6 +420,36 @@ describe('fan-out cap on the small-transfer path', async () => {
 	});
 });
 
+describe('the fan-out cap only counts recipients followed because of small transfers', async () => {
+	const { db, sql } = await memoryDb();
+	afterAll(() => db.close());
+
+	const origin = '0x' + 'e8'.repeat(20);
+	const other = '0x' + 'f8'.repeat(20);
+	const first = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+	const second = '1BoatSLRHtKNngkdXEeobR76b53LETtpyT';
+	const cfg = { ...DEFAULT_TRACE_CONFIG, maxDustRecipients: 1 };
+
+	it('a slot is freed once its recipient is also traced by an ordinary flow', async () => {
+		await listOrigins(sql, [
+			{ address: origin, entity: 'Small-transfer test origin' },
+			{ address: other, entity: 'Another test origin' }
+		]);
+		// 1. `first` is traced on small transfers alone and takes the only slot
+		const res = await runTraceBackfill(sql, new FakeMidgard([6000, 6001, 6002].map((h) => swap(h, origin, first, 30))), { cfg });
+		expect(res.dustTraced).toBe(1);
+		// 2. it then receives $2,000 from another listed address: traced at hop 1 anyway
+		await setState(sql, 'trace:realtime', { height: 6005 });
+		await runRealtimeTick(sql, new FakeMidgard([swap(6010, other, first, 2000)]), { cfg });
+		// 3. the next small-transfer recipient of the first origin gets the slot
+		const log = captureLogger();
+		const tick = await runRealtimeTick(sql, new FakeMidgard([swap(6020, origin, second, 30), swap(6021, origin, second, 30)]), { cfg, logger: log });
+		expect(tick.dustTraced).toBe(1);
+		expect(await tracedRow(sql, `btc:${second}`)).toMatchObject({ hop: 1, risk: 'medium' });
+		expect(log.lines.some((l) => l.includes('fan-out cap'))).toBe(false);
+	});
+});
+
 describe('small transfers are only recorded where a total could flag', () => {
 	const flows: DustFlow[] = [];
 	const sender = (hop: number, originRisk: IndexEntry['originRisk']): IndexEntry => ({
