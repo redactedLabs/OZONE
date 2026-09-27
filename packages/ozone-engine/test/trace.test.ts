@@ -8,7 +8,7 @@ import { runRealtimeTick, runTraceBackfill } from '../src/trace/jobs.js';
 import { collectSnapshot } from '../src/snapshot/builder.js';
 import type { MidgardAction } from '../src/trace/midgard.js';
 import { StaticPrices } from '../src/trace/prices.js';
-import { DEFAULT_TRACE_CONFIG, traceAction, traceRisk, type IndexEntry } from '../src/trace/tracer.js';
+import { DEFAULT_TRACE_CONFIG, traceAction, traceRisk, type IndexEntry, type TraceHit } from '../src/trace/tracer.js';
 import { emptyResult, type ListEntry } from '../src/types.js';
 import { action, FakeMidgard, memoryDb } from './helpers.js';
 
@@ -371,6 +371,99 @@ describe('structuring resistance: per-(origin, recipient) USD aggregation', asyn
 		// publishes the recipient's reason at the undemoted (high) risk.
 		const snap = await collectSnapshot(sql);
 		const rec = snap.records.find((x) => x.key === `btc:${recipient}`);
+		expect(rec?.reasons.some((x) => x.risk === 'high')).toBe(true);
+	});
+});
+
+describe('trace reasons published highest risk first, with an oz_traced backstop', async () => {
+	const { db, sql } = await memoryDb();
+	afterAll(() => db.close());
+
+	it('an unpriced high edge outranks three priced medium edges for the same recipient', async () => {
+		const origin = '0xbeef00000000000000000000000000000000f00d';
+		const recipient = 'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3';
+		const res = emptyResult();
+		res.entries.push({
+			source: 'ethlabels',
+			key: `evm:${origin}`,
+			chain: 'ETH',
+			address: origin,
+			category: 'hack',
+			risk: 'high',
+			code: 'HACK_LABEL',
+			entity: 'Sort-order test origin',
+			text: 'test fixture'
+		});
+		await applySourceResult(sql, { id: 'ethlabels', name: 'eth-labels', kind: 'community' }, res);
+
+		// No `metadata.swap` at all and no pool price for BTC.BTC: priceOf()
+		// finds nothing, so this flow's usd is undefined ("high", undemoted).
+		const unpriced = action({
+			height: 700,
+			in: [{ address: origin, asset: 'ETH.ETH', amount: 1 }],
+			out: [{ address: recipient, asset: 'BTC.BTC', amount: 1 }]
+		});
+		// Three ordinary, individually-demoted ("medium") priced flows — their
+		// sum ($210) stays well under the $1,000 hop-1 threshold, so this is
+		// purely a sort/truncation test, isolated from the USD aggregation fix.
+		const priced = [60, 70, 80].map((usd, i) =>
+			action({
+				height: 701 + i,
+				in: [{ address: origin, asset: 'ETH.ETH', amount: 1 }],
+				out: [{ address: recipient, asset: 'BTC.BTC', amount: 1 }],
+				metadata: { swap: { outPriceUSD: String(usd) } }
+			})
+		);
+		const r = await runTraceBackfill(sql, new FakeMidgard([unpriced, ...priced]));
+		expect(r.errors).toBe(0);
+
+		const edgeRisks = await sql.query<{ risk: string; usd: string | null }>(
+			`SELECT risk, usd FROM oz_trace_edges WHERE to_key = $1`,
+			[`btc:${recipient}`]
+		);
+		expect(edgeRisks.rows).toHaveLength(4);
+		expect(edgeRisks.rows.filter((x) => x.risk === 'high' && x.usd === null)).toHaveLength(1);
+		expect(edgeRisks.rows.filter((x) => x.risk === 'medium')).toHaveLength(3);
+
+		// Old sort (`usd DESC NULLS LAST`) pushed the unpriced edge out of the
+		// kept top 3; the fix orders by risk first, so it survives and the
+		// published verdict for this recipient is "high", not "medium".
+		const snap = await collectSnapshot(sql);
+		const rec = snap.records.find((x) => x.key === `btc:${recipient}`);
+		expect(rec?.reasons).toHaveLength(3);
+		expect(rec?.reasons[0].risk).toBe('high');
+	});
+
+	it("backstops a recipient whose oz_traced.risk is stronger than any surviving edge", async () => {
+		const recipientKey = 'btc:1BoatSLRHtKNngkdXEeobR76b53LETtpyT';
+		const base = {
+			height: 800,
+			date: new Date('2025-06-01').toISOString(),
+			action: 'swap',
+			relation: 'value' as const,
+			fromKey: 'evm:0xcafe000000000000000000000000000000babe',
+			fromAddress: '0xcafe000000000000000000000000000000babe',
+			fromChain: 'ETH',
+			toKey: recipientKey,
+			toAddress: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+			toChain: 'BTC',
+			originKey: 'evm:0xcafe000000000000000000000000000000babe',
+			originSource: 'ethlabels',
+			originRisk: 'high' as const,
+			originCategory: 'hack' as const
+		};
+		const hits: TraceHit[] = [60, 70, 80].map((usd, i) => ({ ...base, txid: `BACKSTOP${i}`, hop: 1, risk: 'medium', usd }));
+		await recordHits(sql, hits);
+		const before = await sql.query<{ risk: string }>(`SELECT risk FROM oz_traced WHERE key = $1`, [recipientKey]);
+		expect(before.rows[0].risk).toBe('medium');
+
+		// Simulate oz_traced holding a stronger reason than any edge that
+		// survived truncation reflects — the invariant the backstop enforces
+		// regardless of how that mismatch came about.
+		await sql.query(`UPDATE oz_traced SET risk = 'high' WHERE key = $1`, [recipientKey]);
+
+		const snap = await collectSnapshot(sql);
+		const rec = snap.records.find((x) => x.key === recipientKey);
 		expect(rec?.reasons.some((x) => x.risk === 'high')).toBe(true);
 	});
 });

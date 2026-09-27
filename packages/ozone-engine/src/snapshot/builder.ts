@@ -11,6 +11,7 @@ import {
 	riskFromRank,
 	riskRank,
 	sha256Hex,
+	splitKey,
 	SUPPORTED_CHAINS,
 	type Category,
 	type PrivateKeyInfo,
@@ -123,9 +124,13 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 		address: string;
 		hop: number;
 		risk: Risk;
+		origin_key: string;
+		origin_source: string;
+		origin_entity: string | null;
+		first_txid: string;
 		service: boolean;
 		suppressed: boolean;
-	}>(`SELECT key, chain, address, hop, risk, service, suppressed FROM oz_traced WHERE NOT suppressed`);
+	}>(`SELECT key, chain, address, hop, risk, origin_key, origin_source, origin_entity, first_txid, service, suppressed FROM oz_traced WHERE NOT suppressed`);
 	const edges = await sql.query<{
 		to_key: string;
 		to_chain: string;
@@ -147,8 +152,18 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 		reason: string;
 	}>(
 		`SELECT to_key, to_chain, txid, from_address, from_chain, action, relation, height, ts, amount, usd, hop, risk, origin_key, origin_risk, origin_source, origin_entity, reason
-		 FROM oz_trace_edges ORDER BY to_key, hop ASC, usd DESC NULLS LAST, ts ASC`
+		 FROM oz_trace_edges
+		 ORDER BY to_key,
+		   array_position(ARRAY['none','info','low','medium','high','severe'], risk) DESC,
+		   hop ASC,
+		   usd DESC NULLS FIRST,
+		   ts ASC`
 	);
+	// Every edge, keyed by (to_key, txid): lets the oz_traced backstop below
+	// find the exact edge behind its best-recorded risk even when that edge
+	// was not among the top MAX_TRACE_REASONS kept for publishing.
+	const edgeByToKeyTxid = new Map<string, (typeof edges.rows)[number]>();
+	for (const e of edges.rows) edgeByToKeyTxid.set(`${e.to_key}\u0000${e.txid}`, e);
 	const edgesByKey = new Map<string, typeof edges.rows>();
 	for (const e of edges.rows) {
 		const list = edgesByKey.get(e.to_key);
@@ -184,9 +199,11 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 	let tracedCount = 0;
 	for (const t of traced.rows) {
 		if (listedKeys.has(t.key)) continue; // listed in its own right; trace adds nothing to the verdict
+		let bestPublished: Risk = 'none';
 		for (const e of edgesByKey.get(t.key) ?? []) {
 			const sum = e.relation === 'value' ? groupTotals.get(groupKey(e.origin_key, e.to_key, e.hop)) : undefined;
 			const risk = sum !== undefined && crossesFullUsd(e.hop, sum) ? undemotedRisk(e.origin_risk, e.hop) : e.risk;
+			if (riskRank(risk) > riskRank(bestPublished)) bestPublished = risk;
 			add(t.key, {
 				code: e.relation === 'value' ? `TRACE_${String(e.action).toUpperCase()}` : `TRACE_${e.relation.toUpperCase()}`,
 				source: 'thorchain_trace',
@@ -211,6 +228,59 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 					...(e.origin_entity ? { originEntity: e.origin_entity } : {})
 				}
 			});
+		}
+		// Backstop: oz_traced.risk is the address's true best-recorded reason
+		// (lowest hop, highest risk seen there) and must never be higher than
+		// what the truncated top-MAX_TRACE_REASONS actually published. If the
+		// cutoff or the aggregation above ever misses it, surface it directly.
+		if (riskRank(t.risk) > riskRank(bestPublished)) {
+			const fallback = edgeByToKeyTxid.get(`${t.key}\u0000${t.first_txid}`);
+			add(
+				t.key,
+				fallback
+					? {
+							code: fallback.relation === 'value' ? `TRACE_${String(fallback.action).toUpperCase()}` : `TRACE_${fallback.relation.toUpperCase()}`,
+							source: 'thorchain_trace',
+							category: 'traced',
+							risk: t.risk,
+							text: fallback.reason,
+							chain: fallback.to_chain,
+							refId: fallback.txid,
+							ref: `https://runescan.io/tx/${fallback.txid}`,
+							trace: {
+								hop: Number(fallback.hop),
+								action: fallback.action,
+								txid: fallback.txid,
+								...(fallback.height ? { height: Number(fallback.height) } : {}),
+								...(fallback.ts ? { date: isoOf(fallback.ts) } : {}),
+								from: fallback.from_address,
+								fromChain: fallback.from_chain,
+								...(fallback.amount ? { amount: fallback.amount } : {}),
+								...(fallback.usd !== null ? { usd: Math.round(Number(fallback.usd)) } : {}),
+								originKey: fallback.origin_key,
+								originSource: fallback.origin_source,
+								...(fallback.origin_entity ? { originEntity: fallback.origin_entity } : {})
+							}
+						}
+					: {
+							code: 'TRACE_BEST',
+							source: 'thorchain_trace',
+							category: 'traced',
+							risk: t.risk,
+							text: `Traced at hop ${t.hop} via ${t.origin_source}${t.origin_entity ? ` (${t.origin_entity})` : ''}; detail edge not in the published top ${MAX_TRACE_REASONS}`,
+							chain: t.chain,
+							refId: t.first_txid,
+							trace: {
+								hop: Number(t.hop),
+								action: 'unknown',
+								txid: t.first_txid,
+								from: splitKey(t.origin_key)?.address ?? t.origin_key,
+								originKey: t.origin_key,
+								originSource: t.origin_source,
+								...(t.origin_entity ? { originEntity: t.origin_entity } : {})
+							}
+						}
+			);
 		}
 		tracedCount++;
 	}
