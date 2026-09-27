@@ -5,9 +5,15 @@
  * and of its unfreeze or delisting (removedAt).
  *
  * EVM logs come from Etherscan-compatible public explorers that need no API
- * key (Blockscout for Ethereum/Base, Routescan for Avalanche); TRON events
- * from TronGrid. Every sync replays the complete event history, so state is
- * self-healing and never depends on an earlier run.
+ * key (Blockscout for Ethereum, Base, Arbitrum, Optimism and Polygon;
+ * Routescan for Avalanche); TRON events from TronGrid. Every sync replays the
+ * complete event history, so state is self-healing and never depends on an
+ * earlier run.
+ *
+ * Chains beyond the original ones (ETH/TRON/AVAX for Tether, ETH/BASE/AVAX
+ * for Circle, ETH for the oracle) are separate sources, so an explorer
+ * outage on one of them can never fail — or, worse, half-delist — a core
+ * source.
  */
 import { parseForChain } from '../../../ozone-client/src/index.js';
 import type { Category, Risk } from '../../../ozone-client/src/index.js';
@@ -41,6 +47,21 @@ export const LOG_APIS: Record<string, LogApi> = {
 		chain: 'AVAX',
 		api: 'https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api',
 		txUrl: (h) => `https://snowtrace.io/tx/${h}`
+	},
+	ARB: {
+		chain: 'ARB',
+		api: 'https://arbitrum.blockscout.com/api',
+		txUrl: (h) => `https://arbitrum.blockscout.com/tx/${h}`
+	},
+	OP: {
+		chain: 'OP',
+		api: 'https://explorer.optimism.io/api',
+		txUrl: (h) => `https://explorer.optimism.io/tx/${h}`
+	},
+	POL: {
+		chain: 'POL',
+		api: 'https://polygon.blockscout.com/api',
+		txUrl: (h) => `https://polygon.blockscout.com/tx/${h}`
 	}
 };
 
@@ -388,6 +409,24 @@ export const CIRCLE_EVM: EvmFreezeContract[] = [
 	{ chain: 'AVAX', contract: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', add: TOPICS.Blacklisted, remove: TOPICS.UnBlacklisted, where: 'topic' }
 ];
 
+/** Circle's native USDC on further chains (same FiatToken Blacklisted/UnBlacklisted events). */
+export const CIRCLE_OTHER_EVM: EvmFreezeContract[] = [
+	{ chain: 'ARB', contract: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', add: TOPICS.Blacklisted, remove: TOPICS.UnBlacklisted, where: 'topic' },
+	{ chain: 'OP', contract: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85', add: TOPICS.Blacklisted, remove: TOPICS.UnBlacklisted, where: 'topic' },
+	{ chain: 'POL', contract: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', add: TOPICS.Blacklisted, remove: TOPICS.UnBlacklisted, where: 'topic' }
+];
+
+/**
+ * USDT0 — Tether's omnichain USDT (LayerZero OFT) on Arbitrum and the
+ * upgraded USDT on Polygon PoS: BlockPlaced / BlockReleased(address indexed),
+ * the same events as Tether's Avalanche contract (verified on Blockscout,
+ * 2026-09-27: 37 freezes on Arbitrum, 5 freezes and 1 release on Polygon).
+ */
+export const USDT0_EVM: EvmFreezeContract[] = [
+	{ chain: 'ARB', contract: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', add: TOPICS.BlockPlaced, remove: TOPICS.BlockReleased, where: 'topic' },
+	{ chain: 'POL', contract: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', add: TOPICS.BlockPlaced, remove: TOPICS.BlockReleased, where: 'topic' }
+];
+
 export const TETHER_TRON_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 export const TRONGRID = 'https://api.trongrid.io';
 
@@ -514,6 +553,40 @@ export const ORACLE_SPEC: EventSourceSpec = {
 
 export const CHAINALYSIS_ORACLE = '0x40C57923924B5c5c5455c48D93317139ADDaC8fb';
 
+/**
+ * Further deployments of the same oracle (code checked with eth_getCode and
+ * events on Blockscout/Routescan, 2026-09-27). Base uses its own address.
+ * BNB Chain, Fantom, Celo and Blast deployments exist but have no key-free
+ * full-history log API that answers, so they are not read.
+ */
+export const ORACLE_OTHER_DEPLOYMENTS: Array<{ chain: keyof typeof LOG_APIS; contract: string }> = [
+	{ chain: 'ARB', contract: CHAINALYSIS_ORACLE },
+	{ chain: 'OP', contract: CHAINALYSIS_ORACLE },
+	{ chain: 'POL', contract: CHAINALYSIS_ORACLE },
+	{ chain: 'AVAX', contract: CHAINALYSIS_ORACLE },
+	{ chain: 'BASE', contract: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B' }
+];
+
+export const USDT0_SPEC: EventSourceSpec = {
+	source: 'tether_usdt0',
+	code: 'USDT0_FROZEN',
+	category: 'stablecoin_freeze',
+	risk: 'high',
+	entity: 'Tether USDT0 (omnichain USDT)',
+	text: (chain) => `USDT (USDT0) frozen on ${chain} (address blocked on the token contract)`,
+	removedText: (chain) => `Formerly frozen (USDT0) on ${chain} — released`,
+	refUrl: 'https://usdt0.to/'
+};
+
+export const CIRCLE_OTHER_SPEC: EventSourceSpec = { ...CIRCLE_SPEC, source: 'circle_other_chains' };
+
+export const ORACLE_OTHER_SPEC: EventSourceSpec = {
+	...ORACLE_SPEC,
+	source: 'chainalysis_oracle_other_chains',
+	text: (chains) => `Sanctioned per the Chainalysis on-chain sanctions oracle on ${chains} (mirror of OFAC SDN EVM addresses)`,
+	removedText: (chain) => `Formerly sanctioned per the Chainalysis oracle on ${chain} — removed (delisted)`
+};
+
 const dropNote = (dropped: number): string[] =>
 	dropped ? [`${dropped} upstream log(s)/event(s) dropped: emitting contract, topic0 or event name did not match what was requested`] : [];
 
@@ -565,22 +638,26 @@ export async function syncCircle(opts: HttpOptions & { logger?: Logger } = {}): 
 	return res;
 }
 
-export async function syncChainalysisOracle(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
-	const api = LOG_APIS.ETH;
+async function oracleEvents(
+	chain: keyof typeof LOG_APIS,
+	contract: string,
+	opts: HttpOptions & { logger?: Logger }
+): Promise<{ events: FreezeEvent[]; dropped: number }> {
+	const api = LOG_APIS[chain];
 	const events: FreezeEvent[] = [];
 	let dropped = 0;
 	for (const [kind, topic] of [
 		['add', TOPICS.SanctionedAddressesAdded],
 		['remove', TOPICS.SanctionedAddressesRemoved]
 	] as const) {
-		const { logs, dropped: d } = await fetchLogs(api, CHAINALYSIS_ORACLE, topic, opts);
+		const { logs, dropped: d } = await fetchLogs(api, contract, topic, opts);
 		dropped += d;
 		for (const l of logs) {
 			decodeAddressArray(l.data).forEach((address, i) =>
 				events.push({
 					kind,
 					address,
-					chain: 'ETH',
+					chain,
 					time: l.timeStamp,
 					tx: l.transactionHash,
 					txUrl: api.txUrl(l.transactionHash),
@@ -588,10 +665,50 @@ export async function syncChainalysisOracle(opts: HttpOptions & { logger?: Logge
 				})
 			);
 		}
+		opts.logger?.info(`${chain} oracle ${kind}: ${logs.length} events`);
 	}
+	return { events, dropped };
+}
+
+export async function syncChainalysisOracle(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
+	const { events, dropped } = await oracleEvents('ETH', CHAINALYSIS_ORACLE, opts);
 	const res = emptyResult();
 	res.entries = foldEvents(events, ORACLE_SPEC);
 	res.version = `events:${events.length}`;
 	res.notes.push(...dropNote(dropped));
 	return res;
 }
+
+/** The oracle's other deployments (every one must answer: a partial read would delist). */
+export async function syncOracleOtherChains(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
+	const events: FreezeEvent[] = [];
+	let dropped = 0;
+	for (const d of ORACLE_OTHER_DEPLOYMENTS) {
+		const r = await oracleEvents(d.chain, d.contract, opts);
+		events.push(...r.events);
+		dropped += r.dropped;
+	}
+	const res = emptyResult();
+	res.entries = foldEvents(events, ORACLE_OTHER_SPEC);
+	res.version = `events:${events.length}`;
+	res.notes.push(...dropNote(dropped));
+	return res;
+}
+
+async function syncEvmFreezes(contracts: EvmFreezeContract[], spec: EventSourceSpec, opts: HttpOptions & { logger?: Logger }): Promise<ParseResult> {
+	const events: FreezeEvent[] = [];
+	let dropped = 0;
+	for (const c of contracts) {
+		const r = await evmFreezeEvents(c, opts);
+		events.push(...r.events);
+		dropped += r.dropped;
+	}
+	const res = emptyResult();
+	res.entries = foldEvents(events, spec);
+	res.version = `events:${events.length}`;
+	res.notes.push(...dropNote(dropped));
+	return res;
+}
+
+export const syncCircleOtherChains = (opts: HttpOptions & { logger?: Logger } = {}) => syncEvmFreezes(CIRCLE_OTHER_EVM, CIRCLE_OTHER_SPEC, opts);
+export const syncUsdt0 = (opts: HttpOptions & { logger?: Logger } = {}) => syncEvmFreezes(USDT0_EVM, USDT0_SPEC, opts);

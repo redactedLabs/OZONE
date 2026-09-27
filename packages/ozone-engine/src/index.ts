@@ -7,9 +7,24 @@ export { parseUkSanctionsXml, UK_SANCTIONS_URL } from './sources/uk.js';
 export { parseEuFsfXml, EU_FSF_URL, EU_FSF_MIRROR_URL } from './sources/eu.js';
 export { parseFbiPublication, FBI_PUBLICATIONS } from './sources/fbi.js';
 export { parseEthLabels, parseScamSniffer, ETH_LABEL_POLICY } from './sources/community.js';
-export { foldEvents, fetchLogs, fetchLogsRpc, fetchLogsExplorer, tronEvents, syncTether, syncCircle, syncChainalysisOracle, TOPICS } from './sources/events.js';
+export {
+	foldEvents,
+	fetchLogs,
+	fetchLogsRpc,
+	fetchLogsExplorer,
+	tronEvents,
+	syncTether,
+	syncCircle,
+	syncChainalysisOracle,
+	syncOracleOtherChains,
+	syncCircleOtherChains,
+	syncUsdt0,
+	LOG_APIS,
+	TOPICS
+} from './sources/events.js';
 export { CURATED, type ClusterSpec, type CuratedIncident } from './sources/curated-data.js';
-export { SOURCES, DERIVED_SOURCES, CORE_SOURCES, sourceById, parseCurated, type SourceDef, type SourceContext } from './sources/registry.js';
+export { SOURCES, DERIVED_SOURCES, CORE_SOURCES, sourceById, activeSources, parseCurated, type SourceDef, type SourceContext } from './sources/registry.js';
+export { parseChainabuseReports, syncChainabuse, CHAINABUSE_API, type ChainabuseReport } from './sources/chainabuse.js';
 export { migrate, batchInsert, withTransaction } from './store/db.js';
 export { applySourceResult, allEntries, manualEntries, manualFlagsSignature, httpUrlOrUndefined, URGENT_DEFAULT_MS, SanityError, type ApplyStats } from './store/entries.js';
 export {

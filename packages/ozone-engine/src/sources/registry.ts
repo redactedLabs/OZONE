@@ -10,7 +10,8 @@ import { httpJson, httpText, type HttpOptions } from '../util/http.js';
 import { ETH_LABELS_URL, parseEthLabels, parseScamSniffer, SCAMSNIFFER_URL } from './community.js';
 import { CURATED } from './curated-data.js';
 import { EU_FSF_MIRROR_URL, EU_FSF_URL, parseEuFsfXml } from './eu.js';
-import { syncChainalysisOracle, syncCircle, syncTether } from './events.js';
+import { syncChainabuse } from './chainabuse.js';
+import { syncChainalysisOracle, syncCircle, syncCircleOtherChains, syncOracleOtherChains, syncTether, syncUsdt0 } from './events.js';
 import { FBI_PUBLICATIONS, parseFbiPublication } from './fbi.js';
 import { OFAC_SDN_URL, parseOfacSdnXml } from './ofac.js';
 import { parseUkSanctionsXml, UK_SANCTIONS_URL } from './uk.js';
@@ -37,6 +38,13 @@ export interface SourceDef {
 	maxDropRatio?: number;
 	/** Refuse a sync with fewer entries than this. */
 	minEntries?: number;
+	/**
+	 * An optional source that needs a key or account: it is only scheduled
+	 * when this environment variable is set (activeSources). Never a core source.
+	 */
+	requiresEnv?: string;
+	/** Update cadence of the upstream data (methodology page, survey). */
+	cadence?: string;
 	fetchParse(ctx: SourceContext): Promise<ParseResult>;
 }
 
@@ -214,6 +222,57 @@ export const SOURCES: SourceDef[] = [
 		}
 	},
 	{
+		id: 'chainalysis_oracle_other_chains',
+		name: 'Chainalysis sanctions oracle (Arbitrum, Optimism, Polygon, Avalanche, Base)',
+		kind: 'sanctions',
+		url: 'https://go.chainalysis.com/chainalysis-oracle-docs.html',
+		description:
+			'The same public on-chain sanctions oracle on its other chains (no API key): additions and removals per chain. BNB Chain, Fantom, Celo and Blast deployments have no key-free log API and are not read.',
+		cadence: 'on-chain, as Chainalysis updates each deployment; read every 6 h',
+		// keyless Blockscout instances allow about 10 requests per IP and window: 2 per chain and sync
+		intervalMs: 6 * H,
+		minEntries: 30,
+		maxDropRatio: 0.25,
+		fetchParse: (ctx) => syncOracleOtherChains({ ...ctx.http, logger: ctx.logger })
+	},
+	{
+		id: 'tether_usdt0',
+		name: 'USDT0 freezes (Arbitrum, Polygon)',
+		kind: 'stablecoin',
+		url: 'https://usdt0.to/',
+		description: 'BlockPlaced/BlockReleased events of USDT0, Tether\'s omnichain USDT, on Arbitrum and Polygon (freeze and release with block time and transaction).',
+		cadence: 'on-chain, as freezes happen; read every 6 h',
+		intervalMs: 6 * H,
+		minEntries: 10,
+		maxDropRatio: 0.25,
+		fetchParse: (ctx) => syncUsdt0({ ...ctx.http, logger: ctx.logger })
+	},
+	{
+		id: 'circle_other_chains',
+		name: 'Circle USDC blacklist (Arbitrum, Optimism, Polygon)',
+		kind: 'stablecoin',
+		url: 'https://www.circle.com/legal/usdc-terms',
+		description: 'USDC Blacklisted/UnBlacklisted events of Circle\'s native USDC on Arbitrum, Optimism and Polygon.',
+		cadence: 'on-chain, as freezes happen; read every 6 h',
+		intervalMs: 6 * H,
+		minEntries: 100,
+		maxDropRatio: 0.1,
+		fetchParse: (ctx) => syncCircleOtherChains({ ...ctx.http, logger: ctx.logger })
+	},
+	{
+		id: 'chainabuse',
+		name: 'Chainabuse verified scam reports (optional, needs CHAINABUSE_API_KEY)',
+		kind: 'community',
+		url: 'https://www.chainabuse.com/',
+		description:
+			'Community scam and phishing reports verified by Chainabuse moderators (TRM Labs), risk medium. Only runs when CHAINABUSE_API_KEY is set; read incrementally (the free tier allows 10 calls a month).',
+		cadence: 'continuous (community reports); read weekly by default',
+		requiresEnv: 'CHAINABUSE_API_KEY',
+		intervalMs: Number(process.env.CHAINABUSE_INTERVAL_HOURS ?? '') > 0 ? Number(process.env.CHAINABUSE_INTERVAL_HOURS) * H : 7 * 24 * H,
+		maxDropRatio: 0.5,
+		fetchParse: (ctx) => syncChainabuse({ ...ctx.http, sql: ctx.sql })
+	},
+	{
 		id: 'ethlabels',
 		name: 'Labelled exploiters (eth-labels)',
 		kind: 'community',
@@ -287,4 +346,9 @@ export const DERIVED_SOURCES = [
 
 export function sourceById(id: string): SourceDef | undefined {
 	return SOURCES.find((s) => s.id === id);
+}
+
+/** The sources to schedule: every source whose key/account variable (if it needs one) is set. */
+export function activeSources(env: Record<string, string | undefined> = process.env): SourceDef[] {
+	return SOURCES.filter((s) => !s.requiresEnv || !!env[s.requiresEnv]);
 }

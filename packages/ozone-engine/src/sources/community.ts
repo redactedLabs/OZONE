@@ -47,6 +47,26 @@ export const ETH_LABEL_POLICY: Readonly<Record<string, LabelPolicy | null>> = Ob
 	blocked: null
 });
 
+/**
+ * eth-labels files each newly labelled heist under its own slug
+ * (`bybit-exploit`, `wazirx-exploit`, …). A slug that is not in the table
+ * above but names an attack — `<incident>-exploit`, `-exploiter`, `-hack`,
+ * `-hacker`, `-heist` — is imported as a hack attribution, so a new incident
+ * reaches Ozone with the next daily sync instead of after a code change.
+ * Entries whose name tag marks a victim (compromised, exploited contract)
+ * are skipped.
+ */
+const NEW_INCIDENT_SLUG = /^[a-z0-9][a-z0-9-]*-(exploit|exploiter|hack|hacker|heist)$/;
+const VICTIM_TAG = /compromised|exploited|victim|drained wallet/i;
+const NEW_INCIDENT: LabelPolicy = { category: 'hack', risk: 'high', code: 'HACK_LABEL' };
+
+function policyFor(label: string, nameTag: string): LabelPolicy | null | undefined {
+	const explicit = ETH_LABEL_POLICY[label];
+	if (explicit !== undefined) return explicit;
+	if (!NEW_INCIDENT_SLUG.test(label)) return undefined;
+	return VICTIM_TAG.test(nameTag) ? null : NEW_INCIDENT;
+}
+
 const CHAIN_BY_ID: Record<number, { chain: string; explorer: string }> = {
 	1: { chain: 'ETH', explorer: 'https://etherscan.io/address/' },
 	56: { chain: 'BSC', explorer: 'https://bscscan.com/address/' },
@@ -72,15 +92,17 @@ export function parseEthLabels(json: unknown, version?: string): ParseResult {
 	if (!Array.isArray(json)) throw new Error('eth-labels: expected an array');
 	const byKey = new Map<string, ParseResult['entries'][number]>();
 	const skippedLabels = new Map<string, number>();
+	const newSlugs = new Map<string, number>();
 	for (const raw of json as EthLabel[]) {
-		if (!raw || typeof raw.address !== 'string') continue;
-		let policy = ETH_LABEL_POLICY[raw.label];
+		if (!raw || typeof raw.address !== 'string' || typeof raw.label !== 'string') continue;
+		const name = (raw.nameTag ?? '').trim();
+		let policy = policyFor(raw.label, name);
 		if (policy === undefined) continue; // unrelated label (exchanges, protocols, …)
 		if (policy === null) {
 			skippedLabels.set(raw.label, (skippedLabels.get(raw.label) ?? 0) + 1);
 			continue;
 		}
-		const name = (raw.nameTag ?? '').trim();
+		if (!(raw.label in ETH_LABEL_POLICY)) newSlugs.set(raw.label, (newSlugs.get(raw.label) ?? 0) + 1);
 		if (/^fake_phishing/i.test(name)) policy = PHISH;
 		const chainInfo = CHAIN_BY_ID[raw.chainId] ?? CHAIN_BY_ID[1];
 		const p = parseForChain(raw.address, chainInfo.chain);
@@ -108,6 +130,7 @@ export function parseEthLabels(json: unknown, version?: string): ParseResult {
 		});
 	}
 	for (const [label, n] of skippedLabels) res.notes.push(`skipped ${n} entries labelled ${label}`);
+	for (const [label, n] of newSlugs) res.notes.push(`imported ${n} entries of the new incident label ${label}`);
 	res.entries = [...byKey.values()];
 	return res;
 }

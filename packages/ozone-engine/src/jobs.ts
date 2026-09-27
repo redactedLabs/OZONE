@@ -6,7 +6,7 @@ import { decodePayload, type PrivateKeyInfo, type SnapshotIndex } from '../../oz
 import { clusterEntries, expandCluster } from './evm/expand.js';
 import { buildAndStoreSnapshot, latestSnapshot, snapshotPayload, type PublishResult, type StoreOptions } from './snapshot/builder.js';
 import { CURATED, type ClusterSpec } from './sources/curated-data.js';
-import { SOURCES, type SourceContext, type SourceDef } from './sources/registry.js';
+import { activeSources, SOURCES, type SourceContext, type SourceDef } from './sources/registry.js';
 import { applySourceResult, recordSourceError, type ApplyStats } from './store/entries.js';
 import { screenUsers, type UserScreenResult } from './screen/users.js';
 import { loadTraceIndex, setState } from './store/trace.js';
@@ -42,7 +42,7 @@ export async function syncSource(sql: Sql, def: SourceDef, ctx: SourceContext = 
 
 export async function syncAllSources(sql: Sql, ctx: SourceContext = {}, only?: string[]): Promise<SyncOutcome[]> {
 	const out: SyncOutcome[] = [];
-	for (const def of SOURCES) {
+	for (const def of activeSources()) {
 		if (only && !only.includes(def.id)) continue;
 		out.push(await syncSource(sql, def, ctx));
 	}
