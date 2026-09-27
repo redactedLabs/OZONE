@@ -98,23 +98,12 @@
 		border: 1px solid var(--app-border);
 	}
 	/* Win98: the theme recolours inline styles and elements; class-based text needs the same (black on silver). */
-	:global(.win98) .label,
-	:global(.win98) .tab {
+	:global(.win98) .tab,
+	:global(.win98) .btn-secondary {
 		color: #000;
 	}
-	:global(.win98) button.tab.active.active,
 	:global(.win98) a.tab.active.active {
 		background: #000080 !important;
 		color: #fff !important;
-	}
-	:global(.win98) a.btn {
-		background: #c0c0c0;
-		color: #000;
-		border: 2px solid;
-		border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
-		border-radius: 0;
-	}
-	:global(.win98) .btn-secondary {
-		color: #000;
 	}
 </style>

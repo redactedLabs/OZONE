@@ -154,8 +154,7 @@
 	:global(.win98) .tab {
 		color: #000;
 	}
-	:global(.win98) button.tab.active.active,
-	:global(.win98) a.tab.active.active {
+	:global(.win98) button.tab.active.active {
 		background: #000080 !important;
 		color: #fff !important;
 	}
