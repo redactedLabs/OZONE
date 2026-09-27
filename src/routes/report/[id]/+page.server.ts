@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { reports } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import { fetchMidgardActions, fetchBalances, groupTransactions } from '$lib/server/historyService';
+import { fetchMidgardActions, fetchBalances, groupTransactions, redactGroups, redactTransactions } from '$lib/server/historyService';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const reportId = params.id.toUpperCase();
@@ -51,11 +51,12 @@ export const load: PageServerLoad = async ({ params }) => {
 		groups = stored.groups || groupTransactions(transactions, report.address);
 	}
 
+	const revealWallet = !!report.revealWallet;
 	return {
 		reportId: report.reportId,
 		totalTransactions: transactions.length,
-		transactions,
-		groups,
+		transactions: redactTransactions(transactions, revealWallet),
+		groups: redactGroups(groups, revealWallet),
 		balances,
 		dateFrom: report.dateFrom?.toISOString() || null,
 		dateTo: report.dateTo?.toISOString() || null,

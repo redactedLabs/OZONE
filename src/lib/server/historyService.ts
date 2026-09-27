@@ -854,3 +854,34 @@ function getPriority(tx: HistoryTransaction, userAddress?: string): number {
 	// Neither user nor contract-to-contract: THORChain native
 	return 200 + base;
 }
+
+// ── Wallet redaction (revealWallet=false) ──
+
+/**
+ * When a report must not reveal its owner's wallet, `revealWallet=false`
+ * used to null only the top-level `address` field — every transaction's
+ * from/to (the owner's own address on their own actions) and txID (a
+ * real, publicly linkable on-chain hash any block explorer resolves back
+ * to that same address) still went out unfiltered, in the JSON response
+ * and in the page's own CSV export built from it. Apply this to every
+ * transaction (and every group's primary/subActions) right before a
+ * response leaves the server; grouping/sorting need the real values and
+ * must run first.
+ */
+function redactTx(tx: HistoryTransaction): HistoryTransaction {
+	return { ...tx, from: '', to: '', txID: '' };
+}
+
+export function redactTransactions(txs: HistoryTransaction[], revealWallet: boolean): HistoryTransaction[] {
+	return revealWallet ? txs : txs.map(redactTx);
+}
+
+export function redactGroups(groups: HistoryGroup[], revealWallet: boolean): HistoryGroup[] {
+	if (revealWallet) return groups;
+	return groups.map((g) => ({
+		...g,
+		txID: '',
+		primary: redactTx(g.primary),
+		subActions: g.subActions.map(redactTx)
+	}));
+}

@@ -316,6 +316,15 @@ describe('API routes', () => {
 		expect(loaded.legacy).toBe(true);
 	});
 
+	it('report ids are drawn from crypto.randomBytes, not Math.random', async () => {
+		const { generateReportId } = await import('../../../routes/api/history/+server');
+		const ids = new Set(Array.from({ length: 200 }, () => generateReportId()));
+		expect(ids.size).toBe(200); // no collisions in a small CSPRNG sample
+		for (const id of ids) {
+			expect(id).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{10}$/);
+		}
+	});
+
 	// A session existing is not enough: hooks.server.ts's role lookup fails
 	// closed (role ''), so these verdict-changing endpoints must refuse it
 	// exactly like an unauthenticated caller once past the 401 check — the

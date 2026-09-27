@@ -1,14 +1,20 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { randomBytes } from 'node:crypto';
 import { db } from '$lib/server/db';
 import { reports } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { fetchMidgardActions, fetchBalances, groupTransactions } from '$lib/server/historyService';
+import { fetchMidgardActions, fetchBalances, groupTransactions, redactGroups, redactTransactions } from '$lib/server/historyService';
 
-function generateReportId(): string {
-	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+// A report id is the sole access control for an unauthenticated, shareable
+// report (POST returns shareUrl: /report/<id>; anyone with it can read it
+// back). Math.random() is V8's non-cryptographic xorshift128+ generator —
+// wrong for a capability token — so this uses the same crypto.randomBytes
+// approach as the sibling public submission id (lib/server/ozone/submissions.ts).
+const REPORT_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export function generateReportId(): string {
 	let id = '';
-	for (let i = 0; i < 10; i++) id += chars[Math.floor(Math.random() * chars.length)];
+	for (const b of randomBytes(10)) id += REPORT_ID_ALPHABET[b % REPORT_ID_ALPHABET.length];
 	return id;
 }
 
@@ -51,14 +57,16 @@ export const POST: RequestHandler = async ({ request }) => {
 			includeNew: includeNew || false,
 			revealWallet: revealWallet || false,
 			txCount: allTxs.length,
+			// Stored in full regardless of revealWallet — redaction happens
+			// only at the response boundary below, on every read.
 			txData: JSON.stringify({ transactions: allTxs, balances, groups }),
 		});
 
 		return json({
 			reportId,
 			totalTransactions: allTxs.length,
-			transactions: allTxs,
-			groups,
+			transactions: redactTransactions(allTxs, !!revealWallet),
+			groups: redactGroups(groups, !!revealWallet),
 			balances,
 			dateFrom: dateFrom || null,
 			dateTo: dateTo || null,
@@ -106,8 +114,8 @@ export const GET: RequestHandler = async ({ url }) => {
 		return json({
 			reportId: report.reportId,
 			totalTransactions: filtered.length,
-			transactions: filtered,
-			groups,
+			transactions: redactTransactions(filtered, !!report.revealWallet),
+			groups: redactGroups(groups, !!report.revealWallet),
 			balances,
 			dateFrom: report.dateFrom?.toISOString() || null,
 			dateTo: report.dateTo?.toISOString() || null,
@@ -128,8 +136,8 @@ export const GET: RequestHandler = async ({ url }) => {
 	return json({
 		reportId: report.reportId,
 		totalTransactions: report.txCount,
-		transactions: Array.isArray(transactions) ? transactions : [],
-		groups,
+		transactions: redactTransactions(Array.isArray(transactions) ? transactions : [], !!report.revealWallet),
+		groups: redactGroups(groups, !!report.revealWallet),
 		balances,
 		dateFrom: report.dateFrom?.toISOString() || null,
 		dateTo: report.dateTo?.toISOString() || null,
