@@ -241,14 +241,21 @@ function parseBtc(input: string, chainCode = 'BTC'): ParsedAddress | null {
 }
 
 function parseLtc(input: string): ParsedAddress | null {
-	return (
-		parseSegwit(input, 'ltc', 'LTC', 'ltc') ??
-		parseBase58Versioned(input, 'LTC', 'ltc', [
-			{ version: 0x30, kind: 'p2pkh' },
-			{ version: 0x32, kind: 'p2sh' },
-			{ version: 0x05, kind: 'p2sh' }
-		])
-	);
+	const seg = parseSegwit(input, 'ltc', 'LTC', 'ltc');
+	if (seg) return seg;
+	const parsed = parseBase58Versioned(input, 'LTC', 'ltc', [
+		{ version: 0x30, kind: 'p2pkh' },
+		{ version: 0x32, kind: 'p2sh' },
+		{ version: 0x05, kind: 'p2sh' }
+	]);
+	if (!parsed || parsed.kind !== 'p2sh' || !parsed.hash) return parsed;
+	// LTC P2SH has two valid version bytes for the identical script hash
+	// (0x32 current, 0x05 legacy): canonicalise to one key, the same way
+	// parseBch re-encodes both of BCH's textual forms to one cashaddr key.
+	const full = new Uint8Array(21);
+	full[0] = 0x32;
+	full.set(parsed.hash, 1);
+	return make('LTC', 'ltc', base58checkEncode(full), 'p2sh', parsed.hash);
 }
 
 function parseDoge(input: string): ParsedAddress | null {
@@ -518,9 +525,11 @@ export function parseListedAddress(
 
 /**
  * Addresses controlled by the same key on sibling chains:
- * TRON ↔ EVM (same 20-byte account hash) and pay-to-pubkey-hash across
- * BTC / BCH / LTC / DOGE (same hash160, legacy and native segwit forms).
- * Script hashes (P2SH/P2WSH/taproot) are not twinned.
+ * TRON ↔ EVM (same 20-byte account hash); pay-to-pubkey-hash across
+ * BTC / BCH / LTC / DOGE / BSV / XVG (same hash160, legacy and native segwit
+ * forms — BSV reuses BTC's own p2pkh version byte, XVG reuses DOGE's); and
+ * P2SH across BTC / BCH / LTC / BSV (same hash160; LTC canonicalises to its
+ * current 0x32 form, see parseLtc). P2WSH and taproot are not twinned.
  */
 export function keyTwins(p: ParsedAddress): ParsedAddress[] {
 	const out: ParsedAddress[] = [];
@@ -528,27 +537,44 @@ export function keyTwins(p: ParsedAddress): ParsedAddress[] {
 	if (!hash) return out;
 	if (p.namespace === 'tron' && hash.length === 20) {
 		out.push(make('ETH', 'evm', '0x' + bytesToHex(hash), 'account', hash));
-	} else if (p.namespace === 'evm' && hash.length === 20) {
+		return out;
+	}
+	if (p.namespace === 'evm' && hash.length === 20) {
 		const full = new Uint8Array(21);
 		full[0] = 0x41;
 		full.set(hash, 1);
 		out.push(make('TRON', 'tron', base58checkEncode(full), 'account', hash));
-	} else if (hash.length === 20 && (p.kind === 'p2pkh' || p.kind === 'p2wpkh')) {
-		const pkh = (version: number) => {
-			const full = new Uint8Array(21);
-			full[0] = version;
-			full.set(hash, 1);
-			return base58checkEncode(full);
-		};
+		return out;
+	}
+	if (hash.length !== 20) return out;
+	const pkh = (version: number) => {
+		const full = new Uint8Array(21);
+		full[0] = version;
+		full.set(hash, 1);
+		return base58checkEncode(full);
+	};
+	if (p.kind === 'p2pkh' || p.kind === 'p2wpkh') {
 		const candidates: ParsedAddress[] = [
 			make('BTC', 'btc', pkh(0x00), 'p2pkh', hash),
 			make('BTC', 'btc', segwitEncode('bc', 0, hash), 'p2wpkh', hash),
 			make('BCH', 'bch', cashAddrEncode('p2pkh', hash), 'p2pkh', hash),
 			make('LTC', 'ltc', pkh(0x30), 'p2pkh', hash),
 			make('LTC', 'ltc', segwitEncode('ltc', 0, hash), 'p2wpkh', hash),
-			make('DOGE', 'doge', pkh(0x1e), 'p2pkh', hash)
+			make('DOGE', 'doge', pkh(0x1e), 'p2pkh', hash),
+			make('BSV', 'bsv', pkh(0x00), 'p2pkh', hash),
+			make('XVG', 'xvg', pkh(0x1e), 'p2pkh', hash)
 		];
-		if (['btc', 'bch', 'ltc', 'doge'].includes(p.namespace)) {
+		if (['btc', 'bch', 'ltc', 'doge', 'bsv', 'xvg'].includes(p.namespace)) {
+			for (const c of candidates) if (c.key !== p.key) out.push(c);
+		}
+	} else if (p.kind === 'p2sh') {
+		const candidates: ParsedAddress[] = [
+			make('BTC', 'btc', pkh(0x05), 'p2sh', hash),
+			make('BCH', 'bch', cashAddrEncode('p2sh', hash), 'p2sh', hash),
+			make('LTC', 'ltc', pkh(0x32), 'p2sh', hash),
+			make('BSV', 'bsv', pkh(0x05), 'p2sh', hash)
+		];
+		if (['btc', 'bch', 'ltc', 'bsv'].includes(p.namespace)) {
 			for (const c of candidates) if (c.key !== p.key) out.push(c);
 		}
 	}

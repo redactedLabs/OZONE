@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { buildSnapshot } from '../src/build.js';
+import { keyTwins, parseForChain } from '../src/chains.js';
 import { createOzoneSnapshotSource, OzoneClient, OzoneUnavailableError } from '../src/client.js';
 import {
 	attachSignature,
@@ -470,5 +471,35 @@ describe('signed screen responses', () => {
 		expect(verifyScreenResponse(JSON.parse(JSON.stringify(body)), trusted)).not.toBeNull();
 		expect(verifyScreenResponse({ ...body, issuedAt: '2026-09-28T00:00:00Z' }, trusted)).toBeNull();
 		expect(verifyScreenResponse(body, [other.publicKey.spec])).toBeNull();
+	});
+});
+
+describe('relayer-hinted lookups reach a listing filed only under a same-string twin ticker', () => {
+	// A relayer/OzoneClient lookup for a real THORChain deposit always carries
+	// the deposit's own chain (e.g. BTC, DOGE) as a hint (client.ts's
+	// createOzoneSnapshotSource.lookup); this checks that hint still finds a
+	// listing published only under the twin ticker whose version byte happens
+	// to produce the identical address string (keyTwins()).
+	const snapWithOnlyTwinsOf = (version: number, p: ReturnType<typeof parseForChain>, entity: string) => {
+		const records = [{ key: p!.key, reasons: [ofac(entity)] }, ...keyTwins(p!).map((t) => ({ key: t.key, reasons: [ofac(entity)] }))];
+		const built = buildSnapshot(
+			{ version, builtAt: new Date(version * 1000).toISOString(), sources: SOURCES, records, payloadUrl: `./${version}` },
+			key
+		);
+		return decodePayload(verifyManifest(JSON.parse(JSON.stringify(built.manifest)), [parsePublicKey(trusted[0])]), built.payload);
+	};
+
+	it('a BTC-hinted lookup finds a listing filed only under BSV', () => {
+		const address = '1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu';
+		const idx = snapWithOnlyTwinsOf(2_000_000_001, parseForChain(address, 'BSV'), 'BSV-ONLY LISTING');
+		expect(idx.screen(address).status).toBe('flagged'); // no hint: reaches bsv: directly
+		expect(idx.screen(address, 'BTC').status).toBe('flagged');
+	});
+
+	it('a DOGE-hinted lookup finds a listing filed only under XVG', () => {
+		const address = 'DHzAVdEoL3PjGeLWNdEJwwMA1CeQ9J9Cpo';
+		const idx = snapWithOnlyTwinsOf(2_000_000_002, parseForChain(address, 'XVG'), 'XVG-ONLY LISTING');
+		expect(idx.screen(address).status).toBe('flagged');
+		expect(idx.screen(address, 'DOGE').status).toBe('flagged');
 	});
 });

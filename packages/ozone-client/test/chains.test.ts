@@ -180,14 +180,45 @@ describe('same-key twins', () => {
 		expect(keyTwins(evm).map((t) => t.key)).toEqual(['tron:TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t']);
 	});
 
-	it('P2PKH across BTC/BCH/LTC/DOGE, not P2SH', () => {
+	it('P2PKH across BTC/BCH/LTC/DOGE/BSV/XVG', () => {
 		const btc = parseForChain('1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu', 'BTC')!;
 		const keys = keyTwins(btc).map((t) => t.key);
 		expect(keys).toContain('bch:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a');
 		expect(keys.some((k) => k.startsWith('btc:bc1q'))).toBe(true);
 		expect(keys.some((k) => k.startsWith('ltc:L'))).toBe(true);
 		expect(keys.some((k) => k.startsWith('doge:D'))).toBe(true);
+		// BSV reuses BTC's own p2pkh version byte: identical address string
+		expect(keys).toContain('bsv:1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu');
+		// XVG reuses DOGE's p2pkh version byte: the doge: twin's address is
+		// simultaneously a valid xvg: reading of the same string
+		const dogeKey = keys.find((k) => k.startsWith('doge:'))!;
+		expect(keys).toContain(`xvg:${dogeKey.slice('doge:'.length)}`);
+	});
+
+	it('P2SH across BTC/BCH/LTC/BSV (identical hash160, each chain\'s own version byte)', () => {
 		const p2sh = parseForChain('3CWFddi6m4ndiGyKqzYvsFYagqDLPVMTzC', 'BTC')!;
-		expect(keyTwins(p2sh)).toEqual([]);
+		const keys = keyTwins(p2sh).map((t) => t.key);
+		expect(keys).toContain('bch:ppm2qsznhks23z7629mms6s4cwef74vcwvn0h829pq');
+		expect(keys.some((k) => k.startsWith('ltc:M'))).toBe(true);
+		// BSV's P2SH version byte (0x05) is byte-identical to BTC/BCH legacy:
+		// the same string is simultaneously a valid BSV-namespaced key
+		expect(keys).toContain('bsv:3CWFddi6m4ndiGyKqzYvsFYagqDLPVMTzC');
+		expect(keys).toHaveLength(3);
+	});
+
+	it('does not twin P2WSH or taproot', () => {
+		const p2wsh = parseForChain('bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3', 'BTC')!;
+		expect(keyTwins(p2wsh)).toEqual([]);
+		const p2tr = parseForChain('bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0', 'BTC')!;
+		expect(keyTwins(p2tr)).toEqual([]);
+	});
+
+	it('LTC P2SH: the legacy (0x05, "3…") and current (0x32, "M…") encodings of the same script hash canonicalise to one key', () => {
+		const legacy = parseForChain('3CWFddi6m4ndiGyKqzYvsFYagqDLPVMTzC', 'LTC')!;
+		expect(legacy.kind).toBe('p2sh');
+		expect(legacy.key.startsWith('ltc:M')).toBe(true);
+		const current = parseForChain(legacy.address, 'LTC')!;
+		expect(current.key).toBe(legacy.key);
+		expect(current.address.startsWith('M')).toBe(true);
 	});
 });

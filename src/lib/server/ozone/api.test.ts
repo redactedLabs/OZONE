@@ -225,9 +225,10 @@ describe('API routes', () => {
 		const { POST } = await import('../../../routes/api/certificate/+server');
 		// 3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG is the curated FBI DPRK BTC P2SH
 		// address (seeded via parseCurated() earlier in this file, law_enforcement/
-		// severe). Read as LTC (P2SH version 0x05 is valid on both chains) it has
-		// no listing of its own — screening only that hinted reading used to come
-		// back clean. The unhinted reading still auto-detects it as BTC and finds
+		// severe). Read as LTC (P2SH version 0x05 is valid on both chains, and
+		// canonicalises to the current 0x32 "M..." form) it has no listing of
+		// its own — screening only that hinted reading used to come back
+		// clean. The unhinted reading still auto-detects it as BTC and finds
 		// the real listing, so the certificate must be flagged either way.
 		const hinted = await call(POST as Handler, { url: '/api/certificate', method: 'POST', body: { address: '3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG', chain: 'LTC' } });
 		const hintedBody = await hinted.json();
@@ -235,7 +236,7 @@ describe('API routes', () => {
 		expect(hintedBody.certificate.status).toBe('flagged');
 		// chain and every screened key (both readings) are in the signed document
 		expect(hintedBody.certificate.chain).toBe('LTC');
-		expect(hintedBody.certificate.keys).toEqual(expect.arrayContaining(['ltc:3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG', 'btc:3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG']));
+		expect(hintedBody.certificate.keys).toEqual(expect.arrayContaining(['ltc:MSgHFKK2WuNoryd2eg66a6xfc3jduKgTVT', 'btc:3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG']));
 		expect(verifyAttached(DOMAIN_CERTIFICATE, hintedBody.certificate, [apiKey.publicKey])).not.toBeNull();
 
 		// unhinted: same address, same result, no chain recorded
