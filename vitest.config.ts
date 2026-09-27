@@ -15,7 +15,7 @@ export default defineConfig({
 		}
 	},
 	test: {
-		include: ['packages/**/test/**/*.test.ts', 'src/**/*.test.ts'],
+		include: ['packages/**/test/**/*.test.ts', 'src/**/*.test.ts', 'scripts/**/*.test.ts'],
 		environment: 'node',
 		pool: 'forks',
 		poolOptions: { forks: { maxForks: 3, minForks: 1 } },
