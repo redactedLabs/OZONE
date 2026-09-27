@@ -97,7 +97,7 @@
 			</table>
 		</div>
 		<p class="p mt-4"><strong>Curated attributions.</strong> {data.curatedPolicy}</p>
-		<p class="p"><strong>Not used:</strong> Israel's NBCTF seizure lists (the site blocks automated access), commercial APIs that need keys, and OpenSanctions' processed data (non-commercial licence) — Ozone reads the primary lists directly.</p>
+		<p class="p"><strong>Not used:</strong> Israel's NBCTF seizure lists (the site blocks automated access), commercial APIs that need keys, and OpenSanctions' processed data (non-commercial licence) — Ozone reads the primary lists directly. (Only when the EU's own endpoint fails does Ozone fetch OpenSanctions' unmodified copy of the same official EU XML file.)</p>
 	</section>
 
 	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="addresses" data-win-title="Addresses">
