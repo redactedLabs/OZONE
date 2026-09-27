@@ -11,7 +11,7 @@ export { foldEvents, fetchLogs, fetchLogsRpc, fetchLogsExplorer, tronEvents, syn
 export { CURATED, type ClusterSpec, type CuratedIncident } from './sources/curated-data.js';
 export { SOURCES, DERIVED_SOURCES, CORE_SOURCES, sourceById, parseCurated, type SourceDef, type SourceContext } from './sources/registry.js';
 export { migrate, batchInsert, withTransaction } from './store/db.js';
-export { applySourceResult, allEntries, manualEntries, SanityError, type ApplyStats } from './store/entries.js';
+export { applySourceResult, allEntries, manualEntries, manualFlagsSignature, httpUrlOrUndefined, URGENT_DEFAULT_MS, SanityError, type ApplyStats } from './store/entries.js';
 export {
 	recordHits,
 	recordDustFlows,

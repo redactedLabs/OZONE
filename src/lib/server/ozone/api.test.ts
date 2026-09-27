@@ -393,9 +393,54 @@ describe('API routes', () => {
 	// exactly like an unauthenticated caller once past the 401 check — the
 	// same gap this candidate reports for flags/submissions extends, per the
 	// brief, to every /api/admin/* write.
+	it('incident path: an admin pastes a hack\'s addresses; they are flagged urgent with their source', async () => {
+		const sql = holder.sql!;
+		const flags = await import('../../../routes/api/admin/flags/+server');
+		const admin: Locals = { user: { id: 'u3', email: 'maint@test', name: 'Maintainer', role: 'admin' } };
+		const bad = await call(flags.POST as Handler, {
+			url: '/api/admin/flags',
+			method: 'POST',
+			locals: admin,
+			body: { addresses: '0x9999999999999999999999999999999999999999', incident: 'X', refUrl: 'javascript:alert(1)' }
+		});
+		expect(bad.status).toBe(400);
+		const res = await call(flags.POST as Handler, {
+			url: '/api/admin/flags',
+			method: 'POST',
+			locals: admin,
+			body: {
+				addresses: 'ETH:0x9999999999999999999999999999999999999999\n bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4, not-an-address',
+				incident: 'Exchange X hack (2026-09-27)',
+				refUrl: 'https://example.org/post-mortem',
+				note: 'drainer wallets from the post-mortem'
+			}
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.listed.map((l: { key: string }) => l.key)).toEqual(['evm:0x9999999999999999999999999999999999999999', 'btc:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4']);
+		expect(body.invalid).toEqual(['not-an-address']);
+		expect(Date.parse(body.urgentUntil) - Date.now()).toBeGreaterThan(47 * 3600_000);
+		const meta = await sql.query<{ incident: string; ref_url: string; created_by: string }>(`SELECT incident, ref_url, created_by FROM oz_manual_meta ORDER BY flag_id`);
+		expect(meta.rows).toHaveLength(2);
+		expect(meta.rows[0]).toMatchObject({ incident: 'Exchange X hack (2026-09-27)', ref_url: 'https://example.org/post-mortem', created_by: 'maint@test' });
+		// what the worker's manual sync publishes
+		const { manualEntries } = await import('$engine/index.js');
+		const entries = (await manualEntries(sql)).filter((e) => e.key.startsWith('evm:0x9999'));
+		expect(entries[0]).toMatchObject({ refUrl: 'https://example.org/post-mortem', entity: 'Exchange X hack (2026-09-27)', meta: { urgent: true } });
+		// pasting the same addresses again adds nothing
+		const again = await call(flags.POST as Handler, {
+			url: '/api/admin/flags',
+			method: 'POST',
+			locals: admin,
+			body: { addresses: ['0x9999999999999999999999999999999999999999'], incident: 'Exchange X hack (2026-09-27)' }
+		});
+		expect((await again.json()).alreadyFlagged).toEqual(['0x9999999999999999999999999999999999999999']);
+	});
+
 	it('admin writes require role admin/owner, not just a session', async () => {
 		const flags = await import('../../../routes/api/admin/flags/+server');
 		expect((await call(flags.POST as Handler, { url: '/api/admin/flags', method: 'POST', locals: nonAdmin, body: { address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', reason: 'x' } })).status).toBe(403);
+		expect((await call(flags.POST as Handler, { url: '/api/admin/flags', method: 'POST', locals: nonAdmin, body: { addresses: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', incident: 'x' } })).status).toBe(403);
 		expect((await call(flags.DELETE as Handler, { url: '/api/admin/flags', method: 'DELETE', locals: nonAdmin, body: { id: 1 } })).status).toBe(403);
 
 		const submissions = await import('../../../routes/api/admin/submissions/+server');

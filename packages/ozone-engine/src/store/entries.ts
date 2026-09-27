@@ -204,16 +204,64 @@ export async function allEntries(sql: Sql, opts: { activeOnly?: boolean } = {}):
 	return r.rows;
 }
 
-/** Maintainer flags from the existing `manual_flags` table, as entries. */
-export async function manualEntries(sql: Sql): Promise<ListEntry[]> {
-	const r = await sql.query<{ id: number; address: string; chain: string | null; reason: string; added_by: string | null; added_at: string }>(
-		`SELECT id, address, chain, reason, added_by, added_at FROM manual_flags WHERE active = true`
-	);
+/** How long a flag stays on the incident path unless the maintainer says otherwise. */
+export const URGENT_DEFAULT_MS = 48 * 3600_000;
+
+/** A maintainer-supplied source URL is only ever published when it is plain http(s). */
+export function httpUrlOrUndefined(url: string | null | undefined): string | undefined {
+	if (!url) return undefined;
+	try {
+		const { protocol } = new URL(url);
+		return protocol === 'https:' || protocol === 'http:' ? url : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+interface ManualRow {
+	id: number;
+	address: string;
+	chain: string | null;
+	reason: string;
+	added_by: string | null;
+	added_at: string;
+	incident?: string | null;
+	ref_url?: string | null;
+	note?: string | null;
+	urgent_until?: string | Date | null;
+}
+
+/**
+ * Maintainer flags from the existing `manual_flags` table, as entries —
+ * with the incident name, source URL and note from oz_manual_meta (0004)
+ * when there is one. A flag still inside its urgent window carries
+ * `meta.urgent`: the tracer checks it (and whatever it reaches) first.
+ */
+export async function manualEntries(sql: Sql, now = new Date()): Promise<ListEntry[]> {
+	let rows: ManualRow[];
+	try {
+		rows = (
+			await sql.query<ManualRow>(
+				`SELECT f.id, f.address, f.chain, f.reason, f.added_by, f.added_at, m.incident, m.ref_url, m.note, m.urgent_until
+				 FROM manual_flags f LEFT JOIN oz_manual_meta m ON m.flag_id = f.id WHERE f.active = true`
+			)
+		).rows;
+	} catch {
+		// oz_manual_meta not there yet (migration 0004 not applied): plain flags
+		rows = (
+			await sql.query<ManualRow>(`SELECT id, address, chain, reason, added_by, added_at FROM manual_flags WHERE active = true`)
+		).rows;
+	}
 	const out: ListEntry[] = [];
-	for (const row of r.rows) {
+	for (const row of rows) {
 		const parsed = parseListedAddress(row.address, row.chain);
 		if (!parsed) continue;
 		const p = parsed.parsed;
+		const incident = row.incident?.trim() || undefined;
+		const note = row.note?.trim() || undefined;
+		const refUrl = httpUrlOrUndefined(row.ref_url);
+		const urgentUntil = row.urgent_until ? new Date(row.urgent_until) : undefined;
+		const urgent = !!urgentUntil && urgentUntil.getTime() > now.getTime();
 		out.push({
 			source: 'manual',
 			key: p.key,
@@ -222,12 +270,40 @@ export async function manualEntries(sql: Sql): Promise<ListEntry[]> {
 			category: 'manual',
 			risk: 'high',
 			code: 'MANUAL',
-			entity: row.reason,
-			text: `Flagged by an Ozone maintainer: ${row.reason}`,
-			refUrl: 'https://ozone.redacted.gg/methodology#manual',
+			entity: incident ?? row.reason,
+			text: `Flagged by an Ozone maintainer: ${row.reason}${incident ? ` (incident: ${incident})` : ''}${note ? ` — ${note}` : ''}`,
+			refUrl: refUrl ?? 'https://ozone.redacted.gg/methodology#manual',
 			refId: `manual:${row.id}`,
-			listedAt: new Date(row.added_at).toISOString()
+			listedAt: new Date(row.added_at).toISOString(),
+			...(incident || refUrl || urgentUntil
+				? {
+						meta: {
+							...(incident ? { incident } : {}),
+							...(refUrl ? { sourceUrl: refUrl } : {}),
+							...(urgentUntil ? { urgentUntil: urgentUntil.toISOString() } : {}),
+							...(urgent ? { urgent: true } : {})
+						}
+					}
+				: {})
 		});
 	}
 	return out;
+}
+
+/**
+ * A cheap fingerprint of the active maintainer flags and their incident
+ * rows: the worker compares it every few seconds and runs the incident path
+ * (sync, trace, publish) as soon as it changes — a flag added, edited or
+ * deactivated.
+ */
+export async function manualFlagsSignature(sql: Sql): Promise<string> {
+	const f = await sql.query<{ n: number; max_id: number | null; ids: string | null }>(
+		`SELECT count(*)::int AS n, max(id) AS max_id, coalesce(sum(id), 0)::text AS ids FROM manual_flags WHERE active = true`
+	);
+	const m = await sql
+		.query<{ n: number; latest: string | null }>(`SELECT count(*)::int AS n, max(created_at)::text AS latest FROM oz_manual_meta`)
+		.catch(() => ({ rows: [{ n: 0, latest: null }] }));
+	const a = f.rows[0];
+	const b = m.rows[0];
+	return `${a?.n ?? 0}:${a?.max_id ?? 0}:${a?.ids ?? 0}|${b?.n ?? 0}:${b?.latest ?? ''}`;
 }

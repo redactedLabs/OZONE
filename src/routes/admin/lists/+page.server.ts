@@ -3,6 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { ozEntries, manualFlags } from '$lib/server/db/schema';
 import { eq, desc, sql, like, and, isNull } from 'drizzle-orm';
+import { sql as rawSql } from '$lib/server/ozone/sql';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
@@ -31,8 +32,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const [totalResult] = await db.select({ count: sql<number>`count(*)` }).from(ozEntries).where(isNull(ozEntries.removedAt));
 
-	// Manual flags
+	// Manual flags (+ incident details from migration 0004, when applied)
 	const flags = await db.select().from(manualFlags).orderBy(desc(manualFlags.addedAt));
+	const meta = new Map(
+		(
+			await rawSql
+				.query<{ flag_id: number; incident: string | null; ref_url: string | null; urgent_until: string | null }>(
+					`SELECT flag_id, incident, ref_url, urgent_until FROM oz_manual_meta`
+				)
+				.catch(() => ({ rows: [] as Array<{ flag_id: number; incident: string | null; ref_url: string | null; urgent_until: string | null }> }))
+		).rows.map((m) => [Number(m.flag_id), m])
+	);
 
 	return {
 		user: locals.user,
@@ -56,6 +66,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			addedBy: f.addedBy,
 			addedAt: f.addedAt?.toISOString(),
 			active: f.active,
+			incident: meta.get(f.id)?.incident ?? null,
+			refUrl: meta.get(f.id)?.ref_url ?? null,
+			urgentUntil: meta.get(f.id)?.urgent_until ? new Date(meta.get(f.id)!.urgent_until!).toISOString() : null,
 		})),
 		page,
 		perPage,

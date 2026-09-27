@@ -4,6 +4,8 @@ import { db } from '$lib/server/db';
 import { manualFlags } from '$lib/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { parseListedAddress } from '$ozone/index.js';
+import { addIncidentFlags } from '$lib/server/ozone/incidents';
+import { sql } from '$lib/server/ozone/sql';
 
 // GET all manual flags. Defense in depth alongside hooks.server.ts (see
 // ozone-hook-gate-encoded-pathname-bypass) — not a cron target, so a plain
@@ -33,6 +35,28 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (locals.user.role !== 'admin' && locals.user.role !== 'owner') return json({ error: 'Forbidden' }, { status: 403 });
 
 	const body = await request.json();
+
+	// Incident path: `addresses` (several, pasted) with the incident name,
+	// source URL and note. Listed, traced and published by the worker within
+	// minutes (see $lib/server/ozone/incidents.ts).
+	if (body?.addresses !== undefined) {
+		const out = await addIncidentFlags(
+			sql,
+			{
+				addresses: body.addresses,
+				chain: body.chain,
+				reason: body.reason,
+				incident: body.incident,
+				refUrl: body.refUrl,
+				note: body.note,
+				urgent: body.urgent,
+				urgentHours: body.urgentHours
+			},
+			locals.user.email
+		);
+		return json(out.body, { status: out.status });
+	}
+
 	const { address, chain, reason } = body;
 
 	if (!address || !reason) {

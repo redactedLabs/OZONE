@@ -9,8 +9,11 @@ import { CURATED, type ClusterSpec } from './sources/curated-data.js';
 import { SOURCES, type SourceContext, type SourceDef } from './sources/registry.js';
 import { applySourceResult, recordSourceError, type ApplyStats } from './store/entries.js';
 import { screenUsers, type UserScreenResult } from './screen/users.js';
-import { setState } from './store/trace.js';
-import type { Sql } from './types.js';
+import { loadTraceIndex, setState } from './store/trace.js';
+import { runTraceBackfill, type BackfillResult } from './trace/jobs.js';
+import type { MidgardLike } from './trace/midgard.js';
+import type { PriceOracle } from './trace/prices.js';
+import type { Logger, Sql } from './types.js';
 
 export interface SyncOutcome {
 	source: string;
@@ -122,4 +125,45 @@ export async function screenUsersFromLatest(sql: Sql, opts: { flagAt?: 'high' | 
 	await logSync(sql, 'users', 'success', r.accounts, r.flagged, Date.now() - t0);
 	await setState(sql, 'users:last', { ...r, at: new Date().toISOString(), snapshot: index.version });
 	return r;
+}
+
+export interface IncidentResult {
+	/** The maintainer-flag sync (lists the pasted addresses). */
+	sync: SyncOutcome;
+	/** Keys on the incident path (urgent flags and what was traced from them). */
+	urgentKeys: number;
+	/** Tracing of those keys (Midgard history, hop by hop within the budget). */
+	trace?: BackfillResult;
+}
+
+/**
+ * The incident path ("a hack was announced: list these addresses now"):
+ * syncs the maintainer flags immediately instead of at the next scheduled
+ * sync, then reads the THORChain history of every urgent key — and of every
+ * recipient traced from one, hop after hop — before anything else, within
+ * `timeBudgetMs`. The caller publishes a snapshot right after (the worker
+ * serializes that with its own snapshot job), so the addresses and their
+ * THORChain recipients reach nodes within minutes.
+ */
+export async function runIncidentPath(
+	sql: Sql,
+	midgard: MidgardLike,
+	opts: { prices?: PriceOracle; logger?: Logger; timeBudgetMs?: number; http?: SourceContext['http'] } = {}
+): Promise<IncidentResult> {
+	const manual = SOURCES.find((d) => d.id === 'manual');
+	if (!manual) throw new Error('manual source missing');
+	const sync = await syncSource(sql, manual, { sql, logger: opts.logger, http: opts.http });
+	if (!sync.ok) return { sync, urgentKeys: 0 };
+	const index = await loadTraceIndex(sql);
+	const urgentKeys = [...index.values()].filter((e) => e.urgent).length;
+	if (!urgentKeys) return { sync, urgentKeys };
+	const trace = await runTraceBackfill(sql, midgard, {
+		prices: opts.prices,
+		logger: opts.logger,
+		timeBudgetMs: opts.timeBudgetMs ?? 5 * 60_000,
+		concurrency: 2,
+		filter: (_key, e) => !!e.urgent
+	});
+	opts.logger?.info(`incident path: ${urgentKeys} urgent key(s); ${trace.checked} checked, ${trace.traced} traced, ${trace.remaining} left`);
+	return { sync, urgentKeys, trace };
 }

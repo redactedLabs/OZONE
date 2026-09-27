@@ -309,6 +309,24 @@ export const ozTraceDustTotals = pgTable(
 	(t) => [primaryKey({ name: 'oz_trace_dust_totals_pkey', columns: [t.originKey, t.toKey, t.hop] })]
 );
 
+// Incident path for maintainer flags (0004_manual_incidents.sql): what the
+// maintainer pasted besides the address, and until when the flag is urgent.
+// Read and written with plain SQL (an app deployed before the migration runs
+// finds no row and keeps working).
+export const ozManualMeta = pgTable(
+	'oz_manual_meta',
+	{
+		flagId: integer('flag_id').primaryKey(),
+		incident: text('incident'),
+		refUrl: text('ref_url'),
+		note: text('note'),
+		urgentUntil: timestamp('urgent_until', { withTimezone: true }),
+		createdBy: text('created_by'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [index('oz_manual_meta_urgent_idx').on(t.urgentUntil)]
+);
+
 // Value flows under the dust limit, one row per flow (0003_trace_dust_flows.sql).
 export const ozTraceDustFlows = pgTable(
 	'oz_trace_dust_flows',

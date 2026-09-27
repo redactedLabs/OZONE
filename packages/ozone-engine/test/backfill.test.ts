@@ -255,4 +255,20 @@ describe('backfill order', async () => {
 		expect((await pendingChecks(sql, index, 3, 100, undefined, now)).map((t) => t.key)).toEqual([k(2)]);
 		expect((await pendingChecks(sql, index, 3, 100, undefined, now + 31 * 60_000)).map((t) => t.key)).toEqual([k(1), k(2)]);
 	});
+
+	it('an urgent maintainer flag, and whatever is traced from it, is on the incident path', async () => {
+		await sql.query(`INSERT INTO manual_flags (id, address, chain, reason, active) VALUES (7, '0x00000000000000000000000000000000000000aa', 'ETH', 'test incident', true)`);
+		await sql.query(`INSERT INTO oz_manual_meta (flag_id, incident, urgent_until) VALUES (7, 'Test hack', now() + interval '1 hour')`);
+		const { manualEntries } = await import('../src/store/entries.js');
+		await list(sql, 'manual', await manualEntries(sql));
+		await sql.query(
+			`INSERT INTO oz_traced (key, chain, address, hop, risk, origin_key, origin_source, origin_risk, origin_category, first_txid, first_height)
+			 VALUES ('btc:${BTC_A}', 'BTC', '${BTC_A}', 1, 'high', 'evm:0x00000000000000000000000000000000000000aa', 'manual', 'high', 'manual', 'T1', 5)`
+		);
+		const index = await loadTraceIndex(sql);
+		expect(index.get('evm:0x00000000000000000000000000000000000000aa')?.urgent).toBe(true);
+		expect(index.get(`btc:${BTC_A}`)?.urgent).toBe(true);
+		const tasks = await pendingChecks(sql, index, DEFAULT_TRACE_CONFIG.maxHops);
+		expect(tasks.slice(0, 2).map((t) => t.urgent)).toEqual([true, true]);
+	});
 });
