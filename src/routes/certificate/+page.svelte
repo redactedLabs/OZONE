@@ -90,7 +90,7 @@
 	<title>Proof of Innocence — THORChain Compliance Certificate | Ozone</title>
 	<meta name="description" content="Screen any THORChain or Rujira address against OFAC, EU sanctions, Tether frozen, known hacks, and more. Get a verifiable compliance certificate with a permanent ID — shareable with auditors, regulators, or counterparties." />
 	<meta property="og:title" content="Proof of Innocence — Compliance Certificate | Ozone" />
-	<meta property="og:description" content="Verifiable compliance certificate for THORChain & Rujira. Screen against 7+ databases. Permanent & shareable." />
+	<meta property="og:description" content="Verifiable compliance certificate for THORChain & Rujira: sanctions, law-enforcement attributions, stablecoin freezes, hack and phishing lists, THORChain flow traces. Signed, permanent and shareable." />
 	<meta property="og:url" content="https://ozone.redacted.gg/certificate" />
 	<meta name="twitter:title" content="Proof of Innocence — Ozone" />
 	<meta name="twitter:description" content="Get a verifiable compliance certificate for any THORChain address. Free." />
@@ -115,7 +115,7 @@
 			</h1>
 
 			<p class="text-base sm:text-lg max-w-2xl mx-auto mb-2" style="color: var(--text-muted);">
-				Screen any THORChain address against 8 compliance databases. Get a verifiable certificate you can share with anyone.
+				Screen any address on a THORChain chain against every Ozone source — sanctions, FBI attributions, stablecoin freezes, hack and phishing lists, THORChain flow traces — and get a signed certificate you can share with anyone.
 			</p>
 			<p class="text-sm max-w-xl mx-auto" style="color: var(--text-faint);">
 				No account needed. Permanent record with shareable link.
@@ -175,7 +175,7 @@
 						{#each [
 							'Unique certificate ID (OZ-XXXXXXXX)',
 							'Address screened + issue date',
-							'All 8 databases verified with status',
+							'Every source and THORChain trace checked (signed snapshot version)',
 							'CLEAR or FLAGGED result with details',
 							'Permanent shareable link',
 						] as item}
@@ -416,7 +416,7 @@
 					<div class="mb-6">
 						<div class="text-[10px] mb-2" style="color: var(--text-faint);">SOURCES VERIFIED</div>
 						<div class="flex flex-wrap gap-1.5">
-							{#each ['OFAC SDN', 'UK Sanctions', 'EU Sanctions', 'FBI attributions', 'Tether freezes', 'Circle blacklist', 'Hack clusters', 'Exploiter labels', 'ScamSniffer', 'THORChain tracing'] as src}
+							{#each ['OFAC SDN', 'UK Sanctions', 'EU Sanctions', 'Sanctions oracle', 'FBI attributions', 'Tether freezes', 'Circle blacklist', 'Hack clusters', 'Exploiter labels', 'ScamSniffer', 'THORChain tracing'] as src}
 								<span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px]" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15); color: #10b981;">
 									&#10003; {src}
 								</span>
