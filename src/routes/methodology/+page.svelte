@@ -118,7 +118,7 @@
 		<p class="p">Laundering through THORChain rarely touches a thor1 account: the Bybit funds (Feb–Mar 2025) went ETH → BTC directly. Ozone therefore follows <em>flows</em>, not accounts:</p>
 		<ul class="list">
 			<li><strong>Followed</strong>: swaps (including streaming and L1→L1), native sends, trade/secured-asset moves, LP withdrawals (to the member's payout addresses), LP pairing (asset and RUNE side of one deposit co-own the position) and THORNames (owner ↔ alias).</li>
-			<li><strong>Hops</strong>: at most {data.trace.maxHops}. A traced address propagates only flows that happen <em>after</em> it received the tainted value.</li>
+			<li><strong>Hops</strong>: at most {data.trace.maxHops}. A traced address propagates only flows that happen <em>after</em> it received the tainted value; likewise a hack-cluster member only from the transfer that made it one (its earlier activity is not the proceeds).</li>
 			<li><strong>Decay</strong>: traced risk is capped at <em>high</em> and drops one level per extra hop (hop 1 high, hop 2 medium, hop 3 low).</li>
 			<li><strong>Amounts</strong>: flows under ${data.trace.dustUsd} are ignored (dusting resistance); hop-1 flows under ${data.trace.hop1FullUsd.toLocaleString('en-US')} and deeper flows under ${data.trace.deepFullUsd.toLocaleString('en-US')} lose one more level. Swap values use the price at the time from Midgard; other flows use current pool prices (approximation, only used against the thresholds).</li>
 			<li><strong>Never flagged by a flow</strong>: affiliate fee outputs, THORChain module accounts (asgard, reserve, bond, affiliate collector, …), CosmWasm contracts, and services (addresses with more than 2,000 THORChain actions).</li>
@@ -149,7 +149,7 @@
 	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="snapshots" data-win-title="Snapshots">
 		<h2 class="h2">Signed snapshots and node-local screening</h2>
 		<ul class="list">
-			<li>The worker publishes a snapshot every few minutes: a small manifest (version, build time, SHA-256 of the payload) signed with Ed25519, and the gzip payload with every listed and traced address and its reasons.</li>
+			<li>The worker checks every 10 minutes and publishes a new snapshot when anything changed (and at least every 6 hours): a small manifest (version, build time, SHA-256 of the payload) signed with Ed25519, and the gzip payload with every listed and traced address and its reasons.</li>
 			<li>Nodes pin Ozone's public key, verify the signature and the payload hash, refuse older versions (anti-rollback) and screen locally — Ozone never learns which address a node screened.</li>
 			<li>If Ozone is unreachable, nodes keep screening against the last verified snapshot; every verdict reports the snapshot version and age.</li>
 			<li>Online answers (<code>/api/v1/screen</code>) and certificates are signed too. Keys: <a href="/api/v1/keys" style="color: var(--app-accent);">/api/v1/keys</a>. Format and client: <a href="https://github.com/redactedLabs/OZONE/blob/main/INTEGRATION.md" target="_blank" rel="noopener" style="color: var(--app-accent);">INTEGRATION.md</a>.</li>

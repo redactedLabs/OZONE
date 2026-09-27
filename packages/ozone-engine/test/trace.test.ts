@@ -183,6 +183,37 @@ describe('trace store + backfill against an embedded Postgres', async () => {
 		expect(again.checked).toBe(0);
 	});
 
+	it('hack-cluster members are tainted only from the transfer that made them members', async () => {
+		const member = '0xdddd000000000000000000000000000000000004';
+		const res = emptyResult();
+		res.entries.push(
+			entry(`evm:${member}`, member, {
+				source: 'cluster',
+				code: 'HACK_CLUSTER',
+				entity: 'Bybit hack laundering cluster',
+				text: 'received 50 ETH from a Bybit exploiter address on 2025-02-22',
+				listedAt: '2025-02-22T10:00:00.000Z'
+			})
+		);
+		await applySourceResult(sql, { id: 'cluster', name: 'Hack clusters', kind: 'derived' }, res);
+		const index = await loadTraceIndex(sql);
+		expect(index.get(`evm:${member}`)?.sinceTime).toBe(Date.parse('2025-02-22T10:00:00.000Z') / 1000);
+		const swap = (date: string, to: string) =>
+			action({
+				height: 19_000_000,
+				date,
+				in: [{ address: member, asset: 'ETH.ETH', amount: 10 }],
+				out: [{ address: to, asset: 'BTC.BTC', amount: 0.3 }]
+			});
+		const lookup = (k: string) => index.get(k);
+		// a year before it received the stolen funds: unrelated activity
+		expect(traceAction(swap('2024-02-01T00:00:00Z', '1BoatSLRHtKNngkdXEeobR76b53LETtpyT'), lookup, prices)).toEqual([]);
+		// after: the proceeds
+		const hits = traceAction(swap('2025-02-23T00:00:00Z', '1BoatSLRHtKNngkdXEeobR76b53LETtpyT'), lookup, prices);
+		expect(hits).toHaveLength(1);
+		expect(hits[0]).toMatchObject({ hop: 1, risk: 'high', originSource: 'cluster' });
+	});
+
 	it('keeps the best reason per address (lower hop wins)', async () => {
 		const index = await loadTraceIndex(sql);
 		const t = index.get('thor:thor1fns25sytpf2gsdlg76g45620u5axm4mkrypqrh')!;

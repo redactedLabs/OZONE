@@ -115,16 +115,32 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 	const suppressed = new Set(
 		(await sql.query<{ key: string }>(`SELECT key FROM oz_overrides WHERE active AND action = 'suppress'`)).rows.map((r) => r.key)
 	);
-	const listed = await sql.query<{ key: string; chain: string; address: string; risk: Risk; category: Category; source: string; entity: string | null }>(
-		`SELECT key, chain, address, risk, category, source, entity FROM oz_entries WHERE removed_at IS NULL`
-	);
+	const listed = await sql.query<{
+		key: string;
+		chain: string;
+		address: string;
+		risk: Risk;
+		category: Category;
+		source: string;
+		entity: string | null;
+		listed_at: string | Date | null;
+	}>(`SELECT key, chain, address, risk, category, source, entity, listed_at FROM oz_entries WHERE removed_at IS NULL`);
 	const put = (e: IndexEntry) => {
 		const cur = index.get(e.key);
-		if (!cur || e.hop < cur.hop || (e.hop === cur.hop && riskRank(e.originRisk) > riskRank(cur.originRisk))) index.set(e.key, e);
+		const better =
+			!cur ||
+			e.hop < cur.hop ||
+			(e.hop === cur.hop &&
+				(riskRank(e.originRisk) > riskRank(cur.originRisk) ||
+					// same strength: an attribution without a start time covers more
+					(riskRank(e.originRisk) === riskRank(cur.originRisk) && cur.sinceTime !== undefined && e.sinceTime === undefined)));
+		if (better) index.set(e.key, e);
 	};
 	for (const r of listed.rows) {
 		if (!isTraceOrigin(r.category)) continue;
 		if (suppressed.has(r.key) && r.category !== 'sanctions' && r.category !== 'law_enforcement') continue;
+		// hack-cluster members are tainted from the transfer that made them members
+		const sinceTime = r.source === 'cluster' && r.listed_at ? Math.floor(new Date(r.listed_at).getTime() / 1000) : undefined;
 		put({
 			key: r.key,
 			hop: 0,
@@ -132,7 +148,8 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 			originKey: r.key,
 			originSource: r.source,
 			...(r.entity ? { originEntity: r.entity } : {}),
-			originCategory: r.category
+			originCategory: r.category,
+			...(sinceTime && Number.isFinite(sinceTime) ? { sinceTime } : {})
 		});
 		if (opts.includeTwins !== false && TWIN_CATEGORIES.has(r.category)) {
 			const p = parseForChain(r.address, r.chain);

@@ -49,6 +49,12 @@ export interface IndexEntry {
 	originCategory: Category;
 	/** Only flows strictly after this THORChain height count. */
 	since?: number;
+	/**
+	 * Only flows at or after this time (unix seconds) count — for addresses
+	 * that became tainted at a known moment, e.g. a hack-cluster member from
+	 * the transfer that made it one. Earlier activity is not the proceeds.
+	 */
+	sinceTime?: number;
 	service?: boolean;
 }
 
@@ -107,6 +113,7 @@ export function traceAction(
 		const src = lookup(flow.fromKey);
 		if (!src || src.service) continue;
 		if (src.since !== undefined && flow.height <= src.since) continue;
+		if (src.sinceTime !== undefined && Date.parse(flow.date) / 1000 < src.sinceTime) continue;
 		const target = lookup(flow.toKey);
 		if (target && target.hop === 0) continue; // already listed in its own right
 		const hop = flow.relation === 'value' ? src.hop + 1 : Math.max(1, src.hop);
