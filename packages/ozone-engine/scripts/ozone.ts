@@ -15,6 +15,8 @@
  *   screen <address> [chain]  verdict from the latest snapshot
  *   stats [--json]            coverage report
  *   export <dir>              write latest manifest + payload to <dir>
+ *   keygen <file>             new Ed25519 signing key: secret seed → <file> (mode 600),
+ *                             prints only the public key (for OZONE_*_SIGNING_KEY / pinning)
  *
  * Environment: OZONE_LOCAL_DB (default .ozone-local/pgdata),
  * OZONE_SNAPSHOT_SIGNING_KEY (default: a dev key in .ozone-local/dev-key.hex),
@@ -50,7 +52,7 @@ const flag = (name: string) => {
 };
 
 const dataDir = resolve(process.env.OZONE_LOCAL_DB ?? '.ozone-local/pgdata');
-mkdirSync(dataDir, { recursive: true });
+if (cmd !== 'keygen') mkdirSync(dataDir, { recursive: true });
 
 function devKey() {
 	if (process.env.OZONE_SNAPSHOT_SIGNING_KEY) return loadPrivateKey(process.env.OZONE_SNAPSHOT_SIGNING_KEY);
@@ -59,7 +61,16 @@ function devKey() {
 	return loadPrivateKey(readFileSync(file, 'utf8').trim());
 }
 
+function keygen(file: string | undefined) {
+	if (!file) throw new Error('usage: keygen <file>   (the secret seed is written there, never printed)');
+	const seed = generateSigningKey().seedHex;
+	writeFileSync(file, seed + '\n', { mode: 0o600, flag: 'wx' }); // 'wx': never overwrite a key
+	const key = loadPrivateKey(seed);
+	console.log(JSON.stringify({ secretSeedFile: resolve(file), publicKey: key.publicKey.spec, keyId: key.publicKey.keyId }, null, 2));
+}
+
 async function main() {
+	if (cmd === 'keygen') return keygen(args[1]);
 	const db = await PGlite.create(dataDir);
 	const sql = db as unknown as Sql;
 	await migrate(sql, { baseline: true });

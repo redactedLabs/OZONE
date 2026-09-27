@@ -78,6 +78,7 @@ See `.env.example` for the full list. Required:
 
 Optional:
 - `OZONE_API_SIGNING_KEY` — Ed25519 seed that signs API answers and certificates
+  (`npx tsx packages/ozone-engine/scripts/ozone.ts keygen <file>` writes a new seed to `<file>` and prints only the public key)
 - `OZONE_SNAPSHOT_PUBLIC_KEYS` — the worker's snapshot key(s), published at `/api/v1/keys`
 - `OZONE_SYNC_IN_APP=1` — run list sync in the app's cron (only without the worker)
 - `OZONE_SNAPSHOT_SIGNING_KEY` — only if the app itself publishes snapshots
