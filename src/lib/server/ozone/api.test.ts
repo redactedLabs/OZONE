@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { generateSigningKey, loadPrivateKey, OzoneClient, verifyAttached, verifyScreenResponse, DOMAIN_CERTIFICATE } from '$ozone/index.js';
-import { applySourceResult, emptyResult, migrate, parseCurated, parseFbiPublication, parseOfacSdnXml, publishSnapshot, FBI_PUBLICATIONS, type Sql } from '$engine/index.js';
+import { applySourceResult, emptyResult, migrate, parseCurated, parseFbiPublication, parseOfacSdnXml, publishSnapshot, recordDustFlows, FBI_PUBLICATIONS, type Sql } from '$engine/index.js';
 
 const holder: { sql?: Sql } = {};
 vi.mock('$lib/server/ozone/sql', () => ({
@@ -158,6 +158,35 @@ describe('API routes', () => {
 		expect(body.listings[0]).toMatchObject({ source: 'ofac_sdn', entity: 'LAZARUS GROUP', ref_url: 'https://sanctionssearch.ofac.treas.gov/Details.aspx?id=27307' });
 		const bad = await call(GET as Handler, { url: '/api/v1/address/nope', params: { address: 'nope' } });
 		expect(bad.status).toBe(400);
+	});
+
+	it('address explanation lists the small transfers counted toward a total, each once', async () => {
+		const to = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
+		const flow = {
+			txid: 'SMALLTX1',
+			height: 900,
+			date: '2025-06-01T00:00:00.000Z',
+			action: 'send',
+			relation: 'value' as const,
+			fromKey: 'evm:0x098b716b8aaf21512996dc57eb0615e2383e2f96',
+			fromAddress: '0x098b716b8aaf21512996dc57eb0615e2383e2f96',
+			fromChain: 'ETH',
+			toKey: `btc:${to}`,
+			toAddress: to,
+			toChain: 'BTC',
+			usd: 30,
+			hop: 1,
+			originKey: 'evm:0x098b716b8aaf21512996dc57eb0615e2383e2f96',
+			originSource: 'ofac_sdn',
+			originRisk: 'severe' as const,
+			originCategory: 'sanctions' as const
+		};
+		await recordDustFlows(holder.sql!, [flow, flow]);
+		const { GET } = await import('../../../routes/api/v1/address/[address]/+server');
+		const body = await (await call(GET as Handler, { url: `/api/v1/address/${to}`, params: { address: to } })).json();
+		expect(body.smallTransfersReceived).toHaveLength(1);
+		expect(body.smallTransfersReceived[0]).toMatchObject({ txid: 'SMALLTX1', from_address: flow.fromAddress, hop: 1, origin_source: 'ofac_sdn' });
+		expect(Number(body.smallTransfersReceived[0].usd)).toBe(30);
 	});
 
 	it('serves large payloads in parts (host response limits) that the client reassembles', async () => {

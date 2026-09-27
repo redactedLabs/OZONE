@@ -2,8 +2,9 @@
  * GET /api/v1/address/<address>?chain= — everything Ozone knows about one
  * address: the verdict (from the current snapshot), every list entry with
  * provenance (history included) and every THORChain flow that reached it
- * (up to 100), plus the flows it sent from flagged status. Read-only,
- * nothing stored.
+ * (up to 100), the transfers under the dust limit that count toward a
+ * TRACE_SMALL_TRANSFERS total (up to 100), plus the flows it sent from
+ * flagged status. Read-only, nothing stored.
  */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -30,6 +31,19 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		 FROM oz_trace_edges WHERE to_key = ANY($1::text[]) ORDER BY hop, ts LIMIT 100`,
 		[keys]
 	);
+	// Each transfer once; one that was also stored as a flow above is left out.
+	// (The table comes with migration 0003, which the worker applies on start:
+	// until then there is nothing to list.)
+	const smallTransfers = await sql
+		.query(
+			`SELECT d.txid, d.action, d.height, d.ts, d.from_address, d.from_chain, d.amount, d.usd, d.hop, d.origin_key, d.origin_source, d.origin_entity
+			 FROM oz_trace_dust_flows d
+			 WHERE d.to_key = ANY($1::text[])
+			   AND NOT EXISTS (SELECT 1 FROM oz_trace_edges e WHERE e.txid = d.txid AND e.from_key = d.from_key AND e.to_key = d.to_key)
+			 ORDER BY d.hop, d.ts LIMIT 100`,
+			[keys]
+		)
+		.catch(() => ({ rows: [] }));
 	const sent = await sql.query(
 		`SELECT txid, action, relation, height, ts, to_address, to_chain, amount, usd, hop, risk, reason
 		 FROM oz_trace_edges WHERE from_key = ANY($1::text[]) ORDER BY ts LIMIT 100`,
@@ -43,6 +57,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			snapshot: res.snapshot,
 			listings: entries.rows,
 			flowsReceived: received.rows,
+			smallTransfersReceived: smallTransfers.rows,
 			flowsSentWhileFlagged: sent.rows
 		},
 		{ headers }
