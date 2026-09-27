@@ -50,17 +50,17 @@
 	</div>
 
 	{#if done}
-		<div class="card rounded-2xl p-6" data-win-title="Submitted">
+		<div class="card api-card rounded-2xl p-6" data-win-title="Submitted">
 			<div class="text-lg font-semibold mb-2" style="color: #10b981;">Received</div>
 			<p class="text-sm mb-3" style="color: var(--text-secondary);">Keep this reference to follow the review:</p>
 			<div class="font-mono text-sm mb-4" style="color: var(--text);">{done.publicId}</div>
 			<a href={done.statusUrl} class="btn">Check status</a>
 		</div>
 	{:else}
-		<form class="card rounded-2xl p-6 space-y-4" data-win-title={kind === 'report' ? 'Report' : 'Appeal'} onsubmit={(e) => { e.preventDefault(); submit(); }}>
+		<form class="card api-card rounded-2xl p-6 space-y-4" data-win-title={kind === 'report' ? 'Report' : 'Appeal'} onsubmit={(e) => { e.preventDefault(); submit(); }}>
 			<label class="block">
 				<span class="label">Address</span>
-				<input class="input font-mono" bind:value={address} required maxlength="128" placeholder="0x…, bc1…, thor1…, T…" />
+				<input type="text" class="input font-mono" bind:value={address} required maxlength="128" placeholder="0x…, bc1…, thor1…, T…" />
 			</label>
 			<label class="block">
 				<span class="label">Chain (optional — detected from the format)</span>
@@ -81,7 +81,7 @@
 			</label>
 			<label class="block">
 				<span class="label">Contact (optional — only if you want an answer beyond the status page)</span>
-				<input class="input" bind:value={contact} maxlength="200" />
+				<input type="text" class="input" bind:value={contact} maxlength="200" />
 			</label>
 			<input class="hp" tabindex="-1" autocomplete="off" bind:value={website} aria-hidden="true" />
 			{#if error}<p class="text-sm" style="color: #ef4444;">{error}</p>{/if}
@@ -148,5 +148,22 @@
 		width: 1px;
 		height: 1px;
 		opacity: 0;
+	}
+	/* Win98: the theme recolours inline styles and elements; class-based text needs the same (black on silver). */
+	:global(.win98) .label,
+	:global(.win98) .tab {
+		color: #000;
+	}
+	:global(.win98) button.tab.active.active,
+	:global(.win98) a.tab.active.active {
+		background: #000080 !important;
+		color: #fff !important;
+	}
+	:global(.win98) a.btn {
+		background: #c0c0c0;
+		color: #000;
+		border: 2px solid;
+		border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+		border-radius: 0;
 	}
 </style>

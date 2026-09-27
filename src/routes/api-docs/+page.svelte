@@ -71,8 +71,10 @@
   -d '{"addresses":["0x098B716B8Aaf21512996dC57EB0615e2383E2f96",
                    {"address":"qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a","chain":"BCH"}],
        "policy":{"flagAt":"high"}}'`;
+	// `\u0069mport` renders as "import"; the escape keeps Vite's dependency
+	// scanner from treating the example code as a real import of the package.
 	const jsExample = `// Online, with signature verification
-import { verifyScreenResponse } from '@redacted/ozone-client';
+\u0069mport { verifyScreenResponse } from '@redacted/ozone-client';
 
 const res = await fetch('https://ozone.redacted.gg/api/v1/screen', {
   method: 'POST',
@@ -83,7 +85,7 @@ const body = verifyScreenResponse(await res.json(), [OZONE_API_KEY]);
 if (!body) throw new Error('unsigned or forged answer');
 const [verdict] = body.results;          // status, risk, reasons, snapshot`;
 	const pythonExample = `// Node-local: no request to Ozone at screening time
-import { OzoneClient } from '@redacted/ozone-client';
+\u0069mport { OzoneClient } from '@redacted/ozone-client';
 
 const oz = new OzoneClient({
   trustedKeys: [OZONE_SNAPSHOT_KEY],     // pin it (see /api/v1/keys)

@@ -56,7 +56,7 @@
 		{/if}
 	</div>
 
-	<section class="card rounded-2xl p-6 sm:p-8 mb-6" id="overview" data-win-title="Overview">
+	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="overview" data-win-title="Overview">
 		<h2 class="h2">In short</h2>
 		<ol class="list">
 			<li><strong>Lists</strong> — official sanctions (OFAC, UK, EU), law-enforcement attributions (FBI), stablecoin issuer freezes (Tether, Circle), hack/exploit and phishing lists. Every entry keeps its source, a reference link, when the source listed it, when Ozone first saw it and — if it happened — when it was removed.</li>
@@ -67,7 +67,7 @@
 		</ol>
 	</section>
 
-	<section class="card rounded-2xl p-6 sm:p-8 mb-6" id="sources" data-win-title="Sources">
+	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="sources" data-win-title="Sources">
 		<h2 class="h2">Sources</h2>
 		<p class="p">Public sources only; none needs an API key. A download that is too small or would remove too many entries at once is refused, so a truncated file can never mass-delist sanctioned addresses.</p>
 		<div class="overflow-x-auto">
@@ -100,7 +100,7 @@
 		<p class="p"><strong>Not used:</strong> Israel's NBCTF seizure lists (the site blocks automated access), commercial APIs that need keys, and OpenSanctions' processed data (non-commercial licence) — Ozone reads the primary lists directly.</p>
 	</section>
 
-	<section class="card rounded-2xl p-6 sm:p-8 mb-6" id="addresses" data-win-title="Addresses">
+	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="addresses" data-win-title="Addresses">
 		<h2 class="h2">Address normalization</h2>
 		<ul class="list">
 			<li><strong>EVM</strong> (ETH, BSC, BASE, AVAX, ARB, …): lower-cased; one key for all EVM chains — an account is the same key holder everywhere.</li>
@@ -113,7 +113,7 @@
 		</ul>
 	</section>
 
-	<section class="card rounded-2xl p-6 sm:p-8 mb-6" id="tracing" data-win-title="THORChain tracing">
+	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="tracing" data-win-title="THORChain tracing">
 		<h2 class="h2">THORChain flow tracing</h2>
 		<p class="p">Laundering through THORChain rarely touches a thor1 account: the Bybit funds (Feb–Mar 2025) went ETH → BTC directly. Ozone therefore follows <em>flows</em>, not accounts:</p>
 		<ul class="list">
@@ -132,7 +132,7 @@
 		</ul>
 	</section>
 
-	<section class="card rounded-2xl p-6 sm:p-8 mb-6" id="verdicts" data-win-title="Verdicts">
+	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="verdicts" data-win-title="Verdicts">
 		<h2 class="h2">Verdicts and risk levels</h2>
 		<div class="space-y-2 mb-4">
 			{#each risks as r}
@@ -146,7 +146,7 @@
 		<p class="p" id="users"><strong>Flagged THORChain users</strong> are monitored thor1 accounts whose own address is flagged, or which are linked (by their Midgard history) to a listed L1 address — a link counts one level lower, because a linked address can be a counterparty. Links through affiliate outputs and hub accounts are ignored: the previous screener flagged exactly two accounts, and both were fee collectors (THORChain's affiliate-collector module and an interface's affiliate address) linked to tens of thousands of unrelated swappers.</p>
 	</section>
 
-	<section class="card rounded-2xl p-6 sm:p-8 mb-6" id="snapshots" data-win-title="Snapshots">
+	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="snapshots" data-win-title="Snapshots">
 		<h2 class="h2">Signed snapshots and node-local screening</h2>
 		<ul class="list">
 			<li>The worker publishes a snapshot every few minutes: a small manifest (version, build time, SHA-256 of the payload) signed with Ed25519, and the gzip payload with every listed and traced address and its reasons.</li>
@@ -156,7 +156,7 @@
 		</ul>
 	</section>
 
-	<section class="card rounded-2xl p-6 sm:p-8 mb-6" id="privacy" data-win-title="Privacy">
+	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="privacy" data-win-title="Privacy">
 		<h2 class="h2">Privacy</h2>
 		<ul class="list">
 			<li>No IP addresses are logged or stored — not for API calls, not for reports, not for admin sessions.</li>
@@ -165,7 +165,7 @@
 		</ul>
 	</section>
 
-	<section class="card rounded-2xl p-6 sm:p-8 mb-6" id="limits" data-win-title="Limitations">
+	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="limits" data-win-title="Limitations">
 		<h2 class="h2">Limitations — what Ozone cannot see</h2>
 		<ul class="list">
 			<li>Transfers outside THORChain are not traced (except the Ethereum hack clusters above). A launderer who moves funds L1-to-L1 before touching THORChain is only caught if an intermediate address is listed.</li>
@@ -176,7 +176,7 @@
 		</ul>
 	</section>
 
-	<section class="card rounded-2xl p-6 sm:p-8" id="manual" data-win-title="Reports and appeals">
+	<section class="card api-card rounded-2xl p-6 sm:p-8" id="manual" data-win-title="Reports and appeals">
 		<h2 class="h2">Reports and appeals</h2>
 		<p class="p">Report an address with evidence, or appeal a flag you believe is wrong: <a href="/submit" style="color: var(--app-accent);">ozone.redacted.gg/submit</a>. Maintainers review every submission; an accepted report becomes a maintainer flag with a written reason, an accepted appeal suppresses derived and community reasons for that address. Official sanctions listings cannot be removed by Ozone — only by the authority that published them — and the appeal answer says so.</p>
 	</section>
@@ -260,5 +260,23 @@
 		padding: 1px 4px;
 		border-radius: 4px;
 		background: var(--bg-code);
+	}
+	/* Win98: the theme recolours inline styles and elements; class-based text needs the same (black on silver). */
+	:global(.win98) .p,
+	:global(.win98) .list,
+	:global(.win98) .th,
+	:global(.win98) .td,
+	:global(.win98) .h2 {
+		color: #000;
+	}
+	:global(.win98) .chip {
+		color: #000;
+		background: #c0c0c0;
+		border: 1px solid #808080;
+		border-radius: 0;
+	}
+	:global(.win98) code {
+		background: #fff;
+		border-radius: 0;
 	}
 </style>

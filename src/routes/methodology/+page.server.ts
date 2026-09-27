@@ -7,13 +7,14 @@ export const load: PageServerLoad = async () => {
 	const live = new Map((c?.listed.bySource ?? []).map((s) => [s.source, s]));
 	const sources = [...SOURCES, ...DERIVED_SOURCES].map((s) => {
 		const l = live.get(s.id);
+		const derivedActive = s.id === 'thorchain_trace' ? (c?.traced.addresses ?? null) : null;
 		return {
 			id: s.id,
 			name: s.name,
 			kind: s.kind,
 			url: s.url,
 			description: s.description,
-			active: l?.active ?? null,
+			active: l?.active ?? derivedActive,
 			removed: l?.removed ?? null,
 			lastSuccessAt: l?.lastSuccessAt ?? null,
 			version: l?.version ?? null,

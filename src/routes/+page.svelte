@@ -78,7 +78,13 @@
 		amount: string;
 		time: string | null;
 		txID: string;
+		/** Unique row key: THORChain reports some actions with the all-zero placeholder txID. */
+		key?: string;
 	};
+
+	const placeholderTx = (id: string) => /^0+$/.test(id);
+	const liveKey = (tx: LiveTx) =>
+		placeholderTx(tx.txID) ? `${tx.type}|${tx.time}|${tx.fromFull}|${tx.toFull}|${tx.amount}|${tx.assetIn}` : tx.txID;
 
 	let liveTxs = $state<LiveTx[]>([]);
 	let seenTxIDs = new Set<string>();
@@ -109,10 +115,15 @@
 			if (!Array.isArray(txData)) return;
 
 			// Filter to only new txs we haven't seen
-			const newTxs = txData.filter(tx => tx.txID && !seenTxIDs.has(tx.txID));
-			for (const tx of newTxs) {
-				seenTxIDs.add(tx.txID);
-			}
+			// (deduplicated inside the batch too — several actions can share the placeholder txID)
+			const newTxs = txData.filter((tx) => {
+				if (!tx.txID) return false;
+				const key = liveKey(tx);
+				if (seenTxIDs.has(key)) return false;
+				seenTxIDs.add(key);
+				tx.key = key;
+				return true;
+			});
 
 			// On first load, show them all at once
 			if (liveTxs.length === 0 && newTxs.length > 0) {
@@ -354,7 +365,7 @@
 				<span class="text-xs font-semibold" style="color: var(--text);">Live</span>
 			</div>
 			<div class="max-h-[400px] overflow-y-auto">
-				{#each liveTxs as tx, i (tx.txID || `tx-${i}`)}
+				{#each liveTxs as tx, i (tx.key ?? (tx.txID || `tx-${i}`))}
 					{@const typeColor = tx.type === 'STREAM' ? '#a78bfa' : tx.type === 'SWAP' ? '#818cf8' : tx.type === 'ADD' ? '#10b981' : tx.type === 'WD' ? '#f59e0b' : tx.type === 'SEND' ? '#22d3ee' : tx.type === 'REFUND' ? '#ef4444' : '#64748b'}
 					<div class="tx-row px-3 py-1.5 text-[11px]" style="border-bottom: 1px solid var(--app-border-subtle);">
 						<div class="flex items-center gap-1.5 w-full">
@@ -366,7 +377,7 @@
 							</span>
 							<span class="shrink-0 text-[9px] font-mono text-right whitespace-nowrap" style="color: var(--text-faint);">{#if tx.amount}<span style="color: var(--text);">{tx.amount}</span>&nbsp;{/if}{tx.assetIn}{#if tx.assetOut && tx.assetOut !== tx.assetIn}&nbsp;→&nbsp;{tx.assetOut}{/if}</span>
 							<span class="shrink-0 w-7 text-right text-[9px] font-mono" style="color: var(--text-ghost);">{txAge(tx.time)}</span>
-							{#if tx.txID}
+							{#if tx.txID && !placeholderTx(tx.txID)}
 								<a href="https://runescan.io/tx/{tx.txID}" target="_blank" rel="noopener" class="shrink-0 tx-link" title="View on RuneScan">&#8599;</a>
 							{/if}
 						</div>
@@ -421,7 +432,7 @@
 			{/if}
 
 			<!-- Bottom pill -->
-			<div class="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5" style="background: var(--globe-pill-bg); backdrop-filter: blur(12px); border: 1px solid var(--border);">
+			<div class="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5 whitespace-nowrap" style="background: var(--globe-pill-bg); backdrop-filter: blur(12px); border: 1px solid var(--border);">
 				<span class="inline-block h-2 w-2 rounded-full animate-pulse" style="background: #10b981;"></span>
 				<span class="text-[10px] font-mono" style="color: #f59e0b;">{compact(data.stats.listedAddresses)} listed</span>
 				<span class="text-[10px]" style="color: var(--text-ghost);">·</span>

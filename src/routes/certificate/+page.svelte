@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { sourceLabel } from '$lib/utils/sourceNames';
 
 	let address = $state('');
 	let phase = $state<'idle' | 'scanning' | 'done'>('idle');
@@ -344,7 +345,7 @@
 						{#each result.matches as match}
 							<div class="rounded-xl p-3" style="background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15);">
 								<div class="flex items-center gap-2">
-									<span class="text-[10px] font-bold px-1.5 py-0.5 rounded" style="background: rgba(239,68,68,0.15); color: #ef4444;">{match.source}</span>
+									<span class="text-[10px] font-bold px-1.5 py-0.5 rounded" style="background: rgba(239,68,68,0.15); color: #ef4444;">{sourceLabel(match.source)}</span>
 									<span class="text-xs" style="color: var(--text);">{match.entityName || 'Match found'}</span>
 								</div>
 								{#if match.reason}

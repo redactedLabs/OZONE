@@ -9,7 +9,7 @@
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 pt-20 pb-16">
-	<div class="card rounded-2xl p-6" data-win-title="Submission status">
+	<div class="card api-card rounded-2xl p-6" data-win-title="Submission status">
 		<div class="text-[10px] font-mono mb-1" style="color: var(--text-faint);">{s.publicId}</div>
 		<h1 class="text-xl font-bold mb-3" style="color: var(--text);">{s.kind === 'appeal' ? 'Appeal' : 'Report'}: <span style="color: {color};">{s.status}</span></h1>
 		<div class="text-xs font-mono break-all mb-2" style="color: var(--text);">{s.address}{s.chain ? ` (${s.chain})` : ''}</div>
@@ -26,5 +26,10 @@
 	.card {
 		background: var(--card-bg);
 		border: 1px solid var(--card-border);
+	}
+	/* Win98: the theme recolours inline styles and elements; class-based text needs the same (black on silver). */
+	:global(.win98) .card {
+		background: #c0c0c0;
+		border-color: #808080;
 	}
 </style>

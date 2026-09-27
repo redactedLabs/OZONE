@@ -62,6 +62,9 @@ const provider = createOzoneProvider({ snapshot, online: createOzoneClient({ /* 
 provider.start()   // → snapshot.start(): loads the verified disk cache, fetches now, then every 10 min
 ```
 
+A complete example (including full verdicts for the attestation record):
+[`packages/ozone-client/examples/relayer-node.ts`](packages/ozone-client/examples/relayer-node.ts).
+
 What the adapter returns:
 
 | call | result |

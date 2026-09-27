@@ -33,7 +33,7 @@
 	</div>
 	{#if message}<p class="text-sm mb-3" style="color: var(--text-secondary);">{message}</p>{/if}
 	{#each data.items as it}
-		<div class="card rounded-xl p-4 mb-3" data-win-title={it.public_id}>
+		<div class="card api-card rounded-xl p-4 mb-3" data-win-title={it.public_id}>
 			<div class="flex flex-wrap items-center gap-2 mb-1">
 				<span class="text-[10px] font-bold px-1.5 py-0.5 rounded" style="background: {it.kind === 'appeal' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color: {it.kind === 'appeal' ? '#10b981' : '#ef4444'};">{it.kind}</span>
 				<span class="font-mono text-xs" style="color: var(--text);">{it.address}</span>
@@ -44,7 +44,7 @@
 			{#if it.contact}<p class="text-[11px] mb-1" style="color: var(--text-muted);">Contact: {it.contact}</p>{/if}
 			{#if it.status === 'open'}
 				<div class="flex flex-wrap gap-2 mt-2">
-					<input class="input flex-1" placeholder="Resolution note (public)" bind:value={notes[it.public_id]} />
+					<input type="text" class="input flex-1" placeholder="Resolution note (public)" bind:value={notes[it.public_id]} />
 					<button class="btn" disabled={busy === it.public_id} onclick={() => resolve(it.public_id, 'accept')}>Accept</button>
 					<button class="btn-secondary" disabled={busy === it.public_id} onclick={() => resolve(it.public_id, 'reject')}>Reject</button>
 				</div>
@@ -96,5 +96,25 @@
 		font-size: 12px;
 		color: var(--text-muted);
 		border: 1px solid var(--app-border);
+	}
+	/* Win98: the theme recolours inline styles and elements; class-based text needs the same (black on silver). */
+	:global(.win98) .label,
+	:global(.win98) .tab {
+		color: #000;
+	}
+	:global(.win98) button.tab.active.active,
+	:global(.win98) a.tab.active.active {
+		background: #000080 !important;
+		color: #fff !important;
+	}
+	:global(.win98) a.btn {
+		background: #c0c0c0;
+		color: #000;
+		border: 2px solid;
+		border-color: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+		border-radius: 0;
+	}
+	:global(.win98) .btn-secondary {
+		color: #000;
 	}
 </style>

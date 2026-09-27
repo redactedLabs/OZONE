@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { sourceLabel } from '$lib/utils/sourceNames';
+
 	let { data } = $props();
 
 	let copiedLink = $state(false);
@@ -33,7 +35,7 @@
 					<div class="space-y-2 text-left max-w-md mx-auto mt-4">
 						{#each data.reasons as r}
 							<div class="rounded-xl p-3 text-[11px]" style="background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); color: var(--text-muted);">
-								<span class="font-bold" style="color: #ef4444;">{r.source}</span> · {r.text}
+								<span class="font-bold" style="color: #ef4444;">{sourceLabel(r.source)}</span> · {r.text}
 								{#if r.ref}<a href={r.ref} target="_blank" rel="noopener" style="color: var(--app-accent);"> source&nbsp;&#8599;</a>{/if}
 							</div>
 						{/each}
