@@ -36,12 +36,34 @@ and the [methodology page](https://ozone.redacted.gg/methodology) for how verdic
 | **UK Sanctions List (FCDO)** | Government | wallet addresses in designation texts (checksum-validated) |
 | **EU consolidated list** | Government | wallet addresses in entity remarks, listing regulation as provenance |
 | **FBI / IC3** | Law enforcement | DPRK (TraderTraitor/Lazarus) laundering addresses, e.g. the Bybit PSA |
-| **Chainalysis sanctions oracle** | On-chain | add/remove events (no API key), e.g. the Tornado Cash delisting |
-| **Tether / Circle** | On-chain | USDT freezes (ETH, TRON, AVAX), USDC blacklist (ETH, BASE, AVAX), incl. unfreezes |
+| **Chainalysis sanctions oracle** | On-chain | add/remove events (no API key) on Ethereum, Arbitrum, Optimism, Polygon, Avalanche and Base, e.g. the Tornado Cash delisting |
+| **Tether / USDT0 / Circle** | On-chain | USDT freezes (ETH, TRON, AVAX), USDT0 freezes (Arbitrum, Polygon), USDC blacklist (ETH, BASE, AVAX, Arbitrum, Optimism, Polygon), incl. unfreezes |
 | **Hack clusters** | Derived | Ethereum fan-out of attributed hack addresses inside the laundering window (Bybit) |
 | **eth-labels / ScamSniffer** | Community | exploiter, heist and phishing labels; drainer addresses |
-| **Curated / maintainers** | Curated | verified attributions with a named primary source; maintainer flags |
+| **Curated / maintainers** | Curated | verified attributions with a named primary source; maintainer flags, incl. the incident path for freshly announced hacks |
+| **Chainabuse** (optional) | Community | moderator-verified scam reports, risk medium; only with `CHAINABUSE_API_KEY` (free account, 10 calls/month) |
 | **THORChain tracing** | Derived | recipients of value from listed addresses through THORChain, with the tx as evidence |
+
+### Freshly announced hacks (incident path)
+
+No public list carries a new hacker's addresses on day one. In the admin UI
+(**Compliance Lists → + Hack / incident**, or `POST /api/admin/flags` with
+`{addresses, incident, refUrl, note}`), a maintainer pastes them with the
+public source. They become maintainer flags marked urgent for 48 h
+(`oz_manual_meta`, migration `0004`). The worker checks the flags every 15 s:
+on a change it lists them, reads their THORChain history — and that of every
+recipient it finds, hop after hop — before anything else, and publishes a
+signed snapshot right away, typically within minutes.
+
+### Tracing coverage
+
+The backfill reads each flagged address's Midgard history oldest first and to
+the end (Midgard's `fromHeight` returns the *oldest* page; the reader pages
+forward with `prevPageToken`), continuing long histories over several slices.
+Order: incident keys, then by risk; within a risk level traced addresses, then
+attributions, then bulk lists, then same-key twins. The real-time follower
+reads forward from its cursor and catches up after an outage instead of
+skipping ahead (it no longer sends every address back to the backfill).
 
 ## Stack
 
@@ -98,7 +120,7 @@ npx tsx packages/ozone-engine/scripts/serve-db.ts          # serve it on 127.0.0
 
 ## Database Schema
 
-Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migration `packages/ozone-engine/migrations/0001_ozone_next.sql` (apply with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
+Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migrations `packages/ozone-engine/migrations/0001_ozone_next.sql` … `0004_manual_incidents.sql` (apply in order with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
 
 ### Core tables
 
