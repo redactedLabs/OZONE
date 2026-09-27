@@ -121,7 +121,11 @@ export function extractFlows(a: MidgardAction, prices?: PriceOracle): Flow[] {
 		const aliasChain = String(tn.chain ?? '');
 		const po = owner ? parseForChain(owner, 'THOR') : null;
 		const pa = alias ? (parseForChain(alias, aliasChain) ?? detectAddress(alias)[0] ?? null) : null;
-		if (po && pa && po.key !== pa.key) {
+		// THORNode lets a registrant set `owner` to any thor address, so an
+		// owner that did not sign this action is an unverified assertion about
+		// a third party, not proof of common ownership.
+		const ownerSigned = po ? ins.some((x) => x.p.key === po.key) : false;
+		if (po && pa && po.key !== pa.key && ownerSigned) {
 			const name = String(tn.thorname ?? '');
 			for (const [f, t] of [
 				[po, pa],

@@ -99,6 +99,34 @@ describe('flow extraction (synthetic edge cases)', () => {
 		});
 		expect(extractFlows(tn).map((x) => x.relation)).toEqual(['thorname', 'thorname']);
 	});
+
+	it('THORName owner/alias links require the owner to be the registering signer', () => {
+		const metadata = {
+			thorname: {
+				thorname: 'laundry2',
+				owner: 'thor14mh37ua4vkyur0l5ra297a4la6tmf95mt96a55',
+				address: '0x098b716b8aaf21512996dc57eb0615e2383e2f96',
+				chain: 'ETH'
+			}
+		};
+		// Anyone can register a THORName and name an uninvolved address as
+		// `owner`: the registrant here is not the owner, so no link is proven.
+		const registeredByOther = action({
+			type: 'thorname',
+			height: 301,
+			in: [{ address: 'thor1fns25sytpf2gsdlg76g45620u5axm4mkrypqrh', asset: 'THOR.RUNE', amount: 11 }],
+			metadata
+		});
+		expect(extractFlows(registeredByOther)).toEqual([]);
+		// The named owner itself pays the registration fee: a verified link.
+		const selfRegistered = action({
+			type: 'thorname',
+			height: 302,
+			in: [{ address: 'thor14mh37ua4vkyur0l5ra297a4la6tmf95mt96a55', asset: 'THOR.RUNE', amount: 11 }],
+			metadata
+		});
+		expect(extractFlows(selfRegistered).map((x) => x.relation)).toEqual(['thorname', 'thorname']);
+	});
 });
 
 describe('risk decay and thresholds', () => {
