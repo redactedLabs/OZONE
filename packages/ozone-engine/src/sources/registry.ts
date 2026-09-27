@@ -243,6 +243,16 @@ export const SOURCES: SourceDef[] = [
 	}
 ];
 
+/**
+ * The sources a snapshot cannot be signed without (buildAndStoreSnapshot's
+ * completeness gate). This is every sanctions/law-enforcement/stablecoin
+ * list plus the curated set — everything the product's "clean" verdicts and
+ * certificates implicitly promise has actually been checked. Community
+ * lists (ethlabels, scamsniffer) are deliberately excluded: useful signal,
+ * not a claimed guarantee.
+ */
+export const CORE_SOURCES: readonly string[] = ['ofac_sdn', 'uk_fcdo', 'eu_fsf', 'fbi', 'curated', 'chainalysis_oracle', 'tether', 'circle'];
+
 /** Sources that are not fetched lists but produced by Ozone itself. */
 export const DERIVED_SOURCES = [
 	{

@@ -33,6 +33,7 @@ export async function runPublish() {
 	const key = snapshotSigningKey();
 	if (!key) return { skipped: 'no OZONE_SNAPSHOT_SIGNING_KEY in this deployment (the worker publishes)' };
 	const s = await publishSnapshot(sql, key);
+	if (!s.published) return { published: false, reason: s.reason };
 	return { version: s.version, size: s.size, stats: s.stats };
 }
 

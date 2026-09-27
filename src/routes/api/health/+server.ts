@@ -6,6 +6,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { sql } from '$lib/server/ozone/sql';
 import { publishedKeys, responseKey } from '$lib/server/ozone/keys';
+import { CORE_SOURCES } from '$engine/index.js';
 
 export const GET: RequestHandler = async () => {
 	const headers = { 'cache-control': 'no-store' };
@@ -21,8 +22,13 @@ export const GET: RequestHandler = async () => {
 			`SELECT value, updated_at FROM oz_state WHERE id = 'trace:realtime'`
 		);
 		const s = snap.rows[0];
+		const bySourceId = new Map(sources.rows.map((r) => [r.id, r]));
+		// A snapshot existing is not enough: while any core source has never
+		// synced, every "clean" verdict it contains could just be a gap.
+		const coreReady = CORE_SOURCES.every((id) => !!bySourceId.get(id)?.last_success_at);
+		const ok = !!s && coreReady;
 		const body = {
-			ok: !!s,
+			ok,
 			time: new Date(now).toISOString(),
 			database: 'ok',
 			snapshot: s
@@ -39,7 +45,7 @@ export const GET: RequestHandler = async () => {
 			})),
 			signing: { responses: !!responseKey(), snapshotKeys: publishedKeys().snapshot.map((k) => k.keyId) }
 		};
-		return json(body, { status: s ? 200 : 503, headers });
+		return json(body, { status: ok ? 200 : 503, headers });
 	} catch {
 		return json({ ok: false, time: new Date(now).toISOString(), database: 'error' }, { status: 503, headers });
 	}

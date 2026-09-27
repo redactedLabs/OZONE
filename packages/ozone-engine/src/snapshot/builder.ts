@@ -19,7 +19,7 @@ import {
 	type SnapshotManifestV1,
 	type SnapshotSourceInfo
 } from '../../../ozone-client/src/index.js';
-import { DERIVED_SOURCES, SOURCES } from '../sources/registry.js';
+import { CORE_SOURCES, DERIVED_SOURCES, SOURCES } from '../sources/registry.js';
 import { allEntries } from '../store/entries.js';
 import { isoOf } from '../store/db.js';
 import { getState, setState } from '../store/trace.js';
@@ -253,6 +253,7 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 }
 
 export interface StoredSnapshot {
+	published: true;
 	version: number;
 	manifest: SnapshotManifestV1;
 	stats: Record<string, number>;
@@ -260,6 +261,15 @@ export interface StoredSnapshot {
 	/** True when the content equalled the latest snapshot's and that one was kept (nothing published). */
 	unchanged?: boolean;
 }
+
+/** Nothing was signed or stored: the core sources haven't synced, or the count drop looked like data loss. */
+export interface SnapshotRefusal {
+	published: false;
+	/** Human-readable, always prefixed "not published: …" — safe to log as-is. */
+	reason: string;
+}
+
+export type PublishResult = StoredSnapshot | SnapshotRefusal;
 
 export interface StoreOptions extends SnapshotBuildOptions {
 	/** Snapshots kept in the database (default 12; nodes only need the newest, mirrors a few). */
@@ -271,6 +281,40 @@ export interface StoreOptions extends SnapshotBuildOptions {
 	 * (default 6 h), so its age still proves liveness.
 	 */
 	republishAfterMs?: number;
+	/**
+	 * Source ids that must each have `oz_sources.last_success_at` set and at
+	 * least their registry `minEntries` active entries before anything is
+	 * signed (default: CORE_SOURCES). Pass `[]` to disable the check
+	 * (tests exercising unrelated behaviour on partial fixture data only —
+	 * never for the worker or the app).
+	 */
+	coreSources?: readonly string[];
+	/** Refuse a publish whose key count falls more than this fraction below the previous snapshot's (default 0.2). */
+	maxKeyDropRatio?: number;
+}
+
+/** Per-source minEntries, defaulting to 1 (at least synced with something) when a source declares none. */
+function minEntriesFor(id: string): number {
+	const def = SOURCES.find((s) => s.id === id);
+	return def?.minEntries ?? 1;
+}
+
+/** Checks the core-source completeness gate; returns a reason string when it fails, otherwise undefined. */
+async function checkCoreSources(sql: Sql, ids: readonly string[]): Promise<string | undefined> {
+	if (!ids.length) return undefined;
+	const rows = await sql.query<{ id: string; last_success_at: string | null; active_count: number }>(
+		`SELECT id, last_success_at, active_count FROM oz_sources WHERE id = ANY($1::text[])`,
+		[ids as string[]]
+	);
+	const byId = new Map(rows.rows.map((r) => [r.id, r]));
+	const problems: string[] = [];
+	for (const id of ids) {
+		const min = minEntriesFor(id);
+		const row = byId.get(id);
+		if (!row || !row.last_success_at) problems.push(`${id} (never synced)`);
+		else if (row.active_count < min) problems.push(`${id} (${row.active_count} active, need ${min})`);
+	}
+	return problems.length ? `core source(s) not ready: ${problems.join(', ')}` : undefined;
 }
 
 /** What a snapshot says about addresses — without version, build time or sync timestamps. */
@@ -288,14 +332,37 @@ function contentHash(json: BuiltSnapshotJson): string {
 }
 type BuiltSnapshotJson = ReturnType<typeof buildSnapshot>['json'];
 
-export async function buildAndStoreSnapshot(sql: Sql, key: PrivateKeyInfo, opts: StoreOptions = {}): Promise<StoredSnapshot> {
+export async function buildAndStoreSnapshot(sql: Sql, key: PrivateKeyInfo, opts: StoreOptions = {}): Promise<PublishResult> {
 	const now = opts.now ?? new Date();
 	const prev = await sql.query<{ version: string; sha256: string; built_at: string; size: number; manifest: SnapshotManifestV1 | string; stats: Record<string, number> | string | null }>(
 		`SELECT version, sha256, built_at, size, manifest, stats FROM oz_snapshots ORDER BY version DESC LIMIT 1`
 	);
 	const prevVersion = prev.rows[0] ? Number(prev.rows[0].version) : 0;
 	const version = Math.max(prevVersion + 1, Math.floor(now.getTime() / 1000));
+
+	// Nothing gets signed until the core sources have synced — an empty or
+	// half-loaded database must never produce a signed "clean" answer.
+	const coreProblem = await checkCoreSources(sql, opts.coreSources ?? CORE_SOURCES);
+	if (coreProblem) return { published: false, reason: `not published: ${coreProblem}` };
+
 	const collected = await collectSnapshot(sql, opts);
+
+	// Nor may a snapshot silently re-sign a large, unexplained loss of keys
+	// (e.g. a database restore that bypassed applySourceResult's own gate).
+	const prevStats = prev.rows[0]
+		? typeof prev.rows[0].stats === 'string'
+			? (JSON.parse(prev.rows[0].stats) as Record<string, number>)
+			: prev.rows[0].stats
+		: undefined;
+	const prevKeys = prevStats?.keys;
+	const maxKeyDropRatio = opts.maxKeyDropRatio ?? 0.2;
+	if (typeof prevKeys === 'number' && prevKeys > 0 && collected.stats.keys < prevKeys * (1 - maxKeyDropRatio)) {
+		return {
+			published: false,
+			reason: `not published: active key count would drop from ${prevKeys} to ${collected.stats.keys} (more than ${Math.round(maxKeyDropRatio * 100)}%)`
+		};
+	}
+
 	const partSize = opts.partSize ?? 3_500_000;
 	const built = buildSnapshot(
 		{
@@ -322,7 +389,7 @@ export async function buildAndStoreSnapshot(sql: Sql, key: PrivateKeyInfo, opts:
 		if (same && age >= 0 && age < (opts.republishAfterMs ?? 6 * 3_600_000)) {
 			const manifest = typeof last.manifest === 'string' ? (JSON.parse(last.manifest) as SnapshotManifestV1) : last.manifest;
 			const stats = typeof last.stats === 'string' ? (JSON.parse(last.stats) as Record<string, number>) : (last.stats ?? collected.stats);
-			return { version: prevVersion, manifest, stats, size: Number(last.size), unchanged: true };
+			return { published: true, version: prevVersion, manifest, stats, size: Number(last.size), unchanged: true };
 		}
 	}
 	await sql.query(
@@ -335,7 +402,7 @@ export async function buildAndStoreSnapshot(sql: Sql, key: PrivateKeyInfo, opts:
 		`DELETE FROM oz_snapshots WHERE version NOT IN (SELECT version FROM oz_snapshots ORDER BY version DESC LIMIT $1)`,
 		[keep]
 	);
-	return { version, manifest: built.manifest, stats: collected.stats, size: built.payload.length };
+	return { published: true, version, manifest: built.manifest, stats: collected.stats, size: built.payload.length };
 }
 
 export async function latestSnapshot(sql: Sql): Promise<{ version: number; manifest: SnapshotManifestV1; builtAt: string } | undefined> {

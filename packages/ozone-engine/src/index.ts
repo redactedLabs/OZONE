@@ -9,7 +9,7 @@ export { parseFbiPublication, FBI_PUBLICATIONS } from './sources/fbi.js';
 export { parseEthLabels, parseScamSniffer, ETH_LABEL_POLICY } from './sources/community.js';
 export { foldEvents, fetchLogs, fetchLogsRpc, fetchLogsExplorer, tronEvents, syncTether, syncCircle, syncChainalysisOracle, TOPICS } from './sources/events.js';
 export { CURATED, type ClusterSpec, type CuratedIncident } from './sources/curated-data.js';
-export { SOURCES, DERIVED_SOURCES, sourceById, parseCurated, type SourceDef, type SourceContext } from './sources/registry.js';
+export { SOURCES, DERIVED_SOURCES, CORE_SOURCES, sourceById, parseCurated, type SourceDef, type SourceContext } from './sources/registry.js';
 export { migrate, batchInsert, withTransaction } from './store/db.js';
 export { applySourceResult, allEntries, manualEntries, SanityError, type ApplyStats } from './store/entries.js';
 export { recordHits, loadTraceIndex, pendingChecks, markChecked, queryForms, getState, setState } from './store/trace.js';
@@ -19,7 +19,17 @@ export { loadPoolPrices, StaticPrices, type PriceOracle } from './trace/prices.j
 export { traceAction, traceRisk, describeHit, DEFAULT_TRACE_CONFIG, type TraceConfig, type TraceHit, type IndexEntry } from './trace/tracer.js';
 export { runTraceBackfill, runRealtimeTick, scheduleRecheck, checkAddress } from './trace/jobs.js';
 export { expandCluster, clusterEntries } from './evm/expand.js';
-export { collectSnapshot, buildAndStoreSnapshot, latestSnapshot, snapshotPayload, GENERATOR } from './snapshot/builder.js';
+export {
+	collectSnapshot,
+	buildAndStoreSnapshot,
+	latestSnapshot,
+	snapshotPayload,
+	GENERATOR,
+	type StoredSnapshot,
+	type SnapshotRefusal,
+	type PublishResult,
+	type StoreOptions
+} from './snapshot/builder.js';
 export { screenUsers, type UserScreenResult } from './screen/users.js';
 export * from './jobs.js';
 export { coverageReport, type CoverageReport } from './report.js';

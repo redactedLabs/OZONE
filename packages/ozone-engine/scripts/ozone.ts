@@ -135,7 +135,8 @@ async function main() {
 		case 'snapshot': {
 			const key = devKey();
 			const s = await publishSnapshot(sql, key);
-			console.log({ version: s.version, size: s.size, stats: s.stats, keyId: key.publicKey.keyId, publicKey: key.publicKey.spec });
+			if (!s.published) console.log({ published: false, reason: s.reason });
+			else console.log({ version: s.version, size: s.size, stats: s.stats, keyId: key.publicKey.keyId, publicKey: key.publicKey.spec });
 			break;
 		}
 		case 'users': {

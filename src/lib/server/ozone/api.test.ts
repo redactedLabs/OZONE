@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { generateSigningKey, loadPrivateKey, OzoneClient, verifyAttached, verifyScreenResponse, DOMAIN_CERTIFICATE } from '$ozone/index.js';
-import { applySourceResult, migrate, parseCurated, parseFbiPublication, parseOfacSdnXml, publishSnapshot, FBI_PUBLICATIONS, type Sql } from '$engine/index.js';
+import { applySourceResult, emptyResult, migrate, parseCurated, parseFbiPublication, parseOfacSdnXml, publishSnapshot, FBI_PUBLICATIONS, type Sql } from '$engine/index.js';
 
 const holder: { sql?: Sql } = {};
 vi.mock('$lib/server/ozone/sql', () => ({
@@ -56,7 +56,15 @@ describe('API routes', () => {
 		await applySourceResult(sql, { id: 'ofac_sdn', name: 'OFAC', kind: 'sanctions' }, parseOfacSdnXml(fx('ofac-sdn-excerpt.xml')));
 		await applySourceResult(sql, { id: 'fbi', name: 'FBI', kind: 'law_enforcement' }, parseFbiPublication(fx('fbi-psa250226.html'), FBI_PUBLICATIONS[0]));
 		await applySourceResult(sql, { id: 'curated', name: 'Curated', kind: 'curated' }, parseCurated());
-		await publishSnapshot(sql, snapKey);
+		// The remaining core sources aren't under test here (real minEntries
+		// like OFAC's 500 or Tether's 1000 would need unrealistic fixture
+		// sizes) — record a trivial success so /api/health's "every core
+		// source has synced" check is honestly satisfied, and skip the
+		// stronger per-count completeness gate below via coreSources: [].
+		for (const id of ['uk_fcdo', 'eu_fsf', 'chainalysis_oracle', 'tether', 'circle']) {
+			await applySourceResult(sql, { id, name: id, kind: 'sanctions' }, emptyResult());
+		}
+		await publishSnapshot(sql, snapKey, { coreSources: [] });
 
 		const { POST } = await import('../../../routes/api/v1/screen/+server');
 		const res = await call(POST as Handler, {
@@ -78,6 +86,22 @@ describe('API routes', () => {
 
 		const bad = await call(POST as Handler, { url: '/api/v1/screen', method: 'POST', body: { addresses: new Array(101).fill('x') } });
 		expect(bad.status).toBe(400);
+	});
+
+	it('refuses to publish while a core source has too few active entries, though it synced', async () => {
+		const sql = holder.sql!;
+		// uk_fcdo/eu_fsf/chainalysis_oracle/tether/circle each recorded a
+		// success above, but with 0 active entries — real minEntries (20/5/50/
+		// 1000/100) are never met, so the default completeness gate must
+		// refuse even though every core source has *attempted* a sync (which
+		// is all /api/health itself checks, so that endpoint stays healthy).
+		const before = await sql.query<{ n: number }>(`SELECT count(*)::int AS n FROM oz_snapshots`);
+		const result = await publishSnapshot(sql, snapKey);
+		expect(result.published).toBe(false);
+		if (result.published) throw new Error('expected a refusal');
+		expect(result.reason).toMatch(/^not published: core source\(s\) not ready:/);
+		const after = await sql.query<{ n: number }>(`SELECT count(*)::int AS n FROM oz_snapshots`);
+		expect(after.rows[0].n).toBe(before.rows[0].n); // nothing new was signed or stored
 	});
 
 	it('keeps the legacy GET /api/screen shape the relayer node parses', async () => {
@@ -130,7 +154,7 @@ describe('API routes', () => {
 	});
 
 	it('serves large payloads in parts (host response limits) that the client reassembles', async () => {
-		await publishSnapshot(holder.sql!, snapKey, { partSize: 1024 });
+		await publishSnapshot(holder.sql!, snapKey, { partSize: 1024, coreSources: [] });
 		const manifestRoute = await import('../../../routes/api/v1/snapshot/+server');
 		const payloadRoute = await import('../../../routes/api/v1/snapshot/[version]/+server');
 		const manifest = await (await call(manifestRoute.GET as Handler, { url: '/api/v1/snapshot' })).json();

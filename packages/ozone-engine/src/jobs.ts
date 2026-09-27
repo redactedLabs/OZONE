@@ -4,7 +4,7 @@
  */
 import { decodePayload, type PrivateKeyInfo, type SnapshotIndex } from '../../ozone-client/src/index.js';
 import { clusterEntries, expandCluster } from './evm/expand.js';
-import { buildAndStoreSnapshot, latestSnapshot, snapshotPayload, type StoredSnapshot } from './snapshot/builder.js';
+import { buildAndStoreSnapshot, latestSnapshot, snapshotPayload, type PublishResult, type StoreOptions } from './snapshot/builder.js';
 import { CURATED, type ClusterSpec } from './sources/curated-data.js';
 import { SOURCES, type SourceContext, type SourceDef } from './sources/registry.js';
 import { applySourceResult, recordSourceError, type ApplyStats } from './store/entries.js';
@@ -101,11 +101,7 @@ export async function runClusterExpansion(
 	}
 }
 
-export async function publishSnapshot(
-	sql: Sql,
-	key: PrivateKeyInfo,
-	opts: { now?: Date; keep?: number; partSize?: number; republishAfterMs?: number } = {}
-): Promise<StoredSnapshot> {
+export async function publishSnapshot(sql: Sql, key: PrivateKeyInfo, opts: StoreOptions = {}): Promise<PublishResult> {
 	return buildAndStoreSnapshot(sql, key, opts);
 }
 

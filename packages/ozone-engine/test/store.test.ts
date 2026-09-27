@@ -140,13 +140,19 @@ describe('snapshot publication', async () => {
 		await applySourceResult(sql, src, seed);
 		const t0 = new Date('2026-09-27T00:00:00Z');
 		const at = (min: number) => new Date(t0.getTime() + min * 60_000);
-		const first = await publishSnapshot(sql, key, { now: at(0) });
+		// coreSources: [] — this describe block is about the unchanged/republish
+		// lifecycle on a single synthetic 'ofac_sdn'-ish source, not about the
+		// core-source completeness gate (covered in the worker's own tests).
+		const noGate = { coreSources: [] as string[] };
+		const first = await publishSnapshot(sql, key, { now: at(0), ...noGate });
+		if (!first.published) throw new Error(first.reason);
 		expect(first.unchanged).toBeUndefined();
 		// same data 10 minutes later: nothing new for nodes to download
-		const same = await publishSnapshot(sql, key, { now: at(10) });
+		const same = await publishSnapshot(sql, key, { now: at(10), ...noGate });
 		expect(same).toMatchObject({ version: first.version, unchanged: true });
 		// a different part layout is a different publication
-		const parts = await publishSnapshot(sql, key, { now: at(20), partSize: 256 });
+		const parts = await publishSnapshot(sql, key, { now: at(20), partSize: 256, ...noGate });
+		if (!parts.published) throw new Error(parts.reason);
 		expect(parts.version).toBeGreaterThan(first.version);
 		expect(parts.manifest.payload.parts?.length).toBeGreaterThan(1);
 		// new data: published immediately
@@ -154,11 +160,13 @@ describe('snapshot publication', async () => {
 		for (let i = 1; i <= 19; i++) r.entries.push(e(addr(i)));
 		r.entries.push(e(addr(99)));
 		await applySourceResult(sql, src, r);
-		const changed = await publishSnapshot(sql, key, { now: at(30), partSize: 256 });
+		const changed = await publishSnapshot(sql, key, { now: at(30), partSize: 256, ...noGate });
+		if (!changed.published) throw new Error(changed.reason);
 		expect(changed.version).toBeGreaterThan(parts.version);
 		expect(changed.unchanged).toBeUndefined();
 		// unchanged but older than the republish interval: republished so its age proves liveness
-		const stale = await publishSnapshot(sql, key, { now: at(30 + 7 * 60), partSize: 256 });
+		const stale = await publishSnapshot(sql, key, { now: at(30 + 7 * 60), partSize: 256, ...noGate });
+		if (!stale.published) throw new Error(stale.reason);
 		expect(stale.version).toBeGreaterThan(changed.version);
 		expect(stale.manifest.prev).toEqual({ version: changed.version, sha256: changed.manifest.payload.sha256 });
 	});

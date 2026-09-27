@@ -73,7 +73,11 @@ describe('quality gates on real-data fixtures', async () => {
 	});
 
 	it('publishes a snapshot that verifies with the client', async () => {
-		const s = await publishSnapshot(sql, key);
+		// coreSources: [] — this fixture never syncs 'circle' and every source
+		// here is an "-excerpt" fixture well under the real registry minEntries
+		// (the completeness gate itself is covered by the worker's tests).
+		const s = await publishSnapshot(sql, key, { coreSources: [] });
+		if (!s.published) throw new Error(s.reason);
 		const stored = await sql.query<{ manifest: unknown; payload: Uint8Array }>(`SELECT manifest, payload FROM oz_snapshots WHERE version = $1`, [s.version]);
 		const manifest = verifyManifest(stored.rows[0].manifest, [key.publicKey]);
 		index = decodePayload(manifest, new Uint8Array(stored.rows[0].payload));
@@ -151,7 +155,8 @@ describe('quality gates on real-data fixtures', async () => {
 	it('publishes linked accounts in the next snapshot, without a feedback loop', async () => {
 		const linkedUser = 'thor1fns25sytpf2gsdlg76g45620u5axm4mkrypqrh';
 		const next = async () => {
-			const s = await publishSnapshot(sql, key);
+			const s = await publishSnapshot(sql, key, { coreSources: [] });
+			if (!s.published) throw new Error(s.reason);
 			const row = await sql.query<{ manifest: unknown; payload: Uint8Array }>(`SELECT manifest, payload FROM oz_snapshots WHERE version = $1`, [s.version]);
 			return decodePayload(verifyManifest(row.rows[0].manifest, [key.publicKey]), new Uint8Array(row.rows[0].payload));
 		};
