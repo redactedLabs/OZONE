@@ -4,7 +4,7 @@
 
 Ozone aggregates sanctions lists, hack databases, on-chain blacklists, and community-curated sources to screen wallet addresses across the Rujira ecosystem. Fully open source — transparent screening that the community can verify and contribute to.
 
-[Live App](https://ozone.redacted.gg) &middot; [Report an Address](https://github.com/redactedLabs/OZONE/issues/new?template=report-address.yml) &middot; [Open Source Info](https://ozone.redacted.gg/open-source)
+[Live App](https://ozone.redacted.gg) &middot; [Methodology](https://ozone.redacted.gg/methodology) &middot; [Report / Appeal](https://ozone.redacted.gg/submit) &middot; [Open Source Info](https://ozone.redacted.gg/open-source)
 
 ---
 
@@ -167,8 +167,7 @@ sync_log                  Sync job history (for monitoring)
 
 We welcome contributions from the community:
 
-- **Report addresses**: Use the [Report Address](https://github.com/redactedLabs/OZONE/issues/new?template=report-address.yml) issue template
-- **Report false positives**: Open an issue if an address is incorrectly flagged
+- **Report addresses / appeal a flag**: use [ozone.redacted.gg/submit](https://ozone.redacted.gg/submit) (maintainers review every submission; the status page shows the outcome) or the [Report Address](https://github.com/redactedLabs/OZONE/issues/new?template=report-address.yml) issue template
 - **New data sources**: Submit a PR to add new compliance data integrations
 - **Bug fixes & improvements**: PRs welcome
 

@@ -65,6 +65,21 @@ async function main() {
 	const sample = await q<{ reason: string }>(
 		`SELECT reason FROM oz_trace_edges WHERE ts >= '2025-02-21' AND ts < '2025-04-01' AND hop = 1 ORDER BY usd DESC NULLS LAST LIMIT 3`
 	);
+	// named incidents / entities from the brief: active addresses whose entity or reason names them
+	const INCIDENTS = ['Bybit', 'Ronin', 'Harmony', 'Atomic', 'Stake', 'WazirX', 'DMM', 'KuCoin', 'Lazarus', 'TraderTraitor', 'Tornado', 'Garantex', 'Grinex'];
+	const incidents: Array<{ incident: string; addresses: number; bySource: string }> = [];
+	for (const name of INCIDENTS) {
+		const rows = await q<{ source: string; n: number }>(
+			`SELECT source, count(DISTINCT key)::int AS n FROM oz_entries
+			 WHERE removed_at IS NULL AND (entity ILIKE $1 OR reason ILIKE $1) GROUP BY source ORDER BY n DESC`,
+			[`%${name}%`]
+		);
+		const [total] = await q<{ n: number }>(
+			`SELECT count(DISTINCT key)::int AS n FROM oz_entries WHERE removed_at IS NULL AND (entity ILIKE $1 OR reason ILIKE $1)`,
+			[`%${name}%`]
+		);
+		incidents.push({ incident: name, addresses: total?.n ?? 0, bySource: rows.map((r) => `${r.source} ${r.n}`).join(', ') });
+	}
 	const coverage = await coverageReport(sql);
 	const report = {
 		snapshot: { version: index.version, builtAt: index.builtAt, keys: index.size, sha256: index.sha256 },
@@ -73,6 +88,7 @@ async function main() {
 			negatives: { total: neg.length, clean: neg.filter((n) => n.status === 'clean').length, falsePositives: neg.filter((n) => n.status !== 'clean') }
 		},
 		bybitPeriod: { ...bybit[0], byChain: bybitByChain, byOrigin: bybitByOrigin, examples: sample.map((s) => s.reason) },
+		incidents,
 		before: BEFORE,
 		after: coverage
 	};
@@ -83,6 +99,8 @@ async function main() {
 		console.table(neg.map((n) => ({ address: n.address.slice(0, 18), chain: n.chain, status: n.status, why: n.why.slice(0, 60) })));
 		console.log('== Bybit period on THORChain (2025-02-21 → 2025-03-31)');
 		console.log(report.bybitPeriod);
+		console.log('== named incidents (active listed addresses naming them)');
+		console.table(incidents);
 		console.log('== coverage after');
 		console.log(JSON.stringify({ listed: coverage.listed.addresses, onThorchainChains: coverage.listed.thorchainChains, traced: coverage.traced, users: coverage.users }, null, 1));
 		console.table(coverage.listed.bySource.map((s) => ({ source: s.source, active: s.active, history: s.removed, error: s.error?.slice(0, 40) ?? '' })));

@@ -87,13 +87,17 @@ async function main() {
 		}
 		case 'trace': {
 			const only = flag('only');
-			// --cluster-depth N: only hack-cluster members up to depth N (and what they flag)
+			// --cluster-depth N: only hack clusters — their seeds (FBI list, "… Exploiter"
+			// labels) and members up to depth N — and what they flag
 			const depth = flag('cluster-depth');
 			const clusterKeys = depth
 				? new Set(
 						(
 							await sql.query<{ key: string }>(
-								`SELECT key FROM oz_entries WHERE source = 'cluster' AND removed_at IS NULL AND (meta->>'depth')::int <= $1`,
+								`SELECT key FROM oz_entries WHERE removed_at IS NULL AND (
+								   (source = 'cluster' AND (meta->>'depth')::int <= $1)
+								   OR source = 'fbi'
+								   OR (source = 'ethlabels' AND entity LIKE '%Exploiter%'))`,
 								[Number(depth)]
 							)
 						).rows.map((r) => r.key)

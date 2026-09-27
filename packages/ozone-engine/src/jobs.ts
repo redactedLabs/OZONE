@@ -104,7 +104,7 @@ export async function runClusterExpansion(
 export async function publishSnapshot(
 	sql: Sql,
 	key: PrivateKeyInfo,
-	opts: { now?: Date; keep?: number; partSize?: number } = {}
+	opts: { now?: Date; keep?: number; partSize?: number; republishAfterMs?: number } = {}
 ): Promise<StoredSnapshot> {
 	return buildAndStoreSnapshot(sql, key, opts);
 }

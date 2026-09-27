@@ -1,5 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { generateSigningKey, loadPrivateKey } from '../../ozone-client/src/index.js';
 import { applySourceResult, SanityError } from '../src/store/entries.js';
+import { publishSnapshot } from '../src/jobs.js';
 import { foldEvents, TETHER_SPEC, ORACLE_SPEC } from '../src/sources/events.js';
 import { decodeAddressArray, toChecksumAddress } from '../src/util/evm.js';
 import { emptyResult, type ListEntry } from '../src/types.js';
@@ -124,5 +126,40 @@ describe('event-sourced lists', () => {
 	it('EIP-55 checksum (for case-sensitive Midgard queries)', () => {
 		expect(toChecksumAddress('0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed')).toBe('0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed');
 		expect(toChecksumAddress('0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359')).toBe('0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359');
+	});
+});
+
+describe('snapshot publication', async () => {
+	const { db, sql } = await memoryDb();
+	afterAll(() => db.close());
+
+	it('does not republish unchanged content (until it is old), publishes changes at once', async () => {
+		const key = loadPrivateKey(generateSigningKey().seedHex);
+		const seed = emptyResult();
+		for (let i = 1; i <= 20; i++) seed.entries.push(e(addr(i)));
+		await applySourceResult(sql, src, seed);
+		const t0 = new Date('2026-09-27T00:00:00Z');
+		const at = (min: number) => new Date(t0.getTime() + min * 60_000);
+		const first = await publishSnapshot(sql, key, { now: at(0) });
+		expect(first.unchanged).toBeUndefined();
+		// same data 10 minutes later: nothing new for nodes to download
+		const same = await publishSnapshot(sql, key, { now: at(10) });
+		expect(same).toMatchObject({ version: first.version, unchanged: true });
+		// a different part layout is a different publication
+		const parts = await publishSnapshot(sql, key, { now: at(20), partSize: 256 });
+		expect(parts.version).toBeGreaterThan(first.version);
+		expect(parts.manifest.payload.parts?.length).toBeGreaterThan(1);
+		// new data: published immediately
+		const r = emptyResult();
+		for (let i = 1; i <= 19; i++) r.entries.push(e(addr(i)));
+		r.entries.push(e(addr(99)));
+		await applySourceResult(sql, src, r);
+		const changed = await publishSnapshot(sql, key, { now: at(30), partSize: 256 });
+		expect(changed.version).toBeGreaterThan(parts.version);
+		expect(changed.unchanged).toBeUndefined();
+		// unchanged but older than the republish interval: republished so its age proves liveness
+		const stale = await publishSnapshot(sql, key, { now: at(30 + 7 * 60), partSize: 256 });
+		expect(stale.version).toBeGreaterThan(changed.version);
+		expect(stale.manifest.prev).toEqual({ version: changed.version, sha256: changed.manifest.payload.sha256 });
 	});
 });

@@ -5,10 +5,12 @@
  */
 import {
 	buildSnapshot,
+	canonicalJson,
 	keyTwins,
 	parseForChain,
 	riskFromRank,
 	riskRank,
+	sha256Hex,
 	SUPPORTED_CHAINS,
 	type Category,
 	type PrivateKeyInfo,
@@ -20,6 +22,7 @@ import {
 import { DERIVED_SOURCES, SOURCES } from '../sources/registry.js';
 import { allEntries } from '../store/entries.js';
 import { isoOf } from '../store/db.js';
+import { getState, setState } from '../store/trace.js';
 import { TWIN_CATEGORIES } from '../policy.js';
 import type { Sql } from '../types.js';
 
@@ -254,18 +257,46 @@ export interface StoredSnapshot {
 	manifest: SnapshotManifestV1;
 	stats: Record<string, number>;
 	size: number;
+	/** True when the content equalled the latest snapshot's and that one was kept (nothing published). */
+	unchanged?: boolean;
 }
 
-export async function buildAndStoreSnapshot(
-	sql: Sql,
-	key: PrivateKeyInfo,
-	opts: SnapshotBuildOptions & { keep?: number; partSize?: number } = {}
-): Promise<StoredSnapshot> {
+export interface StoreOptions extends SnapshotBuildOptions {
+	/** Snapshots kept in the database (default 12; nodes only need the newest, mirrors a few). */
+	keep?: number;
+	partSize?: number;
+	/**
+	 * Unchanged content is not republished (nodes would download identical
+	 * data every cycle) unless the latest snapshot is older than this
+	 * (default 6 h), so its age still proves liveness.
+	 */
+	republishAfterMs?: number;
+}
+
+/** What a snapshot says about addresses — without version, build time or sync timestamps. */
+function contentHash(json: BuiltSnapshotJson): string {
+	return sha256Hex(
+		new TextEncoder().encode(
+			canonicalJson({
+				chains: json.chains,
+				sources: json.sources.map((src) => ({ id: src.id, entries: src.entries })),
+				strings: json.strings,
+				records: json.records
+			})
+		)
+	);
+}
+type BuiltSnapshotJson = ReturnType<typeof buildSnapshot>['json'];
+
+export async function buildAndStoreSnapshot(sql: Sql, key: PrivateKeyInfo, opts: StoreOptions = {}): Promise<StoredSnapshot> {
 	const now = opts.now ?? new Date();
-	const prev = await sql.query<{ version: string; sha256: string }>(`SELECT version, sha256 FROM oz_snapshots ORDER BY version DESC LIMIT 1`);
+	const prev = await sql.query<{ version: string; sha256: string; built_at: string; size: number; manifest: SnapshotManifestV1 | string; stats: Record<string, number> | string | null }>(
+		`SELECT version, sha256, built_at, size, manifest, stats FROM oz_snapshots ORDER BY version DESC LIMIT 1`
+	);
 	const prevVersion = prev.rows[0] ? Number(prev.rows[0].version) : 0;
 	const version = Math.max(prevVersion + 1, Math.floor(now.getTime() / 1000));
 	const collected = await collectSnapshot(sql, opts);
+	const partSize = opts.partSize ?? 3_500_000;
 	const built = buildSnapshot(
 		{
 			version,
@@ -277,16 +308,29 @@ export async function buildAndStoreSnapshot(
 			stats: collected.stats,
 			payloadUrl: `./snapshot/${version}`,
 			// Vercel functions answer at most 4.5 MB: larger payloads are served in parts
-			partSize: opts.partSize ?? 3_500_000,
+			partSize,
 			...(prev.rows[0] ? { prev: { version: prevVersion, sha256: prev.rows[0].sha256 } } : {})
 		},
 		key
 	);
+	const content = contentHash(built.json);
+	const last = prev.rows[0];
+	if (last) {
+		const state = await getState<{ version: number; content: string; partSize?: number }>(sql, 'snapshot:content');
+		const age = now.getTime() - Date.parse(isoOf(last.built_at) ?? '');
+		const same = state?.version === prevVersion && state.content === content && state.partSize === partSize;
+		if (same && age >= 0 && age < (opts.republishAfterMs ?? 6 * 3_600_000)) {
+			const manifest = typeof last.manifest === 'string' ? (JSON.parse(last.manifest) as SnapshotManifestV1) : last.manifest;
+			const stats = typeof last.stats === 'string' ? (JSON.parse(last.stats) as Record<string, number>) : (last.stats ?? collected.stats);
+			return { version: prevVersion, manifest, stats, size: Number(last.size), unchanged: true };
+		}
+	}
 	await sql.query(
 		`INSERT INTO oz_snapshots (version, built_at, sha256, size, manifest, payload, stats) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
 		[version, now, built.manifest.payload.sha256, built.payload.length, JSON.stringify(built.manifest), Buffer.from(built.payload), JSON.stringify(collected.stats)]
 	);
-	const keep = opts.keep ?? 48;
+	await setState(sql, 'snapshot:content', { version, content, partSize });
+	const keep = opts.keep ?? 12;
 	await sql.query(
 		`DELETE FROM oz_snapshots WHERE version NOT IN (SELECT version FROM oz_snapshots ORDER BY version DESC LIMIT $1)`,
 		[keep]
