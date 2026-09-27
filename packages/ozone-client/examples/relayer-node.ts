@@ -9,16 +9,15 @@ import { createOzoneSnapshotSource, OzoneClient } from '@redacted/ozone-client'
 // in the node: import { createOzoneProvider } from './provider'
 //              import { createOzoneClient } from './ozone'
 
-const SNAPSHOT_KEY = process.env.V2_SCREENING_OZONE_SNAPSHOT_KEY // `ed25519:<base64>`, pinned in config
-if (!SNAPSHOT_KEY) throw new Error('V2_SCREENING_OZONE_SNAPSHOT_KEY is required')
+// The node's configuration (src/v2/nodeConfig.ts): pinned `ed25519:<base64>` keys and manifest URLs
+const SNAPSHOT_SIGNERS = (process.env.V2_SCREENING_SNAPSHOT_SIGNERS ?? '').split(',').filter(Boolean)
+const SNAPSHOT_URLS = (process.env.V2_SCREENING_SNAPSHOT_URL ?? 'https://ozone.redacted.gg/api/v1/snapshot').split(',').filter(Boolean)
+if (!SNAPSHOT_SIGNERS.length) throw new Error('V2_SCREENING_SNAPSHOT_SIGNERS (the pinned Ozone snapshot keys) is required')
 
 export const ozoneSnapshot = createOzoneSnapshotSource({
-  trustedKeys: [SNAPSHOT_KEY],
-  manifestUrls: [
-    'https://ozone.redacted.gg/api/v1/snapshot',
-    // …mirrors (another node's export, a static bucket)
-  ],
-  cacheDir: process.env.V2_SCREENING_OZONE_CACHE_DIR ?? '/var/lib/redacted-node/ozone',
+  trustedKeys: SNAPSHOT_SIGNERS,
+  manifestUrls: SNAPSHOT_URLS, // Ozone first, then mirrors (another node's export, a static bucket)
+  cacheDir: `${process.env.V2_SCREENING_STATE_DIR ?? '/var/lib/redacted-v2/screening'}/ozone-snapshot`,
   refreshIntervalMs: 10 * 60_000,
   staleAfterMs: 24 * 60 * 60_000,
   // observability without addresses
@@ -33,7 +32,11 @@ export const ozoneSnapshot = createOzoneSnapshotSource({
  * attestation record — same snapshot, same pinned key.
  */
 export async function explain(address: string, chain: string) {
-  const client = new OzoneClient({ trustedKeys: [SNAPSHOT_KEY!], cacheDir: '/var/lib/redacted-node/ozone' })
+  const client = new OzoneClient({
+    trustedKeys: SNAPSHOT_SIGNERS,
+    manifestUrls: SNAPSHOT_URLS,
+    cacheDir: `${process.env.V2_SCREENING_STATE_DIR ?? '/var/lib/redacted-v2/screening'}/ozone-snapshot`,
+  })
   await client.init()
   const v = client.screen(address, chain)
   return {

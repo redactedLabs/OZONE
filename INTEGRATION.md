@@ -39,8 +39,8 @@ change and compare the recorded hashes with `shasum -a 256 packages/ozone-client
 
 | Key | Signs | Where to get it |
 |-----|-------|-----------------|
-| snapshot key | snapshot manifests | Ozone operator (out of band) / `GET /api/v1/keys` (`usage: "snapshot"`) |
-| response key | `/api/v1/screen` answers, certificates | same, `usage: "response"` |
+| snapshot key | snapshot manifests | Ozone operator (out of band) / `GET /api/v1/keys` (`usage: "snapshot"`) — node: `V2_SCREENING_SNAPSHOT_SIGNERS` |
+| response key | `/api/v1/screen` answers, certificates | same, `usage: "response"` — node: `V2_SCREENING_OZONE_RESPONSE_SIGNERS` |
 
 Keys look like `ed25519:<base64 of the 32-byte public key>`; a key id is
 `oz` + the first 16 hex characters of SHA-256(public key). **Pin them in
@@ -52,20 +52,21 @@ one; nodes add it to their list, then drop the old one.
 
 `createOzoneSnapshotSource` implements the node's existing
 `OzoneSnapshotSource` interface (`src/v2/screening/snapshot.ts`) exactly —
-no change to `provider.ts` / `screener.ts` is needed:
+no change to `provider.ts` / `screener.ts` is needed (the node branch wires
+it this way in `src/v2/nodeService.ts`):
 
 ```ts
 import { createOzoneSnapshotSource } from '@redacted/ozone-client'
 
+// node env: V2_SCREENING_SNAPSHOT_URL (manifest URL(s): https://ozone.redacted.gg/api/v1/snapshot, mirrors)
+//           V2_SCREENING_SNAPSHOT_SIGNERS (pinned ed25519:<base64> snapshot key(s))
 const snapshot = createOzoneSnapshotSource({
-  trustedKeys: [process.env.V2_SCREENING_OZONE_SNAPSHOT_KEY!],        // pinned
-  manifestUrls: [
-    'https://ozone.redacted.gg/api/v1/snapshot',
-    // mirrors, tried in order: another node, a static host, …
-  ],
-  cacheDir: '/var/lib/redacted-node/ozone',   // last verified snapshot survives restarts/outages
-  refreshIntervalMs: 10 * 60_000,
-  staleAfterMs: 24 * 60 * 60_000,
+  trustedKeys: config.screening.snapshotSigners,     // pinned
+  manifestUrls: config.screening.snapshotUrls,       // tried in order: Ozone, another node, a static host, …
+  cacheDir: join(config.screening.stateDir, 'ozone-snapshot'),   // last verified snapshot survives restarts/outages
+  refreshIntervalMs: config.screening.snapshotRefreshMs,         // default 10 min
+  staleAfterMs: config.screening.snapshotMaxAgeMs,               // default 24 h
+  rejectOlderThanMs: config.screening.snapshotDegradedMaxAgeMs,  // a restarted node never loads a very old mirror copy
 })
 const provider = createOzoneProvider({ snapshot, online: createOzoneClient({ /* optional */ }) })
 provider.start()   // → snapshot.start(): loads the verified disk cache, fetches now, then every 10 min
