@@ -169,6 +169,7 @@
 		<h2 class="h2">Limitations — what Ozone cannot see</h2>
 		<ul class="list">
 			<li>Transfers outside THORChain are not traced (except the Ethereum hack clusters above). A launderer who moves funds L1-to-L1 before touching THORChain is only caught if an intermediate address is listed.</li>
+			<li>Hack clusters follow plain ETH transfers only (no token transfers, contract-internal transfers or other chains), inside the incident window and within a request budget; layers funded otherwise are missed.</li>
 			<li>Lists lag reality: community lists publish with delays, sanctions add addresses weeks after the fact, Tether and Circle only freeze what they are asked to.</li>
 			<li>Traces are evidence of a flow, not of intent: a hop-1 recipient may be an exchange deposit address or a victim of deliberate "dusting" (hence the amount thresholds and decay). Read the reason before acting on it.</li>
 			<li>Current pool prices approximate the value of non-swap flows.</li>
