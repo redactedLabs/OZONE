@@ -3,6 +3,7 @@ import { generateSigningKey, loadPrivateKey } from '../../ozone-client/src/index
 import { applySourceResult, SanityError } from '../src/store/entries.js';
 import { publishSnapshot } from '../src/jobs.js';
 import { foldEvents, TETHER_SPEC, ORACLE_SPEC } from '../src/sources/events.js';
+import { migrate, MIGRATIONS } from '../src/store/db.js';
 import { decodeAddressArray, toChecksumAddress } from '../src/util/evm.js';
 import { emptyResult, type ListEntry } from '../src/types.js';
 import { memoryDb } from './helpers.js';
@@ -20,6 +21,25 @@ const e = (key: string, extra: Partial<ListEntry> = {}): ListEntry => ({
 });
 const addr = (i: number) => `evm:0x${i.toString(16).padStart(40, '0')}`;
 const src = { id: 'ofac_sdn', name: 'OFAC SDN list', kind: 'sanctions', minEntries: 5, maxDropRatio: 0.1 };
+
+describe('schema migrations', async () => {
+	const { db, sql } = await memoryDb();
+	afterAll(() => db.close());
+
+	it('re-apply cleanly and keep data (the worker applies them on every start)', async () => {
+		expect(MIGRATIONS.at(-1)).toBe('0003_trace_dust_flows.sql');
+		await sql.query(
+			`INSERT INTO oz_trace_dust_flows (txid, from_key, from_address, from_chain, to_key, to_chain, to_address, action, usd, hop, origin_key, origin_source, origin_risk, origin_category)
+			 VALUES ('MIGTX', 'evm:0xa', '0xa', 'ETH', 'btc:b', 'BTC', 'b', 'send', 30, 1, 'evm:0xa', 'ethlabels', 'high', 'hack')`
+		);
+		await migrate(sql);
+		await migrate(sql);
+		const rows = await sql.query<{ n: number }>(`SELECT count(*)::int AS n FROM oz_trace_dust_flows`);
+		expect(rows.rows[0].n).toBe(1);
+		const idx = await sql.query<{ indexname: string }>(`SELECT indexname FROM pg_indexes WHERE tablename = 'oz_trace_dust_flows' ORDER BY 1`);
+		expect(idx.rows.map((x) => x.indexname)).toEqual(['oz_trace_dust_flows_group_idx', 'oz_trace_dust_flows_pkey', 'oz_trace_dust_flows_to_idx']);
+	});
+});
 
 describe('entry store: delistings and sanity checks', async () => {
 	const { db, sql } = await memoryDb();
