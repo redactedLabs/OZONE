@@ -149,7 +149,11 @@ interned in `strings` and reasons reference them by index (`s` source index,
 entity, `n` chain, `u` ref URL, `i` ref id, `l` listed, `f` first seen, `x`
 removed — unix seconds; `tr` trace: `h` hop, `a` action, `tx` txid, `fr`
 from, `am` amount, `usd`, `ok` origin key, `os` origin source index).
-A reason with `x` (removed) is history and never flags.
+A reason with `x` (removed) is history and never flags. A
+`TRACE_SMALL_TRANSFERS` reason stands for several transfers of under $50
+each that together reached $50: `a` is `small_transfers`, `usd` their total,
+`am` their count, and `tx`/`fr` the transfer with which the total reached
+$50.
 
 **Keys** are `<namespace>:<address>`: `evm:0x…` (lower-case, all EVM chains),
 `btc:`/`ltc:`/`doge:` (base58 as is, bech32 lower-case), `bch:` cashaddr

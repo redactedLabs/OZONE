@@ -12,11 +12,35 @@ export { CURATED, type ClusterSpec, type CuratedIncident } from './sources/curat
 export { SOURCES, DERIVED_SOURCES, CORE_SOURCES, sourceById, parseCurated, type SourceDef, type SourceContext } from './sources/registry.js';
 export { migrate, batchInsert, withTransaction } from './store/db.js';
 export { applySourceResult, allEntries, manualEntries, SanityError, type ApplyStats } from './store/entries.js';
-export { recordHits, recordDustFlows, dustTotals, loadTraceIndex, pendingChecks, markChecked, queryForms, getState, setState } from './store/trace.js';
+export {
+	recordHits,
+	recordDustFlows,
+	dustTotals,
+	loadDustGroups,
+	loadTraceIndex,
+	pendingChecks,
+	markChecked,
+	queryForms,
+	getState,
+	setState,
+	type DustRecordResult
+} from './store/trace.js';
 export { Midgard, DEFAULT_MIDGARD_URL, type MidgardAction, type MidgardLike } from './trace/midgard.js';
 export { extractFlows, THORCHAIN_MODULES, type Flow } from './trace/flows.js';
 export { loadPoolPrices, StaticPrices, type PriceOracle } from './trace/prices.js';
-export { traceAction, traceRisk, describeHit, DEFAULT_TRACE_CONFIG, type TraceConfig, type TraceHit, type IndexEntry, type DustFlow } from './trace/tracer.js';
+export {
+	traceAction,
+	traceRisk,
+	describeHit,
+	describeSmallTransfers,
+	DEFAULT_TRACE_CONFIG,
+	SMALL_TRANSFERS,
+	type TraceConfig,
+	type TraceHit,
+	type IndexEntry,
+	type DustFlow,
+	type SmallTransferTotal
+} from './trace/tracer.js';
 export { runTraceBackfill, runRealtimeTick, scheduleRecheck, checkAddress } from './trace/jobs.js';
 export { expandCluster, clusterEntries } from './evm/expand.js';
 export {

@@ -8,9 +8,15 @@
  * - **hop limit** (default 3) — beyond it nothing is flagged;
  * - **decay** — traced risk is capped at `high` (never `severe`, which is
  *   reserved for official listings) and drops one level per extra hop;
- * - **amount thresholds** — flows under the dust limit (default $50) are
- *   ignored (dusting resistance); hop-1 flows under $1,000 and deeper flows
- *   under $5,000 lose one more level;
+ * - **amount thresholds** — flows under the dust limit (default $50) flag
+ *   nothing on their own (dusting resistance); hop-1 flows under $1,000 and
+ *   deeper flows under $5,000 lose one more level;
+ * - **small transfers add up** — value from the same origin to the same
+ *   recipient at the same hop is summed, each THORChain transaction once: a
+ *   recipient whose total of sub-dust transfers reaches the dust limit is
+ *   traced like one flow of that total (store/trace.ts recordDustFlows), and
+ *   at most `maxDustRecipients` such recipients per origin and hop are
+ *   followed onward (the rest are published, not traced further);
  * - **ownership links** (LP pairing, THORName aliases) keep the hop of the
  *   flagged owner: they are the same actor, not a new counterparty;
  * - **time** — a traced address only propagates flows that happen after it
@@ -27,13 +33,21 @@ export interface TraceConfig {
 	dustUsd: number;
 	hop1FullUsd: number;
 	deepFullUsd: number;
+	/**
+	 * Fan-out cap for the small-transfer path: per listed origin and hop, at
+	 * most this many recipients traced only by a total of sub-dust transfers
+	 * are followed onward (queued for their own history). Further ones are
+	 * still published with their reason, but not traced further, and logged.
+	 */
+	maxDustRecipients: number;
 }
 
 export const DEFAULT_TRACE_CONFIG: TraceConfig = {
 	maxHops: 3,
 	dustUsd: 50,
 	hop1FullUsd: 1_000,
-	deepFullUsd: 5_000
+	deepFullUsd: 5_000,
+	maxDustRecipients: 100
 };
 
 /** A flagged address as the tracer sees it. */
@@ -82,6 +96,36 @@ export interface DustFlow extends Flow {
 	originEntity?: string;
 	originRisk: Risk;
 	originCategory: Category;
+}
+
+/** Action label (and, as `TRACE_SMALL_TRANSFERS`, reason code) of a small-transfer total. */
+export const SMALL_TRANSFERS = 'small_transfers';
+
+/**
+ * Sub-dust transfers from one origin to one recipient at one hop, each
+ * counted once (store/trace.ts loadDustGroups). Once `usd` reaches the dust
+ * limit the recipient is traced as if it had received one flow of that total.
+ */
+export interface SmallTransferTotal {
+	originKey: string;
+	toKey: string;
+	toAddress: string;
+	toChain: string;
+	hop: number;
+	/** Transfers counted. */
+	count: number;
+	usd: number;
+	/** Distinct sending addresses. */
+	senders: string[];
+	/** The strongest origin among the transfers (what decays with hops) and its provenance. */
+	originRisk: Risk;
+	originSource: string;
+	originEntity?: string;
+	originCategory: Category;
+	firstDate: string;
+	lastDate: string;
+	/** The transfer with which the running total reached the dust limit (unset while below it). */
+	crossing?: { txid: string; height: number; date: string; action: string; fromKey: string; fromAddress: string; fromChain: string };
 }
 
 const ORIGIN_CATEGORIES: ReadonlySet<Category> = new Set([
@@ -198,4 +242,16 @@ export function describeHit(h: TraceHit): string {
 	const amount = h.amount ? `${h.amount}${h.usd ? ` (~$${Math.round(h.usd).toLocaleString('en-US')})` : ''}` : 'value';
 	const hopText = h.hop === 1 ? `from ${h.fromAddress}, listed by ${origin}` : `from ${h.fromAddress} (${h.hop - 1} hop${h.hop > 2 ? 's' : ''} from ${origin})`;
 	return `Received ${amount} ${hopText} via ${via} ${h.txid} on ${date}`;
+}
+
+/** Human-readable reason for a recipient traced by a total of small transfers. */
+export function describeSmallTransfers(t: SmallTransferTotal, cfg: TraceConfig = DEFAULT_TRACE_CONFIG): string {
+	const origin = t.originEntity ? `${t.originEntity} (${t.originSource})` : t.originSource;
+	const who = t.senders.length === 1 ? t.senders[0] : `${t.senders.length} addresses`;
+	const hopText = t.hop === 1 ? `from ${who}, listed by ${origin}` : `from ${who} (${t.hop - 1} hop${t.hop > 2 ? 's' : ''} from ${origin})`;
+	const first = t.firstDate.slice(0, 10);
+	const last = t.lastDate.slice(0, 10);
+	const when = first === last ? `on ${first}` : `between ${first} and ${last}`;
+	const crossed = t.crossing ? `; the total reached $${cfg.dustUsd} with THORChain ${t.crossing.action} ${t.crossing.txid}` : '';
+	return `Received ~$${Math.round(t.usd).toLocaleString('en-US')} in ${t.count} small THORChain transfers (each under $${cfg.dustUsd}) ${hopText}, ${when}${crossed}`;
 }

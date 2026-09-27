@@ -3,7 +3,7 @@
  * and the real-time follower (new THORChain actions since a cursor).
  */
 import { riskRank } from '../../../ozone-client/src/index.js';
-import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recordDustFlows, recordHits, setState } from '../store/trace.js';
+import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recordDustFlows, recordHits, setState, type DustRecordResult } from '../store/trace.js';
 import type { Logger, Sql } from '../types.js';
 import { silentLogger } from '../types.js';
 import { toChecksumAddress } from '../util/evm.js';
@@ -41,6 +41,10 @@ export interface BackfillResult {
 	actions: number;
 	hits: number;
 	traced: number;
+	/** Recipients newly traced by a total of small (sub-dust) transfers. */
+	dustTraced: number;
+	/** Such recipients published but not followed onward (fan-out cap). */
+	dustSkipped: number;
 	services: number;
 	errors: number;
 	remaining: number;
@@ -113,7 +117,7 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 	const prices = opts.prices ?? (await loadPoolPrices(midgard).catch(() => undefined));
 	const deadline = Date.now() + (opts.timeBudgetMs ?? Infinity);
 	const maxAddresses = opts.maxAddresses ?? Infinity;
-	const res: BackfillResult = { checked: 0, actions: 0, hits: 0, traced: 0, services: 0, errors: 0, remaining: 0 };
+	const res: BackfillResult = { checked: 0, actions: 0, hits: 0, traced: 0, dustTraced: 0, dustSkipped: 0, services: 0, errors: 0, remaining: 0 };
 	const attempted = new Set<string>();
 	// Serializes trace:pending read-modify-writes across the concurrent
 	// per-address workers below (a plain get/set would drop a concurrent
@@ -133,6 +137,14 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 			if (changed) await setState(sql, 'trace:pending', existing);
 		});
 		return pendingChain;
+	};
+	// Small transfers are recorded one address at a time, so the fan-out cap
+	// counts every promotion the concurrent workers below make.
+	let dustChain: Promise<unknown> = Promise.resolve();
+	const recordDust = (dust: DustFlow[]): Promise<DustRecordResult> => {
+		const run = dustChain.then(() => recordDustFlows(sql, dust, cfg, log));
+		dustChain = run.catch(() => undefined);
+		return run;
 	};
 	for (;;) {
 		const index = await loadTraceIndex(sql);
@@ -160,7 +172,12 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 						res.traced += rec.traced;
 						log.info(`trace ${task.key}: ${r.actions} actions, ${r.hits.length} flows flagged`);
 					}
-					if (r.dust.length) await recordDustFlows(sql, r.dust);
+					if (r.dust.length) {
+						const d = await recordDust(r.dust);
+						res.dustTraced += d.traced;
+						res.dustSkipped += d.skipped;
+						if (d.traced) log.info(`trace ${task.key}: ${d.traced} recipient(s) traced by a total of small transfers`);
+					}
 					if (r.pending.length) await recordPending(r.pending);
 					res.actions += r.actions;
 					res.checked++;
@@ -188,6 +205,8 @@ export interface RealtimeResult {
 	processed: number;
 	hits: number;
 	traced: number;
+	/** Recipients newly traced by a total of small (sub-dust) transfers. */
+	dustTraced: number;
 	from: number;
 	to: number;
 	complete: boolean;
@@ -197,9 +216,10 @@ export interface RealtimeResult {
 export async function runRealtimeTick(
 	sql: Sql,
 	midgard: Midgard,
-	opts: { cfg?: TraceConfig; prices?: PriceOracle; maxPages?: number; index?: Map<string, IndexEntry> } = {}
+	opts: { cfg?: TraceConfig; prices?: PriceOracle; maxPages?: number; index?: Map<string, IndexEntry>; logger?: Logger } = {}
 ): Promise<RealtimeResult> {
 	const cfg = opts.cfg ?? DEFAULT_TRACE_CONFIG;
+	const log = opts.logger ?? silentLogger;
 	const state = await getState<{ height: number }>(sql, 'trace:realtime');
 	let from = state?.height ?? 0;
 	if (!from) {
@@ -207,7 +227,7 @@ export async function runRealtimeTick(
 		const head = await midgard.actions({ limit: 1 });
 		from = Number(head.actions[0]?.height ?? 0);
 		await setState(sql, 'trace:realtime', { height: from });
-		return { processed: 0, hits: 0, traced: 0, from, to: from, complete: true };
+		return { processed: 0, hits: 0, traced: 0, dustTraced: 0, from, to: from, complete: true };
 	}
 	const { actions, complete, head } = await midgard.actionsSince(from, opts.maxPages ?? 40);
 	const index = opts.index ?? (await loadTraceIndex(sql));
@@ -242,14 +262,15 @@ export async function runRealtimeTick(
 	await setState(sql, 'trace:pending', still);
 
 	const rec = await recordHits(sql, dedupe(hits));
-	if (dust.length) await recordDustFlows(sql, dust);
+	const small = await recordDustFlows(sql, dust, cfg, log);
+	if (small.traced) log.info(`trace: ${small.traced} recipient(s) traced by a total of small transfers`);
 	const to = complete ? head : Math.max(from, ...actions.map((a) => Number(a.height)));
 	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { gapFrom: from }) });
 	if (!complete) {
 		// the follower fell behind: make every flagged address re-read its history from `from`
 		await sql.query(`UPDATE oz_trace_checked SET status = 'pending' WHERE status = 'done'`);
 	}
-	return { processed: actions.length, hits: rec.edges, traced: rec.traced, from, to, complete };
+	return { processed: actions.length, hits: rec.edges, traced: rec.traced, dustTraced: small.traced, from, to, complete };
 }
 
 /** Marks every checked address for an incremental re-read (e.g. daily). */

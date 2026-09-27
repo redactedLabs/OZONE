@@ -19,8 +19,8 @@
 
 	const risks = [
 		{ level: 'severe', color: '#ef4444', what: 'Official listing: OFAC, UK, EU sanctions, the on-chain oracle mirror of OFAC, FBI attributions of DPRK laundering addresses.' },
-		{ level: 'high', color: '#f97316', what: 'Hack and exploiter addresses, stablecoin issuer freezes, maintainer flags; addresses that received ≥ $1,000 directly from a listed address through THORChain (hop 1); the first two layers of an attributed hack cluster.' },
-		{ level: 'medium', color: '#f59e0b', what: 'Phishing / drainer lists; hop-2 traces; small hop-1 flows ($50–$1,000); THORChain accounts linked to a listed address; the same-key twin of a high-risk address.' },
+		{ level: 'high', color: '#f97316', what: 'Hack and exploiter addresses, stablecoin issuer freezes, maintainer flags; addresses that received ≥ $1,000 in total directly from a listed address through THORChain (hop 1), in one transfer or many; the first two layers of an attributed hack cluster.' },
+		{ level: 'medium', color: '#f59e0b', what: 'Phishing / drainer lists; hop-2 traces; hop-1 totals of $50–$1,000; THORChain accounts linked to a listed address; the same-key twin of a high-risk address.' },
 		{ level: 'low', color: '#94a3b8', what: 'Hop-3 traces and weak links. Reported with evidence, never flagged by the default policy.' },
 		{ level: 'info', color: '#64748b', what: 'History: delisted, unfrozen or un-blacklisted addresses. Shown for transparency, never flagged.' }
 	];
@@ -120,7 +120,8 @@
 			<li><strong>Followed</strong>: swaps (including streaming and L1→L1), native sends, trade/secured-asset moves, LP withdrawals (to the member's payout addresses), LP pairing (asset and RUNE side of one deposit co-own the position) and THORNames (owner ↔ alias).</li>
 			<li><strong>Hops</strong>: at most {data.trace.maxHops}. A traced address propagates only flows that happen <em>after</em> it received the tainted value; likewise a hack-cluster member only from the start of its incident (earlier activity cannot be the proceeds).</li>
 			<li><strong>Decay</strong>: traced risk is capped at <em>high</em> and drops one level per extra hop (hop 1 high, hop 2 medium, hop 3 low).</li>
-			<li><strong>Amounts</strong>: flows under ${data.trace.dustUsd} are ignored (dusting resistance); hop-1 flows under ${data.trace.hop1FullUsd.toLocaleString('en-US')} and deeper flows under ${data.trace.deepFullUsd.toLocaleString('en-US')} lose one more level. Swap values use the price at the time from Midgard; other flows use current pool prices (approximation, only used against the thresholds).</li>
+			<li><strong>Amounts</strong>: value from the same listed origin to the same recipient at the same hop is added up — each THORChain transaction once, however often it is re-read. A total under ${data.trace.dustUsd} flags nothing (dusting resistance); hop-1 totals under ${data.trace.hop1FullUsd.toLocaleString('en-US')} and deeper totals under ${data.trace.deepFullUsd.toLocaleString('en-US')} lose one more level. Swap values use the price at the time from Midgard; other flows use current pool prices (approximation, only used against the thresholds).</li>
+			<li><strong>Many small transfers</strong>: a recipient built entirely from transfers under ${data.trace.dustUsd} each is traced once they add up to ${data.trace.dustUsd} — with the risk one transfer of that total would get, tainted from the transfer that reached it, and followed onward like any traced address. Its reason (<code>TRACE_SMALL_TRANSFERS</code>) names the total, the number of transfers and the origin. Only transfers a flagged address signed itself count; anyone else's transfers never do. At most {data.trace.maxDustRecipients} such recipients per listed origin and hop are followed further; beyond that they are still flagged, but not traced onward.</li>
 			<li><strong>Never flagged by a flow</strong>: affiliate fee outputs, THORChain module accounts (asgard, reserve, bond, affiliate collector, …), CosmWasm contracts, and services (addresses with more than 2,000 THORChain actions).</li>
 			<li><strong>Coverage</strong>: history is backfilled per flagged address, and a real-time follower processes every new THORChain action. (Midgard's address filter is case-sensitive: senders are stored as observed on chain — lower-case for EVM — which is the form the backfill queries; memo destinations keep the user's spelling, which is why normalization happens on Ozone's side.)</li>
 		</ul>
@@ -171,7 +172,7 @@
 			<li>Transfers outside THORChain are not traced (except the Ethereum hack clusters above). A launderer who moves funds L1-to-L1 before touching THORChain is only caught if an intermediate address is listed.</li>
 			<li>Hack clusters follow plain ETH transfers only (no token transfers, contract-internal transfers or other chains), inside the incident window and within a request budget; layers funded otherwise are missed.</li>
 			<li>Lists lag reality: community lists publish with delays, sanctions add addresses weeks after the fact, Tether and Circle only freeze what they are asked to.</li>
-			<li>Traces are evidence of a flow, not of intent: a hop-1 recipient may be an exchange deposit address or a victim of deliberate "dusting" (hence the amount thresholds and decay). Read the reason before acting on it.</li>
+			<li>Traces are evidence of a flow, not of intent: a hop-1 recipient may be an exchange deposit address or a victim of deliberate "dusting" (hence the amount thresholds and decay: dusting an address costs at least ${data.trace.dustUsd} in total). Read the reason before acting on it.</li>
 			<li>Current pool prices approximate the value of non-swap flows.</li>
 			<li>Midgard is the source of THORChain history; if it misses an action, so does Ozone.</li>
 		</ul>

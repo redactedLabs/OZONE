@@ -23,8 +23,8 @@ import {
 import { CORE_SOURCES, DERIVED_SOURCES, SOURCES } from '../sources/registry.js';
 import { allEntries } from '../store/entries.js';
 import { isoOf } from '../store/db.js';
-import { dustTotals, getState, setState } from '../store/trace.js';
-import { DEFAULT_TRACE_CONFIG } from '../trace/tracer.js';
+import { dustTotals, getState, loadDustGroups, setState } from '../store/trace.js';
+import { DEFAULT_TRACE_CONFIG, SMALL_TRANSFERS, describeSmallTransfers, traceRisk, type SmallTransferTotal } from '../trace/tracer.js';
 import { TWIN_CATEGORIES } from '../policy.js';
 import type { Sql } from '../types.js';
 
@@ -159,17 +159,36 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 		   usd DESC NULLS FIRST,
 		   ts ASC`
 	);
+	type EdgeRow = (typeof edges.rows)[number];
+	const edgeReason = (e: EdgeRow, risk: Risk): Reason => ({
+		code: e.relation === 'value' ? `TRACE_${String(e.action).toUpperCase()}` : `TRACE_${e.relation.toUpperCase()}`,
+		source: 'thorchain_trace',
+		category: 'traced',
+		risk,
+		text: e.reason,
+		chain: e.to_chain,
+		refId: e.txid,
+		ref: `https://runescan.io/tx/${e.txid}`,
+		trace: {
+			hop: Number(e.hop),
+			action: e.action,
+			txid: e.txid,
+			...(e.height ? { height: Number(e.height) } : {}),
+			...(e.ts ? { date: isoOf(e.ts) } : {}),
+			from: e.from_address,
+			fromChain: e.from_chain,
+			...(e.amount ? { amount: e.amount } : {}),
+			...(e.usd !== null ? { usd: Math.round(Number(e.usd)) } : {}),
+			originKey: e.origin_key,
+			originSource: e.origin_source,
+			...(e.origin_entity ? { originEntity: e.origin_entity } : {})
+		}
+	});
 	// Every edge, keyed by (to_key, txid): lets the oz_traced backstop below
 	// find the exact edge behind its best-recorded risk even when that edge
 	// was not among the top MAX_TRACE_REASONS kept for publishing.
-	const edgeByToKeyTxid = new Map<string, (typeof edges.rows)[number]>();
+	const edgeByToKeyTxid = new Map<string, EdgeRow>();
 	for (const e of edges.rows) edgeByToKeyTxid.set(`${e.to_key}\u0000${e.txid}`, e);
-	const edgesByKey = new Map<string, typeof edges.rows>();
-	for (const e of edges.rows) {
-		const list = edgesByKey.get(e.to_key);
-		if (!list) edgesByKey.set(e.to_key, [e]);
-		else if (list.length < MAX_TRACE_REASONS) list.push(e);
-	}
 
 	// Per-flow USD thresholds demote a flow that is, on its own, below the
 	// "full" amount for its hop — but several such flows from the same origin
@@ -179,6 +198,7 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 	// one row per flow, so a replayed action is never counted twice), and
 	// republish at the undemoted risk once the sum reaches the hop's full-USD
 	// threshold.
+	const trace = DEFAULT_TRACE_CONFIG;
 	const groupKey = (originKey: string, toKey: string, hop: number) => `${originKey}\u0000${toKey}\u0000${Number(hop)}`;
 	const groupTotals = new Map<string, number>();
 	for (const e of edges.rows) {
@@ -186,46 +206,108 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 		const k = groupKey(e.origin_key, e.to_key, e.hop);
 		groupTotals.set(k, (groupTotals.get(k) ?? 0) + Number(e.usd));
 	}
-	for (const d of await dustTotals(sql)) {
+	const dust = await dustTotals(sql);
+	for (const d of dust) {
 		const k = groupKey(d.originKey, d.toKey, d.hop);
 		groupTotals.set(k, (groupTotals.get(k) ?? 0) + d.usd);
 	}
 	const undemotedRisk = (originRisk: Risk, hop: number): Risk =>
 		riskFromRank(Math.max(Math.min(riskRank(originRisk), riskRank('high')) - (hop - 1), riskRank('low')));
-	const crossesFullUsd = (hop: number, sum: number) => sum >= (hop === 1 ? DEFAULT_TRACE_CONFIG.hop1FullUsd : DEFAULT_TRACE_CONFIG.deepFullUsd);
+	const crossesFullUsd = (hop: number, sum: number) => sum >= (hop === 1 ? trace.hop1FullUsd : trace.deepFullUsd);
+
+	// A recipient built entirely from sub-dust transfers has no edge to
+	// publish: once an (origin, hop) total of them reaches the dust limit it
+	// gets one TRACE_SMALL_TRANSFERS reason, at the risk one flow of that
+	// total would get. (A group that also has an edge is published through
+	// its edges, with the small transfers already in the sum above.)
+	const edgeGroups = new Set(edges.rows.map((e) => groupKey(e.origin_key, e.to_key, e.hop)));
+	const smallTotals = await loadDustGroups(
+		sql,
+		trace.dustUsd,
+		dust.filter((d) => d.usd >= trace.dustUsd && !edgeGroups.has(groupKey(d.originKey, d.toKey, d.hop)))
+	);
+	const smallTransferReason = (st: SmallTransferTotal, risk: Risk): Reason => {
+		const c = st.crossing!;
+		return {
+			code: `TRACE_${SMALL_TRANSFERS.toUpperCase()}`,
+			source: 'thorchain_trace',
+			category: 'traced',
+			risk,
+			text: describeSmallTransfers(st, trace),
+			chain: st.toChain,
+			refId: c.txid,
+			ref: `https://runescan.io/tx/${c.txid}`,
+			trace: {
+				hop: st.hop,
+				action: SMALL_TRANSFERS,
+				txid: c.txid,
+				...(c.height ? { height: c.height } : {}),
+				date: c.date,
+				from: c.fromAddress,
+				fromChain: c.fromChain,
+				amount: `${st.count} transfers`,
+				usd: Math.round(st.usd),
+				originKey: st.originKey,
+				originSource: st.originSource,
+				...(st.originEntity ? { originEntity: st.originEntity } : {})
+			}
+		};
+	};
+
+	// Candidate reasons per address, each at the risk it is published with.
+	// The strongest MAX_TRACE_REASONS are kept: risk first, then hop, then
+	// USD (unpriced first: unknown, not small), then time.
+	interface Candidate {
+		risk: Risk;
+		hop: number;
+		usd: number | null;
+		time: number;
+		small: boolean;
+		reason: () => Reason;
+	}
+	const candidates = new Map<string, Candidate[]>();
+	const offer = (key: string, c: Candidate) => {
+		const list = candidates.get(key);
+		if (list) list.push(c);
+		else candidates.set(key, [c]);
+	};
+	for (const e of edges.rows) {
+		const sum = e.relation === 'value' ? groupTotals.get(groupKey(e.origin_key, e.to_key, e.hop)) : undefined;
+		const risk = sum !== undefined && crossesFullUsd(e.hop, sum) ? undemotedRisk(e.origin_risk, e.hop) : e.risk;
+		offer(e.to_key, {
+			risk,
+			hop: Number(e.hop),
+			usd: e.usd === null ? null : Number(e.usd),
+			time: e.ts ? new Date(e.ts).getTime() : 0,
+			small: false,
+			reason: () => edgeReason(e, risk)
+		});
+	}
+	for (const st of smallTotals) {
+		const risk = st.crossing ? traceRisk(st.originRisk, st.hop, st.usd, 'value', trace) : null;
+		if (!risk) continue;
+		offer(st.toKey, { risk, hop: st.hop, usd: st.usd, time: Date.parse(st.crossing!.date), small: true, reason: () => smallTransferReason(st, risk) });
+	}
+	const strongestFirst = (a: Candidate, b: Candidate) =>
+		riskRank(b.risk) - riskRank(a.risk) ||
+		a.hop - b.hop ||
+		(a.usd === null ? (b.usd === null ? 0 : -1) : b.usd === null ? 1 : b.usd - a.usd) ||
+		a.time - b.time;
+	const strongest = (key: string, onlySmall = false) =>
+		(candidates.get(key) ?? [])
+			.filter((c) => !onlySmall || c.small)
+			.sort(strongestFirst)
+			.slice(0, MAX_TRACE_REASONS);
 
 	let tracedCount = 0;
+	const tracedKeys = new Set<string>();
 	for (const t of traced.rows) {
+		tracedKeys.add(t.key);
 		if (listedKeys.has(t.key)) continue; // listed in its own right; trace adds nothing to the verdict
 		let bestPublished: Risk = 'none';
-		for (const e of edgesByKey.get(t.key) ?? []) {
-			const sum = e.relation === 'value' ? groupTotals.get(groupKey(e.origin_key, e.to_key, e.hop)) : undefined;
-			const risk = sum !== undefined && crossesFullUsd(e.hop, sum) ? undemotedRisk(e.origin_risk, e.hop) : e.risk;
-			if (riskRank(risk) > riskRank(bestPublished)) bestPublished = risk;
-			add(t.key, {
-				code: e.relation === 'value' ? `TRACE_${String(e.action).toUpperCase()}` : `TRACE_${e.relation.toUpperCase()}`,
-				source: 'thorchain_trace',
-				category: 'traced',
-				risk,
-				text: e.reason,
-				chain: e.to_chain,
-				refId: e.txid,
-				ref: `https://runescan.io/tx/${e.txid}`,
-				trace: {
-					hop: Number(e.hop),
-					action: e.action,
-					txid: e.txid,
-					...(e.height ? { height: Number(e.height) } : {}),
-					...(e.ts ? { date: isoOf(e.ts) } : {}),
-					from: e.from_address,
-					fromChain: e.from_chain,
-					...(e.amount ? { amount: e.amount } : {}),
-					...(e.usd !== null ? { usd: Math.round(Number(e.usd)) } : {}),
-					originKey: e.origin_key,
-					originSource: e.origin_source,
-					...(e.origin_entity ? { originEntity: e.origin_entity } : {})
-				}
-			});
+		for (const c of strongest(t.key)) {
+			if (riskRank(c.risk) > riskRank(bestPublished)) bestPublished = c.risk;
+			add(t.key, c.reason());
 		}
 		// Backstop: oz_traced.risk is the address's true best-recorded reason
 		// (lowest hop, highest risk seen there) and must never be higher than
@@ -236,30 +318,7 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 			add(
 				t.key,
 				fallback
-					? {
-							code: fallback.relation === 'value' ? `TRACE_${String(fallback.action).toUpperCase()}` : `TRACE_${fallback.relation.toUpperCase()}`,
-							source: 'thorchain_trace',
-							category: 'traced',
-							risk: t.risk,
-							text: fallback.reason,
-							chain: fallback.to_chain,
-							refId: fallback.txid,
-							ref: `https://runescan.io/tx/${fallback.txid}`,
-							trace: {
-								hop: Number(fallback.hop),
-								action: fallback.action,
-								txid: fallback.txid,
-								...(fallback.height ? { height: Number(fallback.height) } : {}),
-								...(fallback.ts ? { date: isoOf(fallback.ts) } : {}),
-								from: fallback.from_address,
-								fromChain: fallback.from_chain,
-								...(fallback.amount ? { amount: fallback.amount } : {}),
-								...(fallback.usd !== null ? { usd: Math.round(Number(fallback.usd)) } : {}),
-								originKey: fallback.origin_key,
-								originSource: fallback.origin_source,
-								...(fallback.origin_entity ? { originEntity: fallback.origin_entity } : {})
-							}
-						}
+					? edgeReason(fallback, t.risk)
 					: {
 							code: 'TRACE_BEST',
 							source: 'thorchain_trace',
@@ -281,6 +340,16 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 			);
 		}
 		tracedCount++;
+	}
+	// A recipient traced only by small-transfer totals has no oz_traced row
+	// when the fan-out cap kept it from being followed onward: it is published
+	// all the same (an accepted appeal suppresses it like any traced address).
+	const suppressedTraced = new Set((await sql.query<{ key: string }>(`SELECT key FROM oz_traced WHERE suppressed`)).rows.map((r) => r.key));
+	for (const key of new Set(smallTotals.map((st) => st.toKey))) {
+		if (tracedKeys.has(key) || suppressedTraced.has(key) || listedKeys.has(key)) continue;
+		const kept = strongest(key, true);
+		for (const c of kept) add(key, c.reason());
+		if (kept.length) tracedCount++;
 	}
 	if (tracedCount) sourceCounts.set('thorchain_trace', tracedCount);
 
