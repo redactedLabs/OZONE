@@ -23,6 +23,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+	if (locals.user.role !== 'admin' && locals.user.role !== 'owner') return json({ error: 'Forbidden' }, { status: 403 });
 	const { publicId, action, resolution } = (await request.json()) as { publicId?: string; action?: string; resolution?: string };
 	if (!publicId || (action !== 'accept' && action !== 'reject')) return json({ error: 'publicId and action required' }, { status: 400 });
 	const r = await sql.query<{ kind: string; address: string; chain: string | null; key: string; message: string; status: string }>(

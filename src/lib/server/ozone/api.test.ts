@@ -22,18 +22,25 @@ const apiKey = loadPrivateKey(generateSigningKey().seedHex);
 const snapKey = loadPrivateKey(generateSigningKey().seedHex);
 process.env.OZONE_API_SIGNING_KEY = Buffer.from(apiKey.key.export({ format: 'der', type: 'pkcs8' })).subarray(-32).toString('hex');
 process.env.OZONE_SNAPSHOT_PUBLIC_KEYS = snapKey.publicKey.spec;
+// Only $lib/server/auth's own module load needs this (invite/+server.ts
+// imports it); nothing in this file exercises betterAuth's DB-backed flows.
+process.env.BETTER_AUTH_SECRET = 'test-only-better-auth-secret-not-a-real-secret';
 
 const fx = (name: string) => readFileSync(new URL(`../../../../packages/ozone-engine/test/fixtures/${name}`, import.meta.url), 'utf8');
 
+type Locals = { user: { id: string; email: string; name: string; role: string } | null };
 type Handler = (event: any) => Promise<Response>;
-const call = async (h: Handler, init: { url: string; method?: string; body?: unknown; params?: Record<string, string> }) => {
+const call = async (h: Handler, init: { url: string; method?: string; body?: unknown; params?: Record<string, string>; locals?: Locals }) => {
 	const url = new URL(init.url, 'https://ozone.test');
 	const request = new Request(url, {
 		method: init.method ?? 'GET',
 		...(init.body !== undefined ? { body: JSON.stringify(init.body), headers: { 'content-type': 'application/json' } } : {})
 	});
-	return h({ request, url, params: init.params ?? {}, locals: { user: null } });
+	return h({ request, url, params: init.params ?? {}, locals: init.locals ?? { user: null } });
 };
+/** A session with no admin/owner role — either hooks.server.ts's fail-closed
+ *  default, or (deliberately, for this test) any other non-privileged value. */
+const nonAdmin: Locals = { user: { id: 'u1', email: 'nobody@test', name: 'Nobody', role: '' } };
 
 describe('API routes', () => {
 	let db: PGlite;
@@ -212,5 +219,35 @@ describe('API routes', () => {
 		expect(body.flagged).toBe(true);
 		expect(body.certificate.status).toBe('flagged');
 		expect(verifyAttached(DOMAIN_CERTIFICATE, body.certificate, [apiKey.publicKey])).not.toBeNull();
+	});
+
+	// A session existing is not enough: hooks.server.ts's role lookup fails
+	// closed (role ''), so these verdict-changing endpoints must refuse it
+	// exactly like an unauthenticated caller once past the 401 check — the
+	// same gap this candidate reports for flags/submissions extends, per the
+	// brief, to every /api/admin/* write.
+	it('admin writes require role admin/owner, not just a session', async () => {
+		const flags = await import('../../../routes/api/admin/flags/+server');
+		expect((await call(flags.POST as Handler, { url: '/api/admin/flags', method: 'POST', locals: nonAdmin, body: { address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', reason: 'x' } })).status).toBe(403);
+		expect((await call(flags.DELETE as Handler, { url: '/api/admin/flags', method: 'DELETE', locals: nonAdmin, body: { id: 1 } })).status).toBe(403);
+
+		const submissions = await import('../../../routes/api/admin/submissions/+server');
+		expect((await call(submissions.POST as Handler, { url: '/api/admin/submissions', method: 'POST', locals: nonAdmin, body: { publicId: 'x', action: 'accept' } })).status).toBe(403);
+
+		const changePassword = await import('../../../routes/api/admin/change-password/+server');
+		expect((await call(changePassword.POST as Handler, { url: '/api/admin/change-password', method: 'POST', locals: nonAdmin, body: { currentPassword: 'a', newPassword: 'bbbbbbbb' } })).status).toBe(403);
+
+		// invite creates/deletes accounts — reached via auth.$context/db only
+		// once past this same check, so a 403 here is what proves the gate
+		// runs first (this test never lets a passing role reach that code).
+		const invite = await import('../../../routes/api/admin/invite/+server');
+		expect((await call(invite.POST as Handler, { url: '/api/admin/invite', method: 'POST', locals: nonAdmin, body: { email: 'new@test' } })).status).toBe(403);
+		expect((await call(invite.DELETE as Handler, { url: '/api/admin/invite', method: 'DELETE', locals: nonAdmin, body: { userId: 'x' } })).status).toBe(403);
+
+		// sync-trigger's existing owner-only check must still be in force,
+		// not loosened to "any admin" by this change.
+		const syncTrigger = await import('../../../routes/api/admin/sync-trigger/+server');
+		const admin: Locals = { user: { id: 'u2', email: 'admin@test', name: 'Admin', role: 'admin' } };
+		expect((await call(syncTrigger.POST as Handler, { url: '/api/admin/sync-trigger', method: 'POST', locals: admin, body: { type: 'snapshot' } })).status).toBe(403);
 	});
 });

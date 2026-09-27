@@ -38,15 +38,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 	});
 
 	if (sessionData) {
-		// Fetch role from DB
-		let role = 'admin';
+		// Fetch role from DB. Fail closed: a session alone never grants
+		// admin/owner authority — only a role read back from the database
+		// does, and a lookup error or a missing row must not default to one.
+		let role = '';
 		try {
 			const { db } = await import('$lib/server/db');
 			const { user: userTable } = await import('$lib/server/db/schema');
 			const { eq } = await import('drizzle-orm');
 			const [dbUser] = await db.select({ role: userTable.role }).from(userTable).where(eq(userTable.id, sessionData.user.id)).limit(1);
-			if (dbUser?.role) role = dbUser.role;
-		} catch { /* fallback to admin */ }
+			role = dbUser?.role ?? '';
+		} catch { /* fail closed: role stays '' */ }
 
 		event.locals.user = {
 			id: sessionData.user.id,

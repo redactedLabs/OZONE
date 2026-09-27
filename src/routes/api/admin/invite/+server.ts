@@ -9,9 +9,11 @@ const OWNER_EMAIL = 'f@redacted.gg';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+	if (locals.user.role !== 'admin' && locals.user.role !== 'owner') return json({ error: 'Forbidden' }, { status: 403 });
 
 	const { email, name, role } = await request.json();
 	if (!email) return json({ error: 'Email required' }, { status: 400 });
+	const normalizedEmail = email.toLowerCase();
 
 	// Only owner can create other owners
 	const assignRole = role === 'owner' && locals.user.role === 'owner' ? 'owner' : 'admin';
@@ -22,16 +24,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	for (let i = 0; i < 16; i++) password += chars[Math.floor(Math.random() * chars.length)];
 
 	try {
-		const result = await auth.api.signUpEmail({
-			body: { email, password, name: name || email.split('@')[0] }
-		});
-
-		if (!result) return json({ error: 'Failed to create user' }, { status: 500 });
+		// auth.api.signUpEmail() is disabled (better-auth's own
+		// EMAIL_PASSWORD_SIGN_UP_DISABLED guard applies to server-side calls
+		// too — it isn't only an HTTP-route check). An invited account is
+		// created by an admin, not self-registered, so it's created with the
+		// same lower-level primitives signUpEmail itself uses internally.
+		const ctx = await auth.$context;
+		const passwordHash = await ctx.password.hash(password);
+		const created = await ctx.internalAdapter.createUser({ email: normalizedEmail, name: name || email.split('@')[0], emailVerified: false });
+		if (!created) return json({ error: 'Failed to create user' }, { status: 500 });
+		await ctx.internalAdapter.linkAccount({ userId: created.id, providerId: 'credential', accountId: created.id, password: passwordHash });
 
 		// Set role
-		await db.update(user).set({ role: assignRole }).where(eq(user.email, email));
+		await db.update(user).set({ role: assignRole }).where(eq(user.email, normalizedEmail));
 
-		return json({ email, password, role: assignRole });
+		return json({ email: normalizedEmail, password, role: assignRole });
 	} catch (err: any) {
 		return json({ error: err?.message || 'Failed to create user' }, { status: 500 });
 	}
@@ -39,6 +46,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 export const DELETE: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+	if (locals.user.role !== 'admin' && locals.user.role !== 'owner') return json({ error: 'Forbidden' }, { status: 403 });
 
 	const { userId } = await request.json();
 	if (!userId) return json({ error: 'userId required' }, { status: 400 });

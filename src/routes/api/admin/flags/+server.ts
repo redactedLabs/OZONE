@@ -26,6 +26,7 @@ export const GET: RequestHandler = async () => {
 // POST add new manual flag
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+	if (locals.user.role !== 'admin' && locals.user.role !== 'owner') return json({ error: 'Forbidden' }, { status: 403 });
 
 	const body = await request.json();
 	const { address, chain, reason } = body;
@@ -54,6 +55,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 // DELETE remove a manual flag
 export const DELETE: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+	if (locals.user.role !== 'admin' && locals.user.role !== 'owner') return json({ error: 'Forbidden' }, { status: 403 });
 
 	const body = await request.json();
 	const { id } = body;

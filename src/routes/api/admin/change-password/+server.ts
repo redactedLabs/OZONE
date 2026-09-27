@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from 'better-auth/crypto';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+	if (locals.user.role !== 'admin' && locals.user.role !== 'owner') return json({ error: 'Forbidden' }, { status: 403 });
 
 	const { currentPassword, newPassword } = await request.json();
 

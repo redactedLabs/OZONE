@@ -10,7 +10,8 @@ export default defineConfig({
 			$server: fileURLToPath(new URL('./src/lib/server', import.meta.url)),
 			$ozone: fileURLToPath(new URL('./packages/ozone-client/src', import.meta.url)),
 			$engine: fileURLToPath(new URL('./packages/ozone-engine/src', import.meta.url)),
-			'$env/dynamic/private': fileURLToPath(new URL('./src/lib/server/ozone/__test__/env.ts', import.meta.url))
+			'$env/dynamic/private': fileURLToPath(new URL('./src/lib/server/ozone/__test__/env.ts', import.meta.url)),
+			'$app/environment': fileURLToPath(new URL('./src/lib/server/__test__/app-environment.ts', import.meta.url))
 		}
 	},
 	test: {
