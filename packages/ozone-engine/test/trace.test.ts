@@ -4,7 +4,7 @@ import { applySourceResult } from '../src/store/entries.js';
 import { getState, loadTraceIndex, pendingChecks, queryForms, recordHits } from '../src/store/trace.js';
 import { toChecksumAddress } from '../src/util/evm.js';
 import { extractFlows } from '../src/trace/flows.js';
-import { runRealtimeTick, runTraceBackfill, type PendingAction } from '../src/trace/jobs.js';
+import { checkAddress, runRealtimeTick, runTraceBackfill, SERVICE_ACTIONS, type PendingAction } from '../src/trace/jobs.js';
 import { collectSnapshot } from '../src/snapshot/builder.js';
 import type { MidgardAction } from '../src/trace/midgard.js';
 import { StaticPrices } from '../src/trace/prices.js';
@@ -548,5 +548,42 @@ describe('backfill cursor never advances past a pending action', async () => {
 		expect(tick.hits).toBe(1);
 		const row = await sql.query(`SELECT hop, risk FROM oz_traced WHERE key = $1`, [`btc:${settledRecipient}`]);
 		expect(row.rows[0]).toMatchObject({ hop: 1, risk: 'high' });
+	});
+});
+
+describe('service classification never applies to listed origins or high-risk traced keys', () => {
+	const manyActions = (address: string) =>
+		Array.from({ length: SERVICE_ACTIONS }, (_, i) => action({ height: i + 1, in: [{ address, asset: 'ETH.ETH', amount: 1 }] }));
+
+	it('a hop-0 listed origin is never marked a service, however many raw actions it has', async () => {
+		const originAddress = '0x' + 'b2'.repeat(20);
+		const originKey = `evm:${originAddress}`;
+		const lookup = (k: string): IndexEntry | undefined =>
+			k === originKey ? { key: originKey, hop: 0, originRisk: 'high', originKey, originSource: 'ethlabels', originCategory: 'hack' } : undefined;
+		const r = await checkAddress(new FakeMidgard(manyActions(originAddress)), originKey, 0, lookup, undefined, DEFAULT_TRACE_CONFIG);
+		expect(r.actions).toBe(SERVICE_ACTIONS);
+		expect(r.service).toBe(false);
+	});
+
+	it('a hop-1 key whose decayed risk is still high is never marked a service', async () => {
+		const highAddress = '0x' + 'c3'.repeat(20);
+		const highKey = `evm:${highAddress}`;
+		const lookup = (k: string): IndexEntry | undefined =>
+			k === highKey
+				? { key: highKey, hop: 1, originRisk: 'severe', originKey: 'evm:0xseed', originSource: 'ofac_sdn', originCategory: 'sanctions' }
+				: undefined;
+		const r = await checkAddress(new FakeMidgard(manyActions(highAddress)), highKey, 0, lookup, undefined, DEFAULT_TRACE_CONFIG);
+		expect(r.service).toBe(false);
+	});
+
+	it('keeps the heuristic for a deep, lower-risk traced key', async () => {
+		const lowAddress = '0x' + 'd4'.repeat(20);
+		const lowKey = `evm:${lowAddress}`;
+		const lookup = (k: string): IndexEntry | undefined =>
+			k === lowKey
+				? { key: lowKey, hop: 3, originRisk: 'high', originKey: 'evm:0xseed', originSource: 'ethlabels', originCategory: 'hack' }
+				: undefined;
+		const r = await checkAddress(new FakeMidgard(manyActions(lowAddress)), lowKey, 0, lookup, undefined, DEFAULT_TRACE_CONFIG);
+		expect(r.service).toBe(true);
 	});
 });

@@ -2,13 +2,14 @@
  * Tracing jobs: history backfill (per flagged address, highest risk first)
  * and the real-time follower (new THORChain actions since a cursor).
  */
+import { riskRank } from '../../../ozone-client/src/index.js';
 import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recordDustTotals, recordHits, setState } from '../store/trace.js';
 import type { Logger, Sql } from '../types.js';
 import { silentLogger } from '../types.js';
 import { toChecksumAddress } from '../util/evm.js';
 import type { MidgardLike as Midgard } from './midgard.js';
 import { loadPoolPrices, type PriceOracle } from './prices.js';
-import { DEFAULT_TRACE_CONFIG, traceAction, type DustFlow, type IndexEntry, type TraceConfig, type TraceHit } from './tracer.js';
+import { DEFAULT_TRACE_CONFIG, traceAction, traceRisk, type DustFlow, type IndexEntry, type TraceConfig, type TraceHit } from './tracer.js';
 import { actionTxid, parseTxAddress } from './flows.js';
 
 /** An address with more THORChain actions than this is treated as a service and not propagated. */
@@ -74,6 +75,13 @@ export async function checkAddress(
 	// re-read it, however many times the address is later rechecked.
 	let lowestPendingHeight: number | undefined;
 	let service = false;
+	// A hop-0 listed address, or one whose own trace risk already decays to
+	// high or above, is always traced: a raw action count is trivially
+	// inflatable (by the address itself, or by a third party sending it many
+	// small actions) and must not permanently exempt it.
+	const entry = lookup(key);
+	const neverService =
+		!!entry && (entry.hop === 0 || riskRank(traceRisk(entry.originRisk, entry.hop, undefined, 'value', cfg) ?? 'none') >= riskRank('high'));
 	const seenActions = new Set<string>();
 	for (const form of queryForms(key, toChecksumAddress)) {
 		let n = 0;
@@ -93,7 +101,7 @@ export async function checkAddress(
 			}
 			hits.push(...traceAction(a, lookup, prices, cfg, (d) => dust.push(d)));
 		}
-		if (n >= SERVICE_ACTIONS) service = true;
+		if (!neverService && n >= SERVICE_ACTIONS) service = true;
 	}
 	if (lowestPendingHeight !== undefined) maxHeight = Math.min(maxHeight, lowestPendingHeight - 1);
 	return { hits: dedupe(hits), dust, actions, maxHeight, service, pending };
