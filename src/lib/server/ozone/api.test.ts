@@ -221,6 +221,101 @@ describe('API routes', () => {
 		expect(verifyAttached(DOMAIN_CERTIFICATE, body.certificate, [apiKey.publicKey])).not.toBeNull();
 	});
 
+	it('certificates: a chain hint cannot narrow away a listing under the address\'s other valid reading', async () => {
+		const { POST } = await import('../../../routes/api/certificate/+server');
+		// 3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG is the curated FBI DPRK BTC P2SH
+		// address (seeded via parseCurated() earlier in this file, law_enforcement/
+		// severe). Read as LTC (P2SH version 0x05 is valid on both chains) it has
+		// no listing of its own — screening only that hinted reading used to come
+		// back clean. The unhinted reading still auto-detects it as BTC and finds
+		// the real listing, so the certificate must be flagged either way.
+		const hinted = await call(POST as Handler, { url: '/api/certificate', method: 'POST', body: { address: '3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG', chain: 'LTC' } });
+		const hintedBody = await hinted.json();
+		expect(hintedBody.flagged).toBe(true);
+		expect(hintedBody.certificate.status).toBe('flagged');
+		// chain and every screened key (both readings) are in the signed document
+		expect(hintedBody.certificate.chain).toBe('LTC');
+		expect(hintedBody.certificate.keys).toEqual(expect.arrayContaining(['ltc:3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG', 'btc:3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG']));
+		expect(verifyAttached(DOMAIN_CERTIFICATE, hintedBody.certificate, [apiKey.publicKey])).not.toBeNull();
+
+		// unhinted: same address, same result, no chain recorded
+		const unhinted = await call(POST as Handler, { url: '/api/certificate', method: 'POST', body: { address: '3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG' } });
+		const unhintedBody = await unhinted.json();
+		expect(unhintedBody.flagged).toBe(true);
+		expect(unhintedBody.certificate.chain).toBeUndefined();
+	});
+
+	it('certificates: the permanent page discloses active sub-threshold reasons instead of an unqualified "no matches"', async () => {
+		const sql = holder.sql!;
+		// A ScamSniffer-style listing (phishing, medium risk — below the
+		// default flagAt:'high') for an address nothing else has ever listed.
+		const drainer = `0x${(0xabc).toString(16).padStart(40, '0')}`;
+		await applySourceResult(
+			sql,
+			{ id: 'scamsniffer', name: 'ScamSniffer', kind: 'community' },
+			{
+				entries: [
+					{
+						source: 'scamsniffer',
+						key: `evm:${drainer}`,
+						chain: 'ETH',
+						address: drainer,
+						category: 'phishing',
+						risk: 'medium',
+						code: 'SCAMSNIFFER',
+						entity: 'Phishing / wallet drainer',
+						text: 'Listed by ScamSniffer as a phishing/drainer address'
+					}
+				],
+				rejected: [],
+				notes: []
+			}
+		);
+		const published = await publishSnapshot(sql, snapKey, { coreSources: [] });
+		if (!published.published) throw new Error(published.reason);
+
+		// currentSnapshot() (src/lib/server/ozone/snapshot.ts) caches the
+		// in-memory index for up to 60s, keyed off Date.now() — the earlier
+		// tests in this file already populated it, so the certificate route
+		// would otherwise screen against a snapshot from before this entry
+		// existed. Faking only Date (not timers) advances that check without
+		// touching PGlite's or the rate limiter's own scheduling.
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(Date.now() + 61_000);
+		let body: { flagged: boolean; certId: string; certificate: { risk: string; reasons: unknown[] } };
+		try {
+			const { POST } = await import('../../../routes/api/certificate/+server');
+			const res = await call(POST as Handler, { url: '/api/certificate', method: 'POST', body: { address: drainer } });
+			body = await res.json();
+		} finally {
+			vi.useRealTimers();
+		}
+		expect(body.flagged).toBe(false); // medium is below the default flag threshold
+		expect(body.certificate.risk).toBe('medium');
+		expect(body.certificate.reasons.length).toBeGreaterThan(0);
+
+		const { load } = await import('../../../routes/certificate/[id]/+page.server');
+		const loaded: any = await load({ params: { id: body.certId } } as any);
+		expect(loaded.legacy).toBe(false);
+		expect(loaded.flagged).toBe(false);
+		expect(loaded.risk).toBe('medium');
+		expect(loaded.reasons.length).toBeGreaterThan(0);
+		expect(loaded.reasons[0]).toMatchObject({ source: 'scamsniffer', risk: 'medium' });
+		expect(loaded.sourcesChecked).toEqual(expect.arrayContaining(['scamsniffer']));
+	});
+
+	it('certificates: a legacy row (document IS NULL) loads as unverifiable, never as clean', async () => {
+		const sql = holder.sql!;
+		const legacyId = 'OZ-LEGACYTEST1';
+		await sql.query(
+			`INSERT INTO certificates (cert_id, address, flagged, sources_checked) VALUES ($1,$2,$3,$4)`,
+			[legacyId, '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', false, 8]
+		);
+		const { load } = await import('../../../routes/certificate/[id]/+page.server');
+		const loaded: any = await load({ params: { id: legacyId } } as any);
+		expect(loaded.legacy).toBe(true);
+	});
+
 	// A session existing is not enough: hooks.server.ts's role lookup fails
 	// closed (role ''), so these verdict-changing endpoints must refuse it
 	// exactly like an unauthenticated caller once past the 401 check — the
