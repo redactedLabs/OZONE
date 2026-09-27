@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { afterAll, describe, expect, it } from 'vitest';
 import { applySourceResult } from '../src/store/entries.js';
-import { loadTraceIndex, pendingChecks, queryForms, recordHits } from '../src/store/trace.js';
+import { getState, loadTraceIndex, pendingChecks, queryForms, recordHits } from '../src/store/trace.js';
 import { toChecksumAddress } from '../src/util/evm.js';
 import { extractFlows } from '../src/trace/flows.js';
-import { runRealtimeTick, runTraceBackfill } from '../src/trace/jobs.js';
+import { runRealtimeTick, runTraceBackfill, type PendingAction } from '../src/trace/jobs.js';
 import { collectSnapshot } from '../src/snapshot/builder.js';
 import type { MidgardAction } from '../src/trace/midgard.js';
 import { StaticPrices } from '../src/trace/prices.js';
@@ -465,5 +465,88 @@ describe('trace reasons published highest risk first, with an oz_traced backstop
 		const snap = await collectSnapshot(sql);
 		const rec = snap.records.find((x) => x.key === recipientKey);
 		expect(rec?.reasons.some((x) => x.risk === 'high')).toBe(true);
+	});
+});
+
+describe('backfill cursor never advances past a pending action', async () => {
+	const { db, sql } = await memoryDb();
+	afterAll(() => db.close());
+
+	const origin = '0x' + 'a1'.repeat(20);
+	const laterRecipient = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+	const settledRecipient = 'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3';
+
+	it('caps checked_height below a still-pending action and hands it to trace:pending', async () => {
+		const res = emptyResult();
+		res.entries.push({
+			source: 'ethlabels',
+			key: `evm:${origin}`,
+			chain: 'ETH',
+			address: origin,
+			category: 'hack',
+			risk: 'high',
+			code: 'HACK_LABEL',
+			entity: 'Pending-cursor test origin',
+			text: 'test fixture'
+		});
+		await applySourceResult(sql, { id: 'ethlabels', name: 'eth-labels', kind: 'community' }, res);
+
+		// A streaming swap still in flight (no outputs yet)...
+		const pending = action({
+			height: 1000,
+			status: 'pending',
+			in: [{ address: origin, asset: 'ETH.ETH', amount: 1, txID: 'PENDINGTX1' }],
+			out: []
+		});
+		// ...followed by a later, unrelated, already-settled action.
+		const later = action({
+			height: 1001,
+			in: [{ address: origin, asset: 'ETH.ETH', amount: 1 }],
+			out: [{ address: laterRecipient, asset: 'BTC.BTC', amount: 1 }],
+			metadata: { swap: { outPriceUSD: '90000' } }
+		});
+		const r = await runTraceBackfill(sql, new FakeMidgard([pending, later]));
+		expect(r.errors).toBe(0);
+
+		// The cursor stops just below the pending action's height, not at the
+		// later action's height — otherwise a subsequent scan could never
+		// re-read the pending action once it settles.
+		const checked = await sql.query<{ checked_height: string | number }>(
+			`SELECT checked_height FROM oz_trace_checked WHERE key = $1`,
+			[`evm:${origin}`]
+		);
+		expect(Number(checked.rows[0].checked_height)).toBe(999);
+
+		// The pending action is registered for the real-time follower's
+		// existing re-read-until-settled loop.
+		const pendingState = (await getState<PendingAction[]>(sql, 'trace:pending')) ?? [];
+		expect(pendingState.some((p) => p.txid === 'PENDINGTX1' && p.height === 1000)).toBe(true);
+
+		// The later, non-pending action is still traced promptly in this same
+		// pass — only the stored cursor is conservative.
+		const laterTraced = await sql.query(`SELECT 1 FROM oz_traced WHERE key = $1`, [`btc:${laterRecipient}`]);
+		expect(laterTraced.rows).toHaveLength(1);
+	});
+
+	it('the real-time follower still traces the pending action once it settles', async () => {
+		const settled = action({
+			height: 1000,
+			in: [{ address: origin, asset: 'ETH.ETH', amount: 1, txID: 'PENDINGTX1' }],
+			out: [{ address: settledRecipient, asset: 'BTC.BTC', amount: 1 }],
+			metadata: { swap: { outPriceUSD: '90000' } }
+		});
+		const m = new FakeMidgard([settled]);
+		(m as unknown as { actions: (p: Record<string, unknown>) => Promise<{ actions: MidgardAction[] }> }).actions = async (p) =>
+			p.txid === 'PENDINGTX1' ? { actions: [settled] } : { actions: [settled] };
+		// primes trace:realtime's cursor at the current head, as the follower's
+		// own first-run branch does, so this tick only polls trace:pending
+		await sql.query(
+			`INSERT INTO oz_state (id, value, updated_at) VALUES ('trace:realtime', '{"height": 1001}', now())
+			 ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value`
+		);
+		const tick = await runRealtimeTick(sql, m);
+		expect(tick.hits).toBe(1);
+		const row = await sql.query(`SELECT hop, risk FROM oz_traced WHERE key = $1`, [`btc:${settledRecipient}`]);
+		expect(row.rows[0]).toMatchObject({ hop: 1, risk: 'high' });
 	});
 });

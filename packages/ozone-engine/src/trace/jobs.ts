@@ -14,6 +14,13 @@ import { actionTxid, parseTxAddress } from './flows.js';
 /** An address with more THORChain actions than this is treated as a service and not propagated. */
 export const SERVICE_ACTIONS = 2000;
 
+/** A THORChain action seen `pending` (no outputs yet): re-read until it settles. */
+export interface PendingAction {
+	txid: string;
+	height: number;
+	since: number;
+}
+
 export interface BackfillOptions {
 	cfg?: TraceConfig;
 	prices?: PriceOracle;
@@ -55,11 +62,17 @@ export async function checkAddress(
 	lookup: (key: string) => IndexEntry | undefined,
 	prices: PriceOracle | undefined,
 	cfg: TraceConfig
-): Promise<{ hits: TraceHit[]; dust: DustFlow[]; actions: number; maxHeight: number; service: boolean }> {
+): Promise<{ hits: TraceHit[]; dust: DustFlow[]; actions: number; maxHeight: number; service: boolean; pending: PendingAction[] }> {
 	const hits: TraceHit[] = [];
 	const dust: DustFlow[] = [];
+	const pending: PendingAction[] = [];
 	let actions = 0;
 	let maxHeight = fromHeight;
+	// A pending action (a streaming swap or delayed outbound still in flight,
+	// with no outputs yet) must never be folded into the cursor: once
+	// checked_height reaches or passes it, a height-cursor scan can never
+	// re-read it, however many times the address is later rechecked.
+	let lowestPendingHeight: number | undefined;
 	let service = false;
 	const seenActions = new Set<string>();
 	for (const form of queryForms(key, toChecksumAddress)) {
@@ -70,12 +83,20 @@ export async function checkAddress(
 			if (seenActions.has(id)) continue;
 			seenActions.add(id);
 			actions++;
-			maxHeight = Math.max(maxHeight, Number(a.height));
+			const h = Number(a.height);
+			if (a.status === 'pending') {
+				lowestPendingHeight = lowestPendingHeight === undefined ? h : Math.min(lowestPendingHeight, h);
+				const txid = actionTxid(a);
+				if (!txid.startsWith('H')) pending.push({ txid, height: h, since: Date.now() });
+			} else {
+				maxHeight = Math.max(maxHeight, h);
+			}
 			hits.push(...traceAction(a, lookup, prices, cfg, (d) => dust.push(d)));
 		}
 		if (n >= SERVICE_ACTIONS) service = true;
 	}
-	return { hits: dedupe(hits), dust, actions, maxHeight, service };
+	if (lowestPendingHeight !== undefined) maxHeight = Math.min(maxHeight, lowestPendingHeight - 1);
+	return { hits: dedupe(hits), dust, actions, maxHeight, service, pending };
 }
 
 export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: BackfillOptions = {}): Promise<BackfillResult> {
@@ -86,6 +107,25 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 	const maxAddresses = opts.maxAddresses ?? Infinity;
 	const res: BackfillResult = { checked: 0, actions: 0, hits: 0, traced: 0, services: 0, errors: 0, remaining: 0 };
 	const attempted = new Set<string>();
+	// Serializes trace:pending read-modify-writes across the concurrent
+	// per-address workers below (a plain get/set would drop a concurrent
+	// worker's addition otherwise).
+	let pendingChain: Promise<void> = Promise.resolve();
+	const recordPending = (items: PendingAction[]): Promise<void> => {
+		if (!items.length) return pendingChain;
+		pendingChain = pendingChain.then(async () => {
+			const existing = (await getState<PendingAction[]>(sql, 'trace:pending')) ?? [];
+			let changed = false;
+			for (const p of items) {
+				if (!existing.some((e) => e.txid === p.txid)) {
+					existing.push(p);
+					changed = true;
+				}
+			}
+			if (changed) await setState(sql, 'trace:pending', existing);
+		});
+		return pendingChain;
+	};
 	for (;;) {
 		const index = await loadTraceIndex(sql);
 		const tasks = await pendingChecks(
@@ -113,6 +153,7 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 						log.info(`trace ${task.key}: ${r.actions} actions, ${r.hits.length} flows flagged`);
 					}
 					if (r.dust.length) await recordDustTotals(sql, r.dust);
+					if (r.pending.length) await recordPending(r.pending);
 					res.actions += r.actions;
 					res.checked++;
 					if (r.service) res.services++;
@@ -128,12 +169,6 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 		if (Date.now() > deadline) break;
 	}
 	return res;
-}
-
-interface PendingAction {
-	txid: string;
-	height: number;
-	since: number;
 }
 
 function isFlaggedSender(t: { address: string; coins: Array<{ asset: string }> }, lookup: (k: string) => IndexEntry | undefined): boolean {
