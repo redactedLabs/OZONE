@@ -75,6 +75,29 @@ describe('EU consolidated list', () => {
 		expect(joined?.meta?.joinedFragments).toBe(true);
 		expect(joined?.entity).toBe('Grinex');
 	});
+
+	it('never accepts a non-http(s) refUrl from the upstream feed — falls back to the safe default', () => {
+		// eu_fsf is the only source whose refUrl comes from upstream-controlled
+		// free text (see sources/eu.ts); a poisoned <publicationUrl> or
+		// regulationSummary@publicationUrl must not reach oz_entries.ref_url,
+		// which is bound straight into <a href> on /banned and both
+		// certificate pages with no other scheme check downstream.
+		const malicious = `<?xml version="1.0"?>
+<export generationDate="2026-01-01T00:00:00">
+<sanctionEntity euReferenceNumber="EU.TEST.1" logicalId="999001">
+<regulation regulationType="amendment" publicationDate="2025-01-01" numberTitle="TEST/1" logicalId="999002">
+</regulation>
+<nameAlias wholeName="Test Malicious Entity" strong="true" logicalId="999003">
+<remark>Known blockchain wallet addresses: 0x1234567890123456789012345678901234567890</remark>
+<regulationSummary regulationType="amendment" publicationDate="2025-01-01" numberTitle="TEST/1" publicationUrl="javascript:alert(document.domain)"/>
+</nameAlias>
+</sanctionEntity>
+</export>`;
+		const out = parseEuFsfXml(malicious);
+		expect(out.entries).toHaveLength(1);
+		expect(out.entries[0].key).toBe('evm:0x1234567890123456789012345678901234567890');
+		expect(out.entries[0].refUrl).toBe('https://www.sanctionsmap.eu/');
+	});
 });
 
 describe('FBI Bybit PSA', () => {

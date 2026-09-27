@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { sourceLabel } from '$lib/utils/sourceNames';
+	import { safeHref } from '$lib/utils/safeHref';
 
 	let address = $state('');
 	let phase = $state<'idle' | 'scanning' | 'done'>('idle');
@@ -349,7 +350,7 @@
 									<span class="text-xs" style="color: var(--text);">{match.entityName || 'Match found'}</span>
 								</div>
 								{#if match.reason}
-									<div class="text-[10px] mt-1" style="color: var(--text-muted);">{match.reason}{#if match.ref}&nbsp;<a href={match.ref} target="_blank" rel="noopener" style="color: var(--app-accent);">source&nbsp;&#8599;</a>{/if}</div>
+									<div class="text-[10px] mt-1" style="color: var(--text-muted);">{match.reason}{#if safeHref(match.ref)}&nbsp;<a href={safeHref(match.ref)} target="_blank" rel="noopener" style="color: var(--app-accent);">source&nbsp;&#8599;</a>{/if}</div>
 								{/if}
 							</div>
 						{/each}

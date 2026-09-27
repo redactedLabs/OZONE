@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { safeHref } from '$lib/utils/safeHref';
 
 	let { data } = $props();
 
@@ -165,7 +166,7 @@
 							<div>{truncate(entry.entityName || '--', 36)}</div>
 							<div style="color: var(--text-muted);">
 								{truncate(entry.reason || '', 60)}
-								{#if entry.ref}<a href={entry.ref} target="_blank" rel="noopener" style="color: var(--app-accent);"> source&nbsp;&#8599;</a>{/if}
+								{#if safeHref(entry.ref)}<a href={safeHref(entry.ref)} target="_blank" rel="noopener" style="color: var(--app-accent);"> source&nbsp;&#8599;</a>{/if}
 							</div>
 						</td>
 						<td class="px-4 py-3 text-xs" style="color: var(--text-muted);" title={`First seen by Ozone ${new Date(entry.addedAt).toLocaleDateString()}${entry.removedAt ? ` · removed ${new Date(entry.removedAt).toLocaleDateString()}` : ''}`}>

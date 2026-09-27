@@ -14,6 +14,20 @@ import { decodeEntities, parseAttrs } from '../util/xml.js';
 export const EU_FSF_URL =
 	'https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw';
 export const EU_FSF_MIRROR_URL = 'https://data.opensanctions.org/datasets/latest/eu_fsf/source.xml';
+const FALLBACK_REF_URL = 'https://www.sanctionsmap.eu/';
+
+/**
+ * eu_fsf is the only source whose refUrl comes from upstream-controlled free
+ * text (the official feed's <publicationUrl>, or the same field via the
+ * OpenSanctions mirror used whenever the official endpoint fails) rather
+ * than a hardcoded, Ozone-owned constant. Every consumer eventually binds
+ * this value into an <a href> (see $lib/utils/safeHref.ts) with no other
+ * scheme check downstream, so a non-http(s) value must never be accepted
+ * here in the first place.
+ */
+function isHttpUrl(url: string | undefined): url is string {
+	return typeof url === 'string' && /^https?:\/\//i.test(url);
+}
 
 export function parseEuFsfXml(xml: string): ParseResult {
 	const res = emptyResult();
@@ -45,7 +59,8 @@ export function parseEuFsfXml(xml: string): ParseResult {
 			if (!found.length) continue;
 			const summary = m[2] ? parseAttrs(m[2]) : {};
 			const listedAt = summary.publicationDate || regAttrs.publicationDate || undefined;
-			const refUrl = summary.publicationUrl || regUrl || 'https://www.sanctionsmap.eu/';
+			const candidateRefUrl = summary.publicationUrl || regUrl;
+			const refUrl = isHttpUrl(candidateRefUrl) ? candidateRefUrl : FALLBACK_REF_URL;
 			for (const f of found) {
 				const p = f.parsed;
 				if (byKey.has(p.key)) continue;
