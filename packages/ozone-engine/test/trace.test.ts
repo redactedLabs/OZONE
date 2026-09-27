@@ -70,6 +70,23 @@ describe('flow extraction (synthetic edge cases)', () => {
 		expect(extractFlows({ ...a, status: 'failed' })).toEqual([]);
 	});
 
+	it('an affiliate-address match only suppresses an output within the declared fee', () => {
+		const dest = 'thor1fns25sytpf2gsdlg76g45620u5axm4mkrypqrh';
+		const swap = (outAmount: number) =>
+			action({
+				height: 101,
+				in: [{ address: '0xaaaa000000000000000000000000000000000009', asset: 'ETH.ETH', amount: 100 }],
+				out: [{ address: dest, asset: 'THOR.RUNE', amount: outAmount }],
+				metadata: { swap: { affiliateAddress: dest, affiliateFee: '10', inPriceUSD: '3000', outPriceUSD: '1.5' } }
+			});
+		// input value ~$300,000; a 10 bps (0.1%) fee ceiling (x1.1) is ~$330.
+		// The swapper named the swap's own destination as affiliate, but this
+		// output ($30,000) is far larger than the declared fee: trace it.
+		expect(extractFlows(swap(20_000))).toHaveLength(1);
+		// A genuinely small output within the declared fee stays excluded.
+		expect(extractFlows(swap(200))).toEqual([]);
+	});
+
 	it('addLiquidity links the asset and RUNE sides; THORNames link owner and alias', () => {
 		const add = action({
 			type: 'addLiquidity',

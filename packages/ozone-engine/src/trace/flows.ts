@@ -170,14 +170,28 @@ export function extractFlows(a: MidgardAction, prices?: PriceOracle): Flow[] {
 		return flows;
 	}
 
+	// A swapper's memo names the affiliate; it is trusted for the fee's size
+	// (`affiliateFee`, in bps of the swap's input value) but not for which
+	// output is the fee, since the swapper also controls the output address.
+	const affiliateFeeBps = Number(meta.swap?.affiliateFee ?? meta.refund?.affiliateFee ?? 0);
+	const inputUsd = ins.reduce((sum, x) => {
+		const c = x.t.coins?.[0];
+		const p = c ? priceOf(c.asset, 'in') : undefined;
+		return p ? sum + (Number(c.amount) / 1e8) * p : sum;
+	}, 0);
+	const affiliateFeeCeiling = affiliateFeeBps > 0 && inputUsd > 0 ? (affiliateFeeBps / 10_000) * inputUsd * 1.1 : 0;
+
 	for (const o of a.out) {
 		if (o.affiliate) continue;
 		const po = parseTxAddress(o);
 		if (!po || isExcludedTarget(po)) continue;
-		if (affiliateAddr && po.address.toLowerCase() === affiliateAddr) continue;
 		const coin = o.coins?.[0];
 		const price = coin ? priceOf(coin.asset, 'out') : undefined;
 		const usd = coin && price ? (Number(coin.amount) / 1e8) * price : undefined;
+		// Only exclude an address-matched "affiliate" output when it is no
+		// bigger than the declared fee allows: a swapper naming the swap's own
+		// destination as affiliate must not suppress tracing of the real value.
+		if (affiliateAddr && po.address.toLowerCase() === affiliateAddr && usd !== undefined && usd <= affiliateFeeCeiling) continue;
 		for (const x of ins) {
 			if (x.p.key === po.key) continue; // refunds, self-swaps
 			flows.push({
