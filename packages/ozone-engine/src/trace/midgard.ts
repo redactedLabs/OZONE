@@ -8,7 +8,14 @@
  *   EIP-55). Forward tracing queries the sender form (see queryForms);
  * - multi-address queries (`address=a,b`) time out at the gateway, so every
  *   address is queried on its own;
- * - pagination is by `nextPageToken` (newest first).
+ * - a page is always sorted newest first; `nextPageToken` continues with
+ *   OLDER actions, `prevPageToken` with NEWER ones;
+ * - `fromHeight=H` is inclusive and returns the `limit` OLDEST actions at or
+ *   after H (not the newest ones). Following `nextPageToken` from such a page
+ *   goes below H and returns nothing, so a forward read must continue with
+ *   `prevPageToken` (measured 2026-09-27: an address with 12 actions, limit 5,
+ *   fromHeight=1 → its 5 oldest; nextPageToken → none; prevPageToken → the
+ *   next 5 newer).
  */
 import { httpJson, RateLimiter, type HttpOptions } from '../util/http.js';
 
@@ -40,7 +47,23 @@ export interface MidgardAction {
 
 export interface ActionsPage {
 	actions: MidgardAction[];
+	/** Continues with older actions. */
 	nextPageToken?: string;
+	/** Continues with newer actions. */
+	prevPageToken?: string;
+}
+
+/** Actions per page (Midgard's maximum). */
+export const PAGE_SIZE = 50;
+
+/**
+ * Where a bounded forward read stopped: `complete` when the newest action
+ * was reached; otherwise `resumeHeight` is the height to read again from
+ * (inclusive) — the newest height that may not have been read completely.
+ */
+export interface ForwardRead {
+	complete: boolean;
+	resumeHeight?: number;
 }
 
 export interface MidgardOptions {
@@ -69,62 +92,53 @@ export class Midgard {
 		const url = `${this.baseUrl}/v2/actions?${q.toString()}`;
 		this.requests++;
 		const body = await this.limiter.run(() =>
-			httpJson<{ actions?: MidgardAction[]; meta?: { nextPageToken?: string } }>(url, {
+			httpJson<{ actions?: MidgardAction[]; meta?: { nextPageToken?: string; prevPageToken?: string } }>(url, {
 				timeoutMs: 75_000,
 				retries: 3,
 				...this.opts.http
 			})
 		);
-		return { actions: body.actions ?? [], nextPageToken: body.meta?.nextPageToken || undefined };
+		return {
+			actions: body.actions ?? [],
+			nextPageToken: body.meta?.nextPageToken || undefined,
+			prevPageToken: body.meta?.prevPageToken || undefined
+		};
 	}
 
 	/**
-	 * Every action involving `address` (as sender or recipient), newest
-	 * first, optionally only those newer than `fromHeight`.
+	 * Every action involving `address` (as sender or recipient) at or after
+	 * `fromHeight` (inclusive; whole history when unset), OLDEST FIRST, at
+	 * most `maxPages` pages. `progress` (when given) is filled in when the
+	 * generator finishes: `complete` once the newest action was read,
+	 * otherwise where to resume.
 	 */
-	async *actionsForAddress(address: string, opts: { fromHeight?: number; maxPages?: number } = {}): AsyncGenerator<MidgardAction> {
-		let token: string | undefined;
-		const maxPages = opts.maxPages ?? 400;
-		for (let page = 0; page < maxPages; page++) {
-			const res = await this.actions({
-				address,
-				limit: 50,
-				nextPageToken: token,
-				fromHeight: opts.fromHeight && opts.fromHeight > 0 ? opts.fromHeight : undefined
-			});
-			for (const a of res.actions) yield a;
-			if (!res.nextPageToken || res.actions.length < 50) return;
-			token = res.nextPageToken;
-		}
+	async *actionsForAddress(
+		address: string,
+		opts: { fromHeight?: number; maxPages?: number; progress?: ForwardRead } = {}
+	): AsyncGenerator<MidgardAction> {
+		yield* readForward((p) => this.actions({ address, ...p }), opts.fromHeight, opts.maxPages ?? 400, opts.progress);
 	}
 
 	/**
 	 * Actions newer than `afterHeight`, oldest first (for the real-time
-	 * follower). Stops after `maxPages` pages; `complete` tells whether the
-	 * cursor was reached.
+	 * follower), read forward from the cursor: a follower that fell behind
+	 * catches up in chain order over several calls and never skips a range.
+	 * `complete` tells whether the newest action was reached; if not,
+	 * `resumeAfter` is the height up to which every action was returned (the
+	 * newest page may end in the middle of a height).
 	 */
-	async actionsSince(afterHeight: number, maxPages = 40): Promise<{ actions: MidgardAction[]; complete: boolean; head: number }> {
+	async actionsSince(
+		afterHeight: number,
+		maxPages = 40
+	): Promise<{ actions: MidgardAction[]; complete: boolean; head: number; resumeAfter?: number }> {
+		const progress: ForwardRead = { complete: false };
 		const out: MidgardAction[] = [];
-		let token: string | undefined;
-		let head = afterHeight;
-		for (let page = 0; page < maxPages; page++) {
-			const res = await this.actions({ limit: 50, nextPageToken: token });
-			let reached = false;
-			for (const a of res.actions) {
-				const h = Number(a.height);
-				head = Math.max(head, h);
-				if (h <= afterHeight) {
-					reached = true;
-					continue;
-				}
-				out.push(a);
-			}
-			if (reached || !res.nextPageToken || res.actions.length === 0) {
-				return { actions: out.reverse(), complete: true, head };
-			}
-			token = res.nextPageToken;
+		for await (const a of readForward((p) => this.actions(p), afterHeight + 1, maxPages, progress)) {
+			if (Number(a.height) > afterHeight) out.push(a);
 		}
-		return { actions: out.reverse(), complete: false, head };
+		const head = Math.max(afterHeight, ...out.map((a) => Number(a.height)));
+		if (progress.complete) return { actions: out, complete: true, head };
+		return { actions: out, complete: false, head, resumeAfter: Math.max(afterHeight, (progress.resumeHeight ?? afterHeight + 1) - 1) };
 	}
 
 	async pools(): Promise<Array<{ asset: string; assetPriceUSD: string; status: string }>> {
@@ -143,6 +157,42 @@ export class Midgard {
 			httpJson<{ runePriceUSD?: string }>(`${this.baseUrl}/v2/stats`, { timeoutMs: 60_000, ...this.opts.http })
 		);
 		return Number(s.runePriceUSD ?? 0);
+	}
+}
+
+/**
+ * Reads a Midgard action stream forward in chain order: the first page from
+ * `fromHeight` (the oldest actions at or after it; the whole history when
+ * unset), then `prevPageToken` (newer) until a page is not full. Midgard
+ * sorts every page newest first; each page is yielded oldest first.
+ */
+export async function* readForward(
+	fetchPage: (params: Record<string, string | number | undefined>) => Promise<ActionsPage>,
+	fromHeight: number | undefined,
+	maxPages: number,
+	progress?: ForwardRead
+): AsyncGenerator<MidgardAction> {
+	let page = await fetchPage({ limit: PAGE_SIZE, fromHeight: fromHeight && fromHeight > 0 ? fromHeight : 1 });
+	for (let n = 1; ; n++) {
+		const ascending = [...page.actions].sort((a, b) => Number(a.height) - Number(b.height));
+		for (const a of ascending) yield a;
+		if (page.actions.length < PAGE_SIZE) {
+			if (progress) {
+				progress.complete = true;
+				delete progress.resumeHeight;
+			}
+			return;
+		}
+		if (n >= Math.max(1, maxPages) || !page.prevPageToken) {
+			// Budget spent (or no way forward): the newest height of this page may
+			// continue on the next one, so it is where a later read resumes.
+			if (progress) {
+				progress.complete = false;
+				progress.resumeHeight = Number(ascending[ascending.length - 1].height);
+			}
+			return;
+		}
+		page = await fetchPage({ limit: PAGE_SIZE, prevPageToken: page.prevPageToken });
 	}
 }
 

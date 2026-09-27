@@ -70,6 +70,12 @@ export interface IndexEntry {
 	 */
 	sinceTime?: number;
 	service?: boolean;
+	/**
+	 * Listed through the incident path (a maintainer flag marked urgent, e.g.
+	 * a hack announced today), or traced from such a listing: checked before
+	 * anything else.
+	 */
+	urgent?: boolean;
 }
 
 export interface TraceHit extends Flow {

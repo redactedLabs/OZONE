@@ -17,7 +17,9 @@
 		{ "address": "0xb21e59b3d4e4d6c5247325dc5fbedbc89afc69f4", "chain": "ETH", "why": "Etherscan label Bybit Exploiter 65", "source": "ethlabels" },
 		{ "address": "19qs8FPxK6VfkqHL7TPZDhw3r2rJPU6yhE", "chain": "BTC", "why": "THORChain trace — received 1.21 BTC from Bybit Exploiter 65 (ETH→BTC swap, 2025-02-25)", "source": "thorchain_trace" },
 		{ "address": "3LU8wRu4ZnXP4UM8Yo6kkTiGHM9BubgyiG", "chain": "BTC", "why": "FBI 2023-08-22 DPRK bitcoin address", "source": "curated" },
-		{ "address": "0x1ea3eb07180e408d2742821aa7d94f6c06064fcd", "chain": "ETH", "why": "Tether-frozen (USDT blacklist, Ethereum)", "source": "tether", "live": true }
+		{ "address": "0x1ea3eb07180e408d2742821aa7d94f6c06064fcd", "chain": "ETH", "why": "Tether-frozen (USDT blacklist, Ethereum)", "source": "tether", "live": true },
+		{ "address": "1MhJEWrzvakvRv45mP5SYyJF8QAYx5csrQ", "chain": "BTC", "why": "THORChain trace — 7.03 BTC from Bybit cluster member 0xda999b8b (ETH→BTC swap 0AF06604, 2025-03-02)", "source": "thorchain_trace", "live": true },
+		{ "address": "15btjCPN4UUwdeSTFTbhnFQJCZcvDHoAdp", "chain": "BTC", "why": "THORChain trace — 7.60 BTC from Bybit cluster member 0xcf9a4f5f (ETH→BTC swap C4DE71ED, 2025-02-22)", "source": "thorchain_trace", "live": true }
 	],
 	"negatives": [
 		{ "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "chain": "BTC", "why": "Bitcoin genesis address" },

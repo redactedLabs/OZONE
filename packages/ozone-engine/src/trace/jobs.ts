@@ -7,7 +7,7 @@ import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recor
 import type { Logger, Sql } from '../types.js';
 import { silentLogger } from '../types.js';
 import { toChecksumAddress } from '../util/evm.js';
-import type { MidgardLike as Midgard } from './midgard.js';
+import type { ForwardRead, MidgardLike as Midgard } from './midgard.js';
 import { loadPoolPrices, type PriceOracle } from './prices.js';
 import { DEFAULT_TRACE_CONFIG, traceAction, traceRisk, type DustFlow, type IndexEntry, type TraceConfig, type TraceHit } from './tracer.js';
 import { actionTxid, parseTxAddress } from './flows.js';
@@ -34,6 +34,13 @@ export interface BackfillOptions {
 	filter?: (key: string, e: IndexEntry) => boolean;
 	/** Parallel address checks (each is rate-limited by the Midgard client). */
 	concurrency?: number;
+	/** Midgard pages per check (default CHECK_PAGES / CHECK_PAGES_NEVER_SERVICE). */
+	pages?: PageBudget;
+}
+
+export interface PageBudget {
+	normal?: number;
+	neverService?: number;
 }
 
 export interface BackfillResult {
@@ -60,14 +67,33 @@ function dedupe(hits: TraceHit[]): TraceHit[] {
 	});
 }
 
+/**
+ * Pages read per check. A listed key (or a high-risk traced one) is never a
+ * service, so its history is read to the end — across several checks when it
+ * is longer than one check's budget; any other key with more than
+ * SERVICE_ACTIONS actions is a service and not followed.
+ */
+export const CHECK_PAGES = SERVICE_ACTIONS / 50 + 1;
+export const CHECK_PAGES_NEVER_SERVICE = 200;
+
 export async function checkAddress(
 	midgard: Midgard,
 	key: string,
 	fromHeight: number,
 	lookup: (key: string) => IndexEntry | undefined,
 	prices: PriceOracle | undefined,
-	cfg: TraceConfig
-): Promise<{ hits: TraceHit[]; dust: DustFlow[]; actions: number; maxHeight: number; service: boolean; pending: PendingAction[] }> {
+	cfg: TraceConfig,
+	pages: PageBudget = {}
+): Promise<{
+	hits: TraceHit[];
+	dust: DustFlow[];
+	actions: number;
+	maxHeight: number;
+	service: boolean;
+	pending: PendingAction[];
+	/** The history continues past this check's page budget: check again from `maxHeight`. */
+	more: boolean;
+}> {
 	const hits: TraceHit[] = [];
 	const dust: DustFlow[] = [];
 	const pending: PendingAction[] = [];
@@ -87,9 +113,17 @@ export async function checkAddress(
 	const neverService =
 		!!entry && (entry.hop === 0 || riskRank(traceRisk(entry.originRisk, entry.hop, undefined, 'value', cfg) ?? 'none') >= riskRank('high'));
 	const seenActions = new Set<string>();
+	let more = false;
 	for (const form of queryForms(key, toChecksumAddress)) {
 		let n = 0;
-		for await (const a of midgard.actionsForAddress(form, { fromHeight, maxPages: SERVICE_ACTIONS / 50 + 1 })) {
+		// Oldest first from `fromHeight` (inclusive), so a read cut short by the
+		// page budget resumes where it stopped instead of skipping history.
+		const progress: ForwardRead = { complete: true };
+		for await (const a of midgard.actionsForAddress(form, {
+			fromHeight,
+			maxPages: neverService ? (pages.neverService ?? CHECK_PAGES_NEVER_SERVICE) : (pages.normal ?? CHECK_PAGES),
+			progress
+		})) {
 			n++;
 			const id = `${a.height}|${a.type}|${a.in[0]?.txID ?? ''}|${a.out[0]?.address ?? ''}`;
 			if (seenActions.has(id)) continue;
@@ -106,9 +140,15 @@ export async function checkAddress(
 			hits.push(...traceAction(a, lookup, prices, cfg, (d) => dust.push(d)));
 		}
 		if (!neverService && n >= SERVICE_ACTIONS) service = true;
+		else if (!progress.complete) more = true;
 	}
 	if (lowestPendingHeight !== undefined) maxHeight = Math.min(maxHeight, lowestPendingHeight - 1);
-	return { hits: dedupe(hits), dust, actions, maxHeight, service, pending };
+	// `maxHeight` is where the next check starts (Midgard's fromHeight is
+	// inclusive, so a height the budget cut in half is read again in full).
+	// A read that cannot move forward (one height with more actions than the
+	// whole budget) must not spin: it is then reported as finished.
+	if (more && maxHeight <= fromHeight) more = false;
+	return { hits: dedupe(hits), dust, actions, maxHeight, service, pending, more };
 }
 
 export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: BackfillOptions = {}): Promise<BackfillResult> {
@@ -165,7 +205,7 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 			while (cursor < round.length && Date.now() <= deadline) {
 				const task = round[cursor++];
 				try {
-					const r = await checkAddress(midgard, task.key, task.fromHeight, lookup, prices, cfg);
+					const r = await checkAddress(midgard, task.key, task.fromHeight, lookup, prices, cfg, opts.pages);
 					if (r.hits.length) {
 						const rec = await recordHits(sql, r.hits);
 						res.hits += rec.edges;
@@ -182,7 +222,10 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 					res.actions += r.actions;
 					res.checked++;
 					if (r.service) res.services++;
-					await markChecked(sql, task.key, r.service ? 'service' : 'done', { height: r.maxHeight, actions: r.actions });
+					// A history longer than one check's budget stays pending: the next
+					// slice continues from where this one stopped.
+					if (r.more) log.info(`trace ${task.key}: long history, continuing from height ${r.maxHeight} in the next slice`);
+					await markChecked(sql, task.key, r.service ? 'service' : r.more ? 'pending' : 'done', { height: r.maxHeight, actions: r.actions });
 				} catch (e) {
 					res.errors++;
 					await markChecked(sql, task.key, 'error', { error: (e as Error).message });
@@ -209,10 +252,17 @@ export interface RealtimeResult {
 	dustTraced: number;
 	from: number;
 	to: number;
+	/** The cursor reached the newest action (false: still catching up, continued by the next tick). */
 	complete: boolean;
 }
 
-/** Processes THORChain actions newer than the stored cursor. */
+/**
+ * Processes THORChain actions newer than the stored cursor, in chain order.
+ * A follower that fell behind (a restart, an outage) reads forward from its
+ * cursor, at most `maxPages` pages per tick, and moves the cursor only over
+ * what it has read: it catches up over the next ticks and never skips a
+ * range, so no flagged address has to re-read its history for the gap.
+ */
 export async function runRealtimeTick(
 	sql: Sql,
 	midgard: Midgard,
@@ -229,7 +279,7 @@ export async function runRealtimeTick(
 		await setState(sql, 'trace:realtime', { height: from });
 		return { processed: 0, hits: 0, traced: 0, dustTraced: 0, from, to: from, complete: true };
 	}
-	const { actions, complete, head } = await midgard.actionsSince(from, opts.maxPages ?? 40);
+	const { actions, complete, head, resumeAfter } = await midgard.actionsSince(from, opts.maxPages ?? 40);
 	const index = opts.index ?? (await loadTraceIndex(sql));
 	const lookup = (k: string) => index.get(k);
 	const dust: DustFlow[] = [];
@@ -264,12 +314,15 @@ export async function runRealtimeTick(
 	const rec = await recordHits(sql, dedupe(hits));
 	const small = await recordDustFlows(sql, dust, cfg, log);
 	if (small.traced) log.info(`trace: ${small.traced} recipient(s) traced by a total of small transfers`);
-	const to = complete ? head : Math.max(from, ...actions.map((a) => Number(a.height)));
-	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { gapFrom: from }) });
-	if (!complete) {
-		// the follower fell behind: make every flagged address re-read its history from `from`
-		await sql.query(`UPDATE oz_trace_checked SET status = 'pending' WHERE status = 'done'`);
+	let to = complete ? head : (resumeAfter ?? from);
+	if (!complete && to <= from) {
+		// One height with more actions than a whole tick's budget cannot be
+		// split by height: accept what was read rather than stall on it.
+		to = head;
+		log.warn(`trace: real-time follower moved past height ${head} after reading ${actions.length} actions of it in one tick`);
 	}
+	if (!complete) log.info(`trace: real-time follower catching up: ${actions.length} actions up to height ${to}`);
+	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { behind: true }) });
 	return { processed: actions.length, hits: rec.edges, traced: rec.traced, dustTraced: small.traced, from, to, complete };
 }
 

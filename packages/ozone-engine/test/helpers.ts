@@ -84,3 +84,55 @@ export class FakeMidgard implements MidgardLike {
 		return this.prices['THOR.RUNE'] ?? 0;
 	}
 }
+
+/**
+ * A `fetch` that answers Midgard's /v2/actions the way the real one does
+ * (measured against the public gateway, 2026-09-27): every page sorted
+ * newest first; no cursor → the newest `limit`; `fromHeight=H` (inclusive)
+ * → the `limit` OLDEST actions at or after H; `nextPageToken` → older than
+ * the token, `prevPageToken` → newer than it (the next `limit` in chain
+ * order); `address=` matches any in/out address exactly; `txid=` any txID.
+ * Tokens are positions (height and index within the height).
+ */
+export function midgardFetch(all: MidgardAction[], log: string[] = []): typeof fetch {
+	const pos = new Map<MidgardAction, number>();
+	const perHeight = new Map<number, number>();
+	for (const a of [...all].sort((x, y) => Number(x.height) - Number(y.height))) {
+		const h = Number(a.height);
+		const i = perHeight.get(h) ?? 0;
+		perHeight.set(h, i + 1);
+		pos.set(a, h * 10_000 + i);
+	}
+	const asc = [...all].sort((x, y) => pos.get(x)! - pos.get(y)!);
+	return (async (input: string | URL | Request) => {
+		const url = new URL(String(input));
+		log.push(url.search);
+		if (!url.pathname.endsWith('/v2/actions')) return new Response('not found', { status: 404 });
+		const p = url.searchParams;
+		const limit = Number(p.get('limit') ?? 50);
+		let list = asc;
+		const address = p.get('address');
+		if (address) list = list.filter((a) => [...a.in, ...a.out].some((t) => t.address === address));
+		const txid = p.get('txid');
+		if (txid) list = list.filter((a) => [...a.in, ...a.out].some((t) => t.txID === txid));
+		let page: MidgardAction[];
+		if (p.get('prevPageToken')) {
+			const t = Number(p.get('prevPageToken'));
+			page = list.filter((a) => pos.get(a)! > t).slice(0, limit);
+		} else if (p.get('nextPageToken')) {
+			const t = Number(p.get('nextPageToken'));
+			const floor = Number(p.get('fromHeight') ?? 0);
+			page = list.filter((a) => pos.get(a)! < t && Number(a.height) >= floor).slice(-limit);
+		} else if (p.get('fromHeight')) {
+			const h = Number(p.get('fromHeight'));
+			page = list.filter((a) => Number(a.height) >= h).slice(0, limit);
+		} else {
+			page = list.slice(-limit);
+		}
+		const desc = [...page].reverse();
+		const meta = desc.length
+			? { nextPageToken: String(pos.get(desc[desc.length - 1])), prevPageToken: String(pos.get(desc[0])) }
+			: { nextPageToken: '', prevPageToken: '' };
+		return new Response(JSON.stringify({ actions: desc, meta }), { status: 200, headers: { 'content-type': 'application/json' } });
+	}) as typeof fetch;
+}

@@ -464,7 +464,12 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 		source: string;
 		entity: string | null;
 		cluster: string | null;
-	}>(`SELECT key, chain, address, risk, category, source, entity, meta->>'cluster' AS cluster FROM oz_entries WHERE removed_at IS NULL`);
+		urgent: boolean | null;
+	}>(
+		`SELECT key, chain, address, risk, category, source, entity, meta->>'cluster' AS cluster, (meta->>'urgent') = 'true' AS urgent
+		 FROM oz_entries WHERE removed_at IS NULL`
+	);
+	const urgentKeys = new Set<string>();
 	// Hack-cluster members count from the start of their incident: earlier
 	// activity cannot be the proceeds. (Not from the recorded transfer: the
 	// expansion sees plain ETH transfers only, so a member is often funded
@@ -484,6 +489,7 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 	for (const r of listed.rows) {
 		if (!isTraceOrigin(r.category)) continue;
 		if (suppressed.has(r.key) && r.category !== 'sanctions' && r.category !== 'law_enforcement') continue;
+		if (r.urgent === true) urgentKeys.add(r.key);
 		const sinceTime = r.source === 'cluster' && r.cluster ? incidentStart.get(r.cluster) : undefined;
 		put({
 			key: r.key,
@@ -539,6 +545,13 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 			service: t.service
 		});
 	}
+	// Incident path: a key listed urgently — and whatever was traced from it —
+	// is checked first (pendingChecks), whichever entry describes it best.
+	if (urgentKeys.size) {
+		for (const e of index.values()) {
+			if (urgentKeys.has(e.key) || urgentKeys.has(e.originKey)) e.urgent = true;
+		}
+	}
 	return index;
 }
 
@@ -565,24 +578,56 @@ export interface CheckTask {
 	fromHeight: number;
 	hop: number;
 	priority: number;
+	/** Incident path: before everything else. */
+	urgent: boolean;
+	/** Within one priority: 0 traced, 1 attribution, 2 bulk list, 3 same-key twin. */
+	seedClass: number;
 }
+
+/** Listings with many addresses and weaker attribution than a named incident or a sanctions designation. */
+const BULK_CATEGORIES: ReadonlySet<string> = new Set(['stablecoin_freeze', 'phishing', 'scam']);
+
+/**
+ * Within one priority, what to read first: traced keys (proven THORChain
+ * users), then attributions (sanctions, law enforcement, hack and exploit
+ * attributions, maintainer flags), then bulk lists (issuer freezes,
+ * phishing/scam lists), then same-key twins (speculative: the same key used
+ * on a sibling chain).
+ */
+export function seedClass(e: IndexEntry): number {
+	if (e.hop > 0) return 0;
+	if (e.key !== e.originKey) return 3;
+	return BULK_CATEGORIES.has(e.originCategory) ? 2 : 1;
+}
+
+/**
+ * A key whose last check failed waits this long before it is tried again:
+ * while Midgard fails (an outage, a rate limit), the backfill must not spend
+ * every slice re-trying the same top-priority keys.
+ */
+export const ERROR_RETRY_MS = 30 * 60_000;
 
 /**
  * Addresses whose Midgard history still has to be read: listed origins
  * (and twins) never checked, and traced addresses (below the hop limit, not
- * services) never checked since they were tainted. Highest risk first.
+ * services) never checked since they were tainted. Incident-path keys
+ * first, then highest risk (origin risk, less one per hop), then seedClass,
+ * then key order. A key whose check failed is retried after ERROR_RETRY_MS.
  */
 export async function pendingChecks(
 	sql: Sql,
 	index: Map<string, IndexEntry>,
 	maxHops: number,
 	limit = 1000,
-	filter?: (key: string, e: IndexEntry) => boolean
+	filter?: (key: string, e: IndexEntry) => boolean,
+	now = Date.now()
 ): Promise<CheckTask[]> {
 	const checked = new Map(
-		(await sql.query<{ key: string; status: string; checked_height: string | number }>(`SELECT key, status, checked_height FROM oz_trace_checked`)).rows.map(
-			(r) => [r.key, { status: r.status, height: Number(r.checked_height) || 0 }]
-		)
+		(
+			await sql.query<{ key: string; status: string; checked_height: string | number; checked_at: string | Date | null }>(
+				`SELECT key, status, checked_height, checked_at FROM oz_trace_checked`
+			)
+		).rows.map((r) => [r.key, { status: r.status, height: Number(r.checked_height) || 0, at: r.checked_at ? new Date(r.checked_at).getTime() : 0 }])
 	);
 	const tasks: CheckTask[] = [];
 	for (const e of index.values()) {
@@ -592,22 +637,28 @@ export async function pendingChecks(
 		if (!['evm', 'btc', 'ltc', 'doge', 'bch', 'tron', 'xrp', 'sol', 'thor', 'gaia'].includes(ns)) continue; // THORChain chains only
 		const c = checked.get(e.key);
 		if (c?.status === 'done' || c?.status === 'service') continue;
+		if (c?.status === 'error' && now - c.at < ERROR_RETRY_MS && !e.urgent) continue;
 		tasks.push({
 			key: e.key,
 			// incremental: never re-read what an earlier check already covered
 			fromHeight: Math.max(e.since ?? 0, c?.height ?? 0),
 			hop: e.hop,
-			priority: riskRank(e.originRisk) * 10 - e.hop
+			priority: riskRank(e.originRisk) * 10 - e.hop,
+			urgent: !!e.urgent,
+			seedClass: seedClass(e)
 		});
 	}
-	tasks.sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key));
+	tasks.sort(
+		(a, b) =>
+			Number(b.urgent) - Number(a.urgent) || b.priority - a.priority || a.seedClass - b.seedClass || a.key.localeCompare(b.key)
+	);
 	return tasks.slice(0, limit);
 }
 
 export async function markChecked(
 	sql: Sql,
 	key: string,
-	status: 'done' | 'service' | 'error',
+	status: 'done' | 'service' | 'error' | 'pending',
 	info: { height?: number; actions?: number; error?: string } = {}
 ): Promise<void> {
 	await sql.query(

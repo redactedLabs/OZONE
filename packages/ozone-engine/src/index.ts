@@ -19,13 +19,14 @@ export {
 	loadDustGroups,
 	loadTraceIndex,
 	pendingChecks,
+	seedClass,
 	markChecked,
 	queryForms,
 	getState,
 	setState,
 	type DustRecordResult
 } from './store/trace.js';
-export { Midgard, DEFAULT_MIDGARD_URL, type MidgardAction, type MidgardLike } from './trace/midgard.js';
+export { Midgard, DEFAULT_MIDGARD_URL, PAGE_SIZE, readForward, type MidgardAction, type MidgardLike, type ForwardRead } from './trace/midgard.js';
 export { extractFlows, THORCHAIN_MODULES, type Flow } from './trace/flows.js';
 export { loadPoolPrices, StaticPrices, type PriceOracle } from './trace/prices.js';
 export {
@@ -41,7 +42,7 @@ export {
 	type DustFlow,
 	type SmallTransferTotal
 } from './trace/tracer.js';
-export { runTraceBackfill, runRealtimeTick, scheduleRecheck, checkAddress } from './trace/jobs.js';
+export { runTraceBackfill, runRealtimeTick, scheduleRecheck, checkAddress, SERVICE_ACTIONS, CHECK_PAGES, CHECK_PAGES_NEVER_SERVICE, type BackfillResult, type RealtimeResult } from './trace/jobs.js';
 export { expandCluster, clusterEntries } from './evm/expand.js';
 export {
 	collectSnapshot,

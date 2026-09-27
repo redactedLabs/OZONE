@@ -44,8 +44,16 @@ export async function httpBytes(url: string, opts: HttpOptions = {}): Promise<Ui
 				signal: controller.signal,
 				headers: { 'user-agent': USER_AGENT, ...(opts.headers ?? {}) }
 			});
+			if (!res.ok) {
+				// An unread error body keeps its connection busy: release it.
+				await res.body?.cancel().catch(() => undefined);
+			}
 			if (res.status === 429 || res.status >= 500) {
-				throw new HttpError(res.status, url, `HTTP ${res.status}`);
+				const err = new HttpError(res.status, url, `HTTP ${res.status}`);
+				// a rate-limited client waits as long as the server asks (bounded)
+				const after = Number(res.headers.get('retry-after'));
+				if (res.status === 429 && Number.isFinite(after) && after > 0) (err as HttpError & { retryAfterMs?: number }).retryAfterMs = Math.min(60_000, after * 1000);
+				throw err;
 			}
 			if (!res.ok) {
 				// 4xx other than 429 is not retried
@@ -60,7 +68,7 @@ export async function httpBytes(url: string, opts: HttpOptions = {}): Promise<Ui
 			lastErr = e;
 			if ((e as { fatal?: boolean }).fatal) throw e;
 			if (attempt < retries) {
-				const retryAfter = e instanceof HttpError && e.status === 429 ? 5000 : 0;
+				const retryAfter = e instanceof HttpError && e.status === 429 ? ((e as HttpError & { retryAfterMs?: number }).retryAfterMs ?? 5000) : 0;
 				await sleep(Math.max(retryAfter, 1000 * 2 ** attempt));
 			}
 		} finally {
