@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { groupTransactions, redactGroups, redactTransactions } from './historyService';
+import { afterEach, describe, expect, it } from 'vitest';
+import { fetchBalances, fetchMidgardActions, groupTransactions, isValidThorAddress, redactGroups, redactTransactions } from './historyService';
 import type { HistoryTransaction } from '$lib/utils/historyTypes';
+
+const REAL_THOR_ADDRESS = 'thor1fns25sytpf2gsdlg76g45620u5axm4mkrypqrh';
 
 const tx = (over: Partial<HistoryTransaction> = {}): HistoryTransaction => ({
 	type: 'send',
@@ -69,5 +71,39 @@ describe('redactGroups', () => {
 		// including as the group's own key — a recipient could otherwise look
 		// it up directly on a block explorer regardless of what the UI shows
 		expect(JSON.stringify(out)).not.toContain('TX-A');
+	});
+});
+
+describe('isValidThorAddress', () => {
+	it('accepts a real, checksum-valid thor1… address', () => {
+		expect(isValidThorAddress(REAL_THOR_ADDRESS)).toBe(true);
+	});
+
+	it('rejects a merely thor-prefixed string, other chains, and non-strings', () => {
+		expect(isValidThorAddress('thor1not-real-bech32')).toBe(false);
+		expect(isValidThorAddress('0x098b716b8aaf21512996dc57eb0615e2383e2f96')).toBe(false);
+		expect(isValidThorAddress('')).toBe(false);
+		expect(isValidThorAddress(undefined as unknown as string)).toBe(false);
+		expect(isValidThorAddress(123 as unknown as string)).toBe(false);
+	});
+});
+
+describe('fetchMidgardActions / fetchBalances: address validated before any fetch', () => {
+	const originalFetch = global.fetch;
+	afterEach(() => {
+		global.fetch = originalFetch;
+	});
+
+	it('never calls fetch for a non-thor address', async () => {
+		let called = false;
+		global.fetch = (async () => {
+			called = true;
+			throw new Error('fetch must not be called for an invalid address');
+		}) as typeof fetch;
+
+		expect(await fetchMidgardActions('not-a-thor-address')).toEqual([]);
+		expect(called).toBe(false);
+		expect(await fetchBalances('0x098b716b8aaf21512996dc57eb0615e2383e2f96')).toEqual([]);
+		expect(called).toBe(false);
 	});
 });

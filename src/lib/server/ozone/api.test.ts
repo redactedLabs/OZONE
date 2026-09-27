@@ -346,6 +346,18 @@ describe('API routes', () => {
 		}
 	});
 
+	it('POST /api/history refuses a non-bech32 address before any DB write or Midgard fetch', async () => {
+		const { POST } = await import('../../../routes/api/history/+server');
+		const res = await call(POST as Handler, {
+			url: '/api/history',
+			method: 'POST',
+			body: { address: 'thor1not-a-real-bech32-address' }
+		});
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body.error).toMatch(/valid thor address/i);
+	});
+
 	// A session existing is not enough: hooks.server.ts's role lookup fails
 	// closed (role ''), so these verdict-changing endpoints must refuse it
 	// exactly like an unauthenticated caller once past the 401 check — the

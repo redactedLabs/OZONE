@@ -1,9 +1,15 @@
 import { getContractLabel, getContract, isContract } from '$lib/utils/rujiraContracts';
 import { INTERNAL_TYPES } from '$lib/utils/historyTypes';
 import type { HistoryTransaction, HistoryGroup } from '$lib/utils/historyTypes';
+import { parseForChain } from '$ozone/index.js';
 
 const MIDGARD_URL = 'https://gateway.liquify.com/chain/thorchain_midgard';
 const THORNODE_URL = 'https://gateway.liquify.com/chain/thorchain_api';
+
+/** A real, checksum-valid thor1… bech32 address — not just a 'thor' prefix. */
+export function isValidThorAddress(address: string): boolean {
+	return typeof address === 'string' && !!parseForChain(address, 'THOR');
+}
 
 // ── Asset / amount helpers ──
 
@@ -649,6 +655,10 @@ export function parseAction(a: any): HistoryTransaction {
 // ── Data fetching ──
 
 export async function fetchMidgardActions(address: string): Promise<HistoryTransaction[]> {
+	// Before any fetch or DB write reachable from this: every caller (POST/GET
+	// /api/history, report/[id]'s includeNew refresh) passes a caller-supplied
+	// address through to here.
+	if (!isValidThorAddress(address)) return [];
 	let all: HistoryTransaction[] = [];
 	const pageSize = 50;
 	const maxPages = 100;
@@ -656,9 +666,9 @@ export async function fetchMidgardActions(address: string): Promise<HistoryTrans
 
 	for (let page = 0; page < maxPages; page++) {
 		try {
-			let url = `${MIDGARD_URL}/v2/actions?address=${address}&limit=${pageSize}`;
+			let url = `${MIDGARD_URL}/v2/actions?address=${encodeURIComponent(address)}&limit=${pageSize}`;
 			if (nextPageToken) {
-				url += `&nextPageToken=${nextPageToken}`;
+				url += `&nextPageToken=${encodeURIComponent(nextPageToken)}`;
 			} else if (page > 0) {
 				break;
 			}
@@ -707,8 +717,9 @@ export async function fetchMidgardActions(address: string): Promise<HistoryTrans
 }
 
 export async function fetchBalances(address: string): Promise<Array<{ asset: string; amount: string }>> {
+	if (!isValidThorAddress(address)) return [];
 	try {
-		const res = await fetch(`${THORNODE_URL}/cosmos/bank/v1beta1/balances/${address}`);
+		const res = await fetch(`${THORNODE_URL}/cosmos/bank/v1beta1/balances/${encodeURIComponent(address)}`);
 		if (!res.ok) return [];
 		const data = await res.json();
 		const balances = data?.balances || [];

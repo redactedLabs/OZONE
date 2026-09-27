@@ -2,8 +2,13 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { rujiraUsers, l1Addresses } from '$lib/server/db/schema';
 import { eq, and, desc, sql, inArray, like } from 'drizzle-orm';
+import { parseForChain } from '$ozone/index.js';
+import { globalThrottle } from '$lib/server/ozone/throttle';
 
 const MIDGARD_URL = 'https://gateway.liquify.com/chain/thorchain_midgard';
+// This import fan-out is reachable by anyone (no session) via ?search= —
+// each hit can be up to 100 sequential Midgard requests plus DB writes.
+const allowImport = globalThrottle(20);
 
 function chainFromAsset(asset: string): string {
 	if (!asset) return 'UNKNOWN';
@@ -29,20 +34,23 @@ function chainFromAddress(address: string): string | null {
 }
 
 async function lookupAndImport(address: string) {
+	// Validate before any DB write or fetch: this is a caller-supplied search
+	// string (?search=), not yet a known address, and it reaches the Midgard
+	// URL and a permanent DB row otherwise.
+	if (!parseForChain(address, 'THOR')) return null;
 	try {
-		// Insert user
-		await db.insert(rujiraUsers).values({ thorAddress: address }).onConflictDoNothing();
-
-		// 1. Scan ALL actions with pagination for L1 addresses
+		// 1. Scan ALL actions with pagination for L1 addresses. rujira_users
+		// isn't written yet — a garbage or genuinely inactive address must
+		// not leave a permanent row just because someone searched for it.
 		const pageSize = 50;
 		const maxPages = 100;
 		let nextPageToken: string | null = null;
 		let hasActions = false;
 
 		for (let page = 0; page < maxPages; page++) {
-			let url = `${MIDGARD_URL}/v2/actions?address=${address}&limit=${pageSize}`;
+			let url = `${MIDGARD_URL}/v2/actions?address=${encodeURIComponent(address)}&limit=${pageSize}`;
 			if (nextPageToken) {
-				url += `&nextPageToken=${nextPageToken}`;
+				url += `&nextPageToken=${encodeURIComponent(nextPageToken)}`;
 			} else if (page > 0) {
 				break;
 			}
@@ -101,9 +109,13 @@ async function lookupAndImport(address: string) {
 
 		if (!hasActions) return null;
 
+		// Only now, with real on-chain activity confirmed, is this address
+		// worth a permanent record.
+		await db.insert(rujiraUsers).values({ thorAddress: address }).onConflictDoNothing();
+
 		// 2. Also check LP membership
 		try {
-			const memberRes = await fetch(`${MIDGARD_URL}/v2/member/${address}`);
+			const memberRes = await fetch(`${MIDGARD_URL}/v2/member/${encodeURIComponent(address)}`);
 			if (memberRes.ok) {
 				const memberData = await memberRes.json();
 				for (const pool of memberData?.pools || []) {
@@ -143,7 +155,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		const existing = await db.select().from(rujiraUsers)
 			.where(eq(rujiraUsers.thorAddress, search)).limit(1);
 
-		if (existing.length === 0) {
+		if (existing.length === 0 && allowImport()) {
 			await lookupAndImport(search);
 		}
 	}

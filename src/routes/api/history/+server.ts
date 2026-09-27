@@ -4,7 +4,8 @@ import { randomBytes } from 'node:crypto';
 import { db } from '$lib/server/db';
 import { reports } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { fetchMidgardActions, fetchBalances, groupTransactions, redactGroups, redactTransactions } from '$lib/server/historyService';
+import { fetchMidgardActions, fetchBalances, groupTransactions, isValidThorAddress, redactGroups, redactTransactions } from '$lib/server/historyService';
+import { globalThrottle } from '$lib/server/ozone/throttle';
 
 // A report id is the sole access control for an unauthenticated, shareable
 // report (POST returns shareUrl: /report/<id>; anyone with it can read it
@@ -18,13 +19,22 @@ export function generateReportId(): string {
 	return id;
 }
 
+// Both unauthenticated and each able to trigger up to 100 sequential Midgard
+// requests plus a DB write — separate buckets so a burst of one doesn't use
+// up the other's budget.
+const allowCreate = globalThrottle(20);
+const allowRefresh = globalThrottle(20);
+
 // POST — fetch history + create shareable report
 export const POST: RequestHandler = async ({ request }) => {
 	const { address, dateFrom, dateTo, includeNew, revealWallet } = await request.json();
 
-	if (!address || !address.startsWith('thor')) {
+	// Before any DB write or fetch: address is caller-supplied and reaches
+	// both otherwise.
+	if (!isValidThorAddress(address)) {
 		return json({ error: 'Valid thor address required' }, { status: 400 });
 	}
+	if (!allowCreate()) return json({ error: 'Too many reports right now, please retry in a minute' }, { status: 429 });
 
 	try {
 		const [allTxsRaw, balances] = await Promise.all([
@@ -94,6 +104,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	// If includeNew, re-fetch and update
 	if (report.includeNew) {
+		if (!allowRefresh()) return json({ error: 'Too many refreshes right now, please retry in a minute' }, { status: 429 });
 		const [allTxs, balances] = await Promise.all([
 			fetchMidgardActions(report.address),
 			fetchBalances(report.address),

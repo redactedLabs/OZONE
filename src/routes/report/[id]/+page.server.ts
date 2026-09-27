@@ -4,6 +4,11 @@ import { reports } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { fetchMidgardActions, fetchBalances, groupTransactions, redactGroups, redactTransactions } from '$lib/server/historyService';
+import { globalThrottle } from '$lib/server/ozone/throttle';
+
+// Unauthenticated (anyone with the report link) and can trigger up to 100
+// sequential Midgard requests plus a DB write on every page view.
+const allowRefresh = globalThrottle(20);
 
 export const load: PageServerLoad = async ({ params }) => {
 	const reportId = params.id.toUpperCase();
@@ -20,7 +25,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	let balances: Array<{ asset: string; amount: string }> = [];
 	let groups: any[];
 
-	if (report.includeNew) {
+	if (report.includeNew && allowRefresh()) {
 		// Live report — re-fetch latest transactions and balances
 		[transactions, balances] = await Promise.all([
 			fetchMidgardActions(report.address),
