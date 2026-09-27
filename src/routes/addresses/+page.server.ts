@@ -64,14 +64,21 @@ async function lookupAndImport(address: string) {
 
 			for (const action of actions) {
 				const inAddresses = new Set((action.in || []).map((io: any) => io.address).filter(Boolean));
-				const outAddresses: string[] = (action.out || []).map((io: any) => io.address).filter(Boolean);
+				// Only link L1 addresses that appear on the account's own signed
+				// action — a third party appearing merely as a recipient must
+				// never create a link (that would let anyone dust an arbitrary
+				// account into looking "linked" to a listed address).
+				if (!inAddresses.has(address)) continue;
 
-				const linkL1 = async (io: any, isAffiliate = false) => {
+				for (const io of [...(action.in || []), ...(action.out || [])] as any[]) {
 					const addr = io.address;
-					if (!addr || addr.startsWith('thor') || addr === address) return;
+					if (!addr || addr.startsWith('thor') || addr === address) continue;
 					const asset = io.coins?.[0]?.asset || '';
 					const chain = chainFromAddress(addr) || chainFromAsset(asset);
-					if (chain === 'UNKNOWN') return;
+					if (chain === 'UNKNOWN') continue;
+					// Derived from Midgard's own per-output flag, not from "another
+					// thor output exists" — the account signed this either way.
+					const isAffiliate = io.affiliate === true;
 					await db.insert(l1Addresses).values({
 						thorAddress: address,
 						l1Address: addr.startsWith('0x') ? addr.toLowerCase() : addr,
@@ -80,25 +87,9 @@ async function lookupAndImport(address: string) {
 						affiliate: isAffiliate,
 					}).onConflictDoUpdate({
 						target: [l1Addresses.thorAddress, l1Addresses.l1Address, l1Addresses.chain],
-						set: { affiliate: isAffiliate }
+						// Never downgrades an existing non-affiliate (real) link to affiliate.
+						set: { affiliate: sql`${l1Addresses.affiliate} AND ${isAffiliate}` }
 					});
-				};
-
-				if (inAddresses.has(address)) {
-					for (const io of [...(action.in || []), ...(action.out || [])]) {
-						await linkL1(io, false);
-					}
-				} else if (outAddresses.includes(address)) {
-					const otherThorOut = outAddresses.filter((a: string) => a !== address && a.startsWith('thor'));
-					if (otherThorOut.length > 0) {
-						for (const io of [...(action.in || []), ...(action.out || [])]) {
-							await linkL1(io, true);
-						}
-					} else {
-						for (const input of action.in || []) {
-							await linkL1(input, false);
-						}
-					}
 				}
 			}
 

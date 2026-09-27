@@ -324,14 +324,21 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 
 			for (const action of actions) {
 				const inAddresses = new Set((action.in || []).map((io: any) => io.address).filter(Boolean));
-				const outAddresses: string[] = (action.out || []).map((io: any) => io.address).filter(Boolean);
+				// Only link L1 addresses that appear on the account's own signed
+				// action — a third party appearing merely as a recipient must
+				// never create a link (that would let anyone dust an arbitrary
+				// account into looking "linked" to a listed address).
+				if (!inAddresses.has(thorAddress)) continue;
 
-				const linkL1 = async (io: any, isAffiliate = false) => {
+				for (const io of [...(action.in || []), ...(action.out || [])] as any[]) {
 					const addr = io.address;
-					if (!addr || addr.startsWith('thor')) return;
+					if (!addr || addr.startsWith('thor')) continue;
 					const asset = io.coins?.[0]?.asset || '';
 					const chain = chainFromAddress(addr) || (asset ? chainFromAsset(asset) : null);
-					if (!chain || chain === 'UNKNOWN') return;
+					if (!chain || chain === 'UNKNOWN') continue;
+					// Derived from Midgard's own per-output flag, not from "another
+					// thor output exists" — the account signed this either way.
+					const isAffiliate = io.affiliate === true;
 
 					await db.insert(l1Addresses).values({
 						thorAddress,
@@ -341,31 +348,10 @@ export async function fetchL1ForUser(thorAddress: string): Promise<{
 						affiliate: isAffiliate
 					}).onConflictDoUpdate({
 						target: [l1Addresses.thorAddress, l1Addresses.l1Address, l1Addresses.chain],
-						set: { affiliate: isAffiliate }
+						// Never downgrades an existing non-affiliate (real) link to affiliate.
+						set: { affiliate: sql`${l1Addresses.affiliate} AND ${isAffiliate}` }
 					});
 					found++;
-				};
-
-				if (inAddresses.has(thorAddress)) {
-					// We initiated this action — direct links
-					for (const io of [...(action.in || []), ...(action.out || [])]) {
-						await linkL1(io, false);
-					}
-				} else if (outAddresses.includes(thorAddress)) {
-					const otherThorOut = outAddresses.filter(
-						(a: string) => a !== thorAddress && a.startsWith('thor')
-					);
-					if (otherThorOut.length > 0) {
-						// Multiple thor recipients — tag as affiliate, keep all L1s
-						for (const io of [...(action.in || []), ...(action.out || [])]) {
-							await linkL1(io, true);
-						}
-					} else {
-						// Sole recipient — direct link from action.in
-						for (const input of action.in || []) {
-							await linkL1(input, false);
-						}
-					}
 				}
 			}
 
