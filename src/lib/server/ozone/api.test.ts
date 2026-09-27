@@ -316,6 +316,27 @@ describe('API routes', () => {
 		expect(loaded.legacy).toBe(true);
 	});
 
+	it('signs maxTraceHop into the policy whenever the caller sets it, omits it otherwise', async () => {
+		const { POST } = await import('../../../routes/api/v1/screen/+server');
+		const withHop = await call(POST as Handler, {
+			url: '/api/v1/screen',
+			method: 'POST',
+			body: { addresses: ['0x098B716B8Aaf21512996dC57EB0615e2383E2f96'], policy: { maxTraceHop: 0 } }
+		});
+		const withHopBody = await withHop.json();
+		expect(withHopBody.policy).toMatchObject({ flagAt: 'high', maxTraceHop: 0 });
+		expect(verifyScreenResponse(withHopBody, [apiKey.publicKey.spec])).not.toBeNull();
+
+		const withoutHop = await call(POST as Handler, {
+			url: '/api/v1/screen',
+			method: 'POST',
+			body: { addresses: ['0x098B716B8Aaf21512996dC57EB0615e2383E2f96'] }
+		});
+		const withoutHopBody = await withoutHop.json();
+		expect(withoutHopBody.policy).toEqual({ flagAt: 'high' });
+		expect('maxTraceHop' in withoutHopBody.policy).toBe(false);
+	});
+
 	it('report ids are drawn from crypto.randomBytes, not Math.random', async () => {
 		const { generateReportId } = await import('../../../routes/api/history/+server');
 		const ids = new Set(Array.from({ length: 200 }, () => generateReportId()));

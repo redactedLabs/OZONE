@@ -12,7 +12,8 @@ export interface ScreenResponseV1 {
 	/** Random id of this answer (not linked to the caller). */
 	id: string;
 	issuedAt: string;
-	policy: { flagAt: string };
+	/** maxTraceHop is present exactly when the caller's policy set it — a verifier can then see it narrowed the results. */
+	policy: { flagAt: string; maxTraceHop?: number };
 	snapshot: { version: number; builtAt: string; sha256: string } | null;
 	results: Verdict[];
 	signature?: SignatureBlock;

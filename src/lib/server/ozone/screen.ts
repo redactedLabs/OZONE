@@ -62,7 +62,12 @@ export async function screenItems(items: ScreenItem[], policy: Policy = {}): Pro
 		type: SCREEN_RESPONSE_TYPE,
 		id: randomBytes(12).toString('hex'),
 		issuedAt: new Date(now).toISOString(),
-		policy: { flagAt: policy.flagAt ?? 'high' },
+		// maxTraceHop changes which reasons/status/risk the results below can
+		// show (evaluate() drops traced reasons past it) — omitting it from
+		// the signed policy let a verifier who didn't request the answer
+		// themselves see a "clean" verdict with no way to tell it was
+		// produced under a caller-chosen hop limit rather than the default.
+		policy: { flagAt: policy.flagAt ?? 'high', ...(policy.maxTraceHop !== undefined ? { maxTraceHop: policy.maxTraceHop } : {}) },
 		snapshot: snap ? { version: snap.index.version, builtAt: snap.index.builtAt, sha256: snap.index.sha256 } : null,
 		results
 	};
