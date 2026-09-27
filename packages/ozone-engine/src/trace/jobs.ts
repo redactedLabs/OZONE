@@ -3,7 +3,7 @@
  * and the real-time follower (new THORChain actions since a cursor).
  */
 import { riskRank } from '../../../ozone-client/src/index.js';
-import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recordDustTotals, recordHits, setState } from '../store/trace.js';
+import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recordDustFlows, recordHits, setState } from '../store/trace.js';
 import type { Logger, Sql } from '../types.js';
 import { silentLogger } from '../types.js';
 import { toChecksumAddress } from '../util/evm.js';
@@ -160,7 +160,7 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 						res.traced += rec.traced;
 						log.info(`trace ${task.key}: ${r.actions} actions, ${r.hits.length} flows flagged`);
 					}
-					if (r.dust.length) await recordDustTotals(sql, r.dust);
+					if (r.dust.length) await recordDustFlows(sql, r.dust);
 					if (r.pending.length) await recordPending(r.pending);
 					res.actions += r.actions;
 					res.checked++;
@@ -242,7 +242,7 @@ export async function runRealtimeTick(
 	await setState(sql, 'trace:pending', still);
 
 	const rec = await recordHits(sql, dedupe(hits));
-	if (dust.length) await recordDustTotals(sql, dust);
+	if (dust.length) await recordDustFlows(sql, dust);
 	const to = complete ? head : Math.max(from, ...actions.map((a) => Number(a.height)));
 	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { gapFrom: from }) });
 	if (!complete) {

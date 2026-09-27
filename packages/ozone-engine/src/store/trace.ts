@@ -1,9 +1,10 @@
 /**
- * Trace persistence: edges (every flow that flagged something), the best
- * reason per traced address, the tracer's index and Midgard progress.
+ * Trace persistence: edges (every flow that flagged something), small
+ * transfers under the dust limit (to be added up), the best reason per
+ * traced address, the tracer's index and Midgard progress.
  */
 import { keyTwins, parseForChain, riskFromRank, riskRank, splitKey, type Category, type Risk } from '../../../ozone-client/src/index.js';
-import { isTraceOrigin, describeHit, type IndexEntry, type TraceHit } from '../trace/tracer.js';
+import { isTraceOrigin, describeHit, type DustFlow, type IndexEntry, type TraceHit } from '../trace/tracer.js';
 import type { Sql } from '../types.js';
 import { TWIN_CATEGORIES } from '../policy.js';
 import { CURATED } from '../sources/curated-data.js';
@@ -105,27 +106,79 @@ export async function recordHits(sql: Sql, hits: TraceHit[]): Promise<{ edges: n
 }
 
 /**
- * Adds to the running per-(origin, recipient, hop) USD total for value flows
- * that were under the dust limit on their own (traceAction's `onDust`).
- * These never get an oz_trace_edges row of their own; the snapshot builder
- * reads this table to add them into that pair's sum.
+ * Records value flows that were under the dust limit on their own
+ * (traceAction's `onDust`) in oz_trace_dust_flows: one row per flow, keyed
+ * like oz_trace_edges by (txid, from_key, to_key). Replaying an action — the
+ * backfill re-reading an address, a retry after a crash, the real-time
+ * follower and the backfill both seeing it, overlapping cursors — finds the
+ * existing row and adds nothing; totals are SUMs over rows (dustTotals),
+ * never a counter that grows on every read. A replay from a lower hop (the
+ * sender has since been traced closer to a listed address) moves the flow to
+ * that hop's group instead of counting it a second time.
  */
-export async function recordDustTotals(sql: Sql, dust: Array<{ originKey: string; toKey: string; hop: number; usd: number }>): Promise<void> {
-	if (!dust.length) return;
-	const merged = new Map<string, { originKey: string; toKey: string; hop: number; usd: number }>();
+export async function recordDustFlows(sql: Sql, dust: DustFlow[]): Promise<{ flows: number }> {
+	if (!dust.length) return { flows: 0 };
+	// one row per flow in the statement (ON CONFLICT DO UPDATE refuses to touch a row twice)
+	const byFlow = new Map<string, DustFlow>();
 	for (const d of dust) {
-		const k = `${d.originKey}\u0000${d.toKey}\u0000${d.hop}`;
-		const cur = merged.get(k);
-		if (cur) cur.usd += d.usd;
-		else merged.set(k, { ...d });
+		const k = `${d.txid}\u0000${d.fromKey}\u0000${d.toKey}`;
+		const cur = byFlow.get(k);
+		if (!cur || d.hop < cur.hop) byFlow.set(k, d);
 	}
+	const flows = [...byFlow.values()];
 	await batchInsert(
 		sql,
-		`INSERT INTO oz_trace_dust_totals (origin_key, to_key, hop, usd, updated_at)`,
-		5,
-		[...merged.values()].map((d) => [d.originKey, d.toKey, d.hop, d.usd, new Date()]),
-		`ON CONFLICT (origin_key, to_key, hop) DO UPDATE SET usd = oz_trace_dust_totals.usd + EXCLUDED.usd, updated_at = EXCLUDED.updated_at`
+		`INSERT INTO oz_trace_dust_flows (txid, from_key, from_address, from_chain, to_key, to_chain, to_address, action, height, ts,
+			amount, usd, hop, origin_key, origin_source, origin_entity, origin_risk, origin_category)`,
+		18,
+		flows.map((d) => [
+			d.txid,
+			d.fromKey,
+			d.fromAddress,
+			d.fromChain,
+			d.toKey,
+			d.toChain,
+			d.toAddress,
+			d.action,
+			d.height,
+			new Date(d.date),
+			d.amount ?? null,
+			d.usd,
+			d.hop,
+			d.originKey,
+			d.originSource,
+			d.originEntity ?? null,
+			d.originRisk,
+			d.originCategory
+		]),
+		`ON CONFLICT (txid, from_key, to_key) DO UPDATE SET
+			hop = EXCLUDED.hop,
+			origin_key = EXCLUDED.origin_key,
+			origin_source = EXCLUDED.origin_source,
+			origin_entity = EXCLUDED.origin_entity,
+			origin_risk = EXCLUDED.origin_risk,
+			origin_category = EXCLUDED.origin_category
+		 WHERE EXCLUDED.hop < oz_trace_dust_flows.hop`
 	);
+	return { flows: flows.length };
+}
+
+/**
+ * A dust flow that was also stored as a trace edge (the same transfer valued
+ * above the dust limit on another read, e.g. at a different pool price) is
+ * already in the edge sums: the ledger side leaves it out.
+ */
+const NOT_AN_EDGE = `NOT EXISTS (SELECT 1 FROM oz_trace_edges e WHERE e.txid = d.txid AND e.from_key = d.from_key AND e.to_key = d.to_key)`;
+
+/** Per-(origin, recipient, hop) totals of recorded small transfers, each counted once. */
+export async function dustTotals(sql: Sql): Promise<Array<{ originKey: string; toKey: string; hop: number; usd: number; count: number }>> {
+	const r = await sql.query<{ origin_key: string; to_key: string; hop: number; usd: string | number; n: number }>(
+		`SELECT d.origin_key, d.to_key, d.hop, sum(d.usd) AS usd, count(*)::int AS n
+		 FROM oz_trace_dust_flows d
+		 WHERE ${NOT_AN_EDGE}
+		 GROUP BY d.origin_key, d.to_key, d.hop`
+	);
+	return r.rows.map((x) => ({ originKey: x.origin_key, toKey: x.to_key, hop: Number(x.hop), usd: Number(x.usd), count: Number(x.n) }));
 }
 
 const lowerRisk = (r: Risk): Risk => riskFromRank(Math.max(riskRank('low'), riskRank(r) - 1));

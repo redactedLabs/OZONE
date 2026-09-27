@@ -23,7 +23,7 @@ import {
 import { CORE_SOURCES, DERIVED_SOURCES, SOURCES } from '../sources/registry.js';
 import { allEntries } from '../store/entries.js';
 import { isoOf } from '../store/db.js';
-import { getState, setState } from '../store/trace.js';
+import { dustTotals, getState, setState } from '../store/trace.js';
 import { DEFAULT_TRACE_CONFIG } from '../trace/tracer.js';
 import { TWIN_CATEGORIES } from '../policy.js';
 import type { Sql } from '../types.js';
@@ -175,22 +175,20 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 	// "full" amount for its hop — but several such flows from the same origin
 	// to the same recipient still add up (structuring). Aggregate every
 	// known-usd value edge by (origin, recipient, hop), plus flows that never
-	// got their own edge for being under the dust limit (oz_trace_dust_totals,
-	// written by traceAction's onDust callback), and republish at the
-	// undemoted risk once the sum reaches the hop's full-USD threshold.
-	const groupKey = (originKey: string, toKey: string, hop: number) => `${originKey}\u0000${toKey}\u0000${hop}`;
+	// got their own edge for being under the dust limit (oz_trace_dust_flows,
+	// one row per flow, so a replayed action is never counted twice), and
+	// republish at the undemoted risk once the sum reaches the hop's full-USD
+	// threshold.
+	const groupKey = (originKey: string, toKey: string, hop: number) => `${originKey}\u0000${toKey}\u0000${Number(hop)}`;
 	const groupTotals = new Map<string, number>();
 	for (const e of edges.rows) {
 		if (e.relation !== 'value' || e.usd === null) continue;
 		const k = groupKey(e.origin_key, e.to_key, e.hop);
 		groupTotals.set(k, (groupTotals.get(k) ?? 0) + Number(e.usd));
 	}
-	const dustTotals = await sql.query<{ origin_key: string; to_key: string; hop: number; usd: string | number }>(
-		`SELECT origin_key, to_key, hop, usd FROM oz_trace_dust_totals`
-	);
-	for (const d of dustTotals.rows) {
-		const k = groupKey(d.origin_key, d.to_key, d.hop);
-		groupTotals.set(k, (groupTotals.get(k) ?? 0) + Number(d.usd));
+	for (const d of await dustTotals(sql)) {
+		const k = groupKey(d.originKey, d.toKey, d.hop);
+		groupTotals.set(k, (groupTotals.get(k) ?? 0) + d.usd);
 	}
 	const undemotedRisk = (originRisk: Risk, hop: number): Risk =>
 		riskFromRank(Math.max(Math.min(riskRank(originRisk), riskRank('high')) - (hop - 1), riskRank('low')));

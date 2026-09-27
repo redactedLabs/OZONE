@@ -11,6 +11,7 @@ import {
 	numeric,
 	customType,
 	index,
+	primaryKey,
 	unique,
 	uniqueIndex
 } from 'drizzle-orm/pg-core';
@@ -189,8 +190,9 @@ export const privacySnapshots = pgTable('privacy_snapshots', {
 
 // ---------------------------------------------------------------------------
 // ozone-next tables. The SQL source of truth (idempotent, additive) is
-// packages/ozone-engine/migrations/0001_ozone_next.sql; these definitions keep
-// `drizzle-kit push` and typed queries in sync with it.
+// packages/ozone-engine/migrations/0001_ozone_next.sql and the later 000N
+// files; these definitions keep `drizzle-kit push` and typed queries in sync
+// with it.
 // ---------------------------------------------------------------------------
 
 export const ozSources = pgTable('oz_sources', {
@@ -292,6 +294,51 @@ export const ozTraced = pgTable('oz_traced', {
 	suppressed: boolean('suppressed').notNull().default(false),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
+
+// Superseded by oz_trace_dust_flows (0003): no longer read or written, kept
+// because the migrations are additive only (0002_trace_dust_totals.sql).
+export const ozTraceDustTotals = pgTable(
+	'oz_trace_dust_totals',
+	{
+		originKey: text('origin_key').notNull(),
+		toKey: text('to_key').notNull(),
+		hop: integer('hop').notNull(),
+		usd: numeric('usd').notNull().default('0'),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [primaryKey({ name: 'oz_trace_dust_totals_pkey', columns: [t.originKey, t.toKey, t.hop] })]
+);
+
+// Value flows under the dust limit, one row per flow (0003_trace_dust_flows.sql).
+export const ozTraceDustFlows = pgTable(
+	'oz_trace_dust_flows',
+	{
+		txid: text('txid').notNull(),
+		fromKey: text('from_key').notNull(),
+		fromAddress: text('from_address').notNull(),
+		fromChain: text('from_chain').notNull(),
+		toKey: text('to_key').notNull(),
+		toChain: text('to_chain').notNull(),
+		toAddress: text('to_address').notNull(),
+		action: text('action').notNull(),
+		height: bigint('height', { mode: 'number' }),
+		ts: timestamp('ts', { withTimezone: true }),
+		amount: text('amount'),
+		usd: numeric('usd').notNull(),
+		hop: integer('hop').notNull(),
+		originKey: text('origin_key').notNull(),
+		originSource: text('origin_source').notNull(),
+		originEntity: text('origin_entity'),
+		originRisk: text('origin_risk').notNull(),
+		originCategory: text('origin_category').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		primaryKey({ name: 'oz_trace_dust_flows_pkey', columns: [t.txid, t.fromKey, t.toKey] }),
+		index('oz_trace_dust_flows_group_idx').on(t.originKey, t.toKey, t.hop),
+		index('oz_trace_dust_flows_to_idx').on(t.toKey)
+	]
+);
 
 export const ozTraceChecked = pgTable('oz_trace_checked', {
 	key: text('key').primaryKey(),

@@ -68,12 +68,20 @@ export interface TraceHit extends Flow {
 	originCategory: Category;
 }
 
-/** A value flow dropped for being under the dust limit on its own. */
-export interface DustFlow {
-	originKey: string;
-	toKey: string;
-	hop: number;
+/**
+ * A value flow under the dust limit on its own. It flags nothing by itself,
+ * but is kept (once per THORChain transaction, see store/trace.ts
+ * recordDustFlows) so that many of them from the same origin to the same
+ * recipient still add up.
+ */
+export interface DustFlow extends Flow {
 	usd: number;
+	hop: number;
+	originKey: string;
+	originSource: string;
+	originEntity?: string;
+	originRisk: Risk;
+	originCategory: Category;
 }
 
 const ORIGIN_CATEGORIES: ReadonlySet<Category> = new Set([
@@ -112,8 +120,11 @@ export function traceRisk(
 /**
  * Flows of one action that leave a flagged address. `onDust`, when given,
  * is called for value flows under the dust limit that flag nothing on their
- * own, so a caller can accumulate them (see store/trace.ts recordDustTotals)
+ * own, so a caller can accumulate them (see store/trace.ts recordDustFlows)
  * — many such flows from the same origin to the same recipient still add up.
+ * They pass every rule a flagging flow passes (signed by a flagged sender,
+ * after its taint, not a service, not to a listed address) and are only
+ * reported where a large enough total could flag anything at that hop.
  */
 export function traceAction(
 	action: MidgardAction,
@@ -133,8 +144,26 @@ export function traceAction(
 		const hop = flow.relation === 'value' ? src.hop + 1 : Math.max(1, src.hop);
 		const risk = traceRisk(src.originRisk, hop, flow.usd, flow.relation, cfg);
 		if (!risk) {
-			if (onDust && flow.relation === 'value' && flow.usd !== undefined && flow.usd > 0 && flow.usd < cfg.dustUsd && hop >= 1 && hop <= cfg.maxHops) {
-				onDust({ originKey: src.originKey, toKey: flow.toKey, hop, usd: flow.usd });
+			if (
+				onDust &&
+				flow.relation === 'value' &&
+				flow.usd !== undefined &&
+				flow.usd > 0 &&
+				flow.usd < cfg.dustUsd &&
+				// the undemoted risk at this hop: null past the hop limit, or when
+				// even a large total from this origin would flag nothing
+				traceRisk(src.originRisk, hop, undefined, 'value', cfg)
+			) {
+				onDust({
+					...flow,
+					usd: flow.usd,
+					hop,
+					originKey: src.originKey,
+					originSource: src.originSource,
+					...(src.originEntity ? { originEntity: src.originEntity } : {}),
+					originRisk: src.originRisk,
+					originCategory: src.originCategory
+				});
 			}
 			continue;
 		}
