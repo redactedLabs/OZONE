@@ -14,6 +14,7 @@ import { parsePublicKey, type PublicKeyInfo } from './crypto.js';
 import { sha256Hex } from './encoding.js';
 import {
 	decodePayload,
+	DEFAULT_STALE_AFTER_MS,
 	SnapshotError,
 	verifyManifest,
 	type ScreenOptions,
@@ -23,6 +24,8 @@ import {
 import type { Policy, Verdict } from './verdict.js';
 
 export const DEFAULT_MANIFEST_URL = 'https://ozone.redacted.gg/api/v1/snapshot';
+/** Default `rejectOlderThanMs`: a mirror's answer this old is refused outright, not just marked stale. */
+export const DEFAULT_REJECT_OLDER_THAN_MS = 7 * 24 * 3600 * 1000;
 
 export interface OzoneClientOptions {
 	/** Pinned Ozone snapshot keys, e.g. `ed25519:<base64>`. At least one. */
@@ -38,7 +41,12 @@ export interface OzoneClientOptions {
 	refreshIntervalMs?: number;
 	/** Largest payload accepted (default 64 MiB). */
 	maxPayloadBytes?: number;
-	/** Refuse snapshots built more than this long ago (default: accept any age, verdicts carry it). */
+	/**
+	 * Refuse snapshots (from any mirror, including a restarted node's own
+	 * on-disk cache) built more than this long ago (default 7 days). Pass
+	 * `Infinity` to disable the check entirely and accept any age — there is
+	 * no other way to turn it off, so that choice is always explicit.
+	 */
 	rejectOlderThanMs?: number;
 	/** Verdicts older than this are marked `stale` (default 24 h). */
 	staleAfterMs?: number;
@@ -169,6 +177,8 @@ export class OzoneClient {
 
 	private checkMonotonic(manifest: SnapshotManifestV1): 'newer' | 'same' {
 		const cur = this.current;
+		const maxAge = this.opts.rejectOlderThanMs ?? DEFAULT_REJECT_OLDER_THAN_MS;
+		const tooOld = this.clock() - Date.parse(manifest.builtAt) > maxAge;
 		if (cur) {
 			if (manifest.version < cur.version) {
 				throw new SnapshotError('rollback', `Snapshot ${manifest.version} is older than loaded ${cur.version}`);
@@ -177,11 +187,17 @@ export class OzoneClient {
 				if (manifest.payload.sha256 !== cur.sha256) {
 					throw new SnapshotError('equivocation', `Two different payloads for version ${manifest.version}`);
 				}
+				// A mirror echoing back exactly what's already loaded is not
+				// itself an acceptance of that content's age — a node that
+				// hasn't seen anything newer in `maxAge` must still fail
+				// closed instead of quietly keeping an ancient snapshot forever.
+				if (tooOld) {
+					throw new SnapshotError('expired', `Snapshot ${manifest.version} is older than the accepted age`);
+				}
 				return 'same';
 			}
 		}
-		const maxAge = this.opts.rejectOlderThanMs;
-		if (maxAge !== undefined && this.clock() - Date.parse(manifest.builtAt) > maxAge) {
+		if (tooOld) {
 			throw new SnapshotError('expired', `Snapshot ${manifest.version} is older than the accepted age`);
 		}
 		return 'newer';
@@ -270,11 +286,22 @@ export class OzoneClient {
 
 	private async doRefresh(): Promise<boolean> {
 		const errors: string[] = [];
+		let lastSameVersion: number | undefined;
 		for (const url of this.urls) {
 			try {
 				const manifestBytes = await this.fetchWithTimeout(url, MAX_MANIFEST_BYTES);
 				const manifest = verifyManifest(JSON.parse(Buffer.from(manifestBytes).toString('utf8')), this.trusted);
 				if (this.checkMonotonic(manifest) === 'same') {
+					lastSameVersion = manifest.version;
+					const heldAge = this.current ? this.clock() - Date.parse(this.current.builtAt) : 0;
+					const staleAfter = this.opts.staleAfterMs ?? DEFAULT_STALE_AFTER_MS;
+					if (this.current && heldAge > staleAfter) {
+						// This mirror has nothing newer, but the held snapshot
+						// already looks stale by the caller's own threshold — a
+						// later URL (e.g. Ozone itself, listed after a mirror)
+						// might. Don't settle for the first "same" seen.
+						continue;
+					}
 					this.lastRefreshAt = this.clock();
 					this.lastError = undefined;
 					this.opts.onEvent?.({ type: 'unchanged', version: manifest.version });
@@ -296,6 +323,15 @@ export class OzoneClient {
 				if (e instanceof SnapshotError) this.opts.onEvent?.({ type: 'rejected', url, code: e.code, error: msg });
 				else this.opts.onEvent?.({ type: 'refresh_failed', url, error: msg });
 			}
+		}
+		if (lastSameVersion !== undefined) {
+			// Every reachable mirror agreed there is nothing newer than what's
+			// already loaded, even though it looks stale — a confirmed "no
+			// fresher snapshot exists anywhere we asked", not a refresh failure.
+			this.lastRefreshAt = this.clock();
+			this.lastError = undefined;
+			this.opts.onEvent?.({ type: 'unchanged', version: lastSameVersion });
+			return false;
 		}
 		this.lastError = errors.join('; ');
 		throw new Error(`Ozone snapshot refresh failed: ${this.lastError}`);
@@ -340,7 +376,9 @@ export class OzoneClient {
  */
 export interface RelayerSnapshotSource {
 	info(): SnapshotInfo | undefined;
-	lookup(query: { address: string; chain: string }): { status: 'clean' | 'flagged'; reference?: string } | { status: 'unsupported_chain' };
+	lookup(
+		query: { address: string; chain: string }
+	): { status: 'clean' | 'flagged'; reference?: string; stale: boolean; ageSeconds: number } | { status: 'unsupported_chain' };
 	refresh(): Promise<void>;
 	start(): void;
 	stop(): void;
@@ -356,7 +394,17 @@ export function createOzoneSnapshotSource(clientOrOptions: OzoneClient | OzoneCl
 			if (!snap.supportsChain(query.chain)) return { status: 'unsupported_chain' };
 			const v = client.screen(query.address, query.chain);
 			if (v.status === 'invalid') return { status: 'unsupported_chain' };
-			return v.reference ? { status: v.status, reference: v.reference } : { status: v.status };
+			// Freshness used to be computed (Verdict.snapshot.stale/ageSeconds)
+			// but dropped here, so a caller of this adapter — unlike one using
+			// OzoneClient.screen() directly — had no way to see a stale "clean"
+			// for what it was.
+			const ref = v.snapshot;
+			return {
+				status: v.status,
+				...(v.reference ? { reference: v.reference } : {}),
+				stale: ref?.stale ?? false,
+				ageSeconds: ref?.ageSeconds ?? 0
+			};
 		},
 		refresh: async () => {
 			// first call: the verified on-disk snapshot is available even if every mirror is down

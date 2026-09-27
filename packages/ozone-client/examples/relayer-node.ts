@@ -20,6 +20,11 @@ export const ozoneSnapshot = createOzoneSnapshotSource({
   cacheDir: `${process.env.V2_SCREENING_STATE_DIR ?? '/var/lib/redacted-v2/screening'}/ozone-snapshot`,
   refreshIntervalMs: 10 * 60_000,
   staleAfterMs: 24 * 60 * 60_000,
+  // A restarted node must never load a very old mirror copy (or a stale
+  // on-disk cache) and treat it as current. 7 days is the client's own
+  // default — set explicitly here so the choice is visible; pass Infinity
+  // instead to accept any age (never leave this unset to mean that).
+  rejectOlderThanMs: 7 * 24 * 60 * 60_000,
   // observability without addresses
   onEvent: (e) => console.info(`[ozone] ${e.type}`, 'version' in e ? e.version : '', 'code' in e ? e.code : ''),
 })

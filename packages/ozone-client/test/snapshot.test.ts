@@ -242,13 +242,19 @@ describe('OzoneClient', () => {
 		const source = createOzoneSnapshotSource({
 			trustedKeys: trusted,
 			manifestUrls: ['https://primary.example/api/v1/snapshot', 'https://mirror.example/api/v1/snapshot'],
-			fetch: failing
+			fetch: failing,
+			// this fixture's builtAt is fixed; freshness against the real
+			// clock isn't what this test is about (see its own tests below)
+			rejectOlderThanMs: Infinity
 		});
 		expect(source.info()).toBeUndefined();
 		await source.refresh();
 		expect(calls.some((c) => c.startsWith('https://mirror.example/api/v1/1790000000'))).toBe(true);
 		expect(source.info()).toMatchObject({ version: '1790000000', createdAt: 1_790_000_000_000 });
-		expect(source.lookup({ address: '0x098b716b8aaf21512996dc57eb0615e2383e2f96', chain: 'ETH' })).toEqual({
+		// toMatchObject, not toEqual: this fixture's builtAt is fixed while the
+		// client's clock is real, so stale/ageSeconds (also asserted by the
+		// dedicated freshness tests below) are a moving target here.
+		expect(source.lookup({ address: '0x098b716b8aaf21512996dc57eb0615e2383e2f96', chain: 'ETH' })).toMatchObject({
 			status: 'flagged',
 			reference: 'oz:v1790000000:flagged:OFAC_SDN'
 		});
@@ -264,7 +270,9 @@ describe('OzoneClient', () => {
 		const snaps = new Map([['1790000000', v1]]);
 		const state = { down: false, latest: '1790000000' };
 		const { fetchImpl } = server(snaps, state);
-		const opts = { trustedKeys: trusted, manifestUrls: ['https://ozone.example/api/v1/snapshot'], cacheDir: dir, fetch: fetchImpl };
+		// rejectOlderThanMs: Infinity — this fixture's builtAt is fixed; this
+		// test is about cache/failover behaviour, not freshness (see below).
+		const opts = { trustedKeys: trusted, manifestUrls: ['https://ozone.example/api/v1/snapshot'], cacheDir: dir, fetch: fetchImpl, rejectOlderThanMs: Infinity };
 		// a first node process fills the cache
 		await createOzoneSnapshotSource(opts).refresh();
 		// Ozone goes down; a restarted node still screens from the verified cache
@@ -297,17 +305,151 @@ describe('OzoneClient', () => {
 			if (corrupt && m[1] === '1') bytes[0] ^= 1;
 			return new Response(bytes.buffer as ArrayBuffer);
 		}) as typeof fetch;
-		const c = new OzoneClient({ trustedKeys: trusted, manifestUrls: ['https://mirror.example/ozone/latest.json'], fetch: fetchImpl });
+		// rejectOlderThanMs: Infinity — this fixture's builtAt is fixed; this
+		// test is about part-download/corruption handling, not freshness.
+		const c = new OzoneClient({ trustedKeys: trusted, manifestUrls: ['https://mirror.example/ozone/latest.json'], fetch: fetchImpl, rejectOlderThanMs: Infinity });
 		expect(await c.refresh()).toBe(true);
 		expect(c.screen('0x098b716b8aaf21512996dc57eb0615e2383e2f96').status).toBe('flagged');
 		corrupt = true;
-		const c2 = new OzoneClient({ trustedKeys: trusted, manifestUrls: ['https://mirror.example/ozone/latest.json'], fetch: fetchImpl });
+		const c2 = new OzoneClient({ trustedKeys: trusted, manifestUrls: ['https://mirror.example/ozone/latest.json'], fetch: fetchImpl, rejectOlderThanMs: Infinity });
 		await expect(c2.refresh()).rejects.toThrow(/refresh failed/);
 	});
 
 	it('refuses plain-http remote mirrors and empty key sets', () => {
 		expect(() => new OzoneClient({ trustedKeys: trusted, manifestUrls: ['http://evil.example/snap'] })).toThrowError(/https/);
 		expect(() => new OzoneClient({ trustedKeys: [] })).toThrowError(/trusted key/);
+	});
+});
+
+describe('OzoneClient freshness', () => {
+	const NOW = 1_800_000_000_000;
+	const DAY = 24 * 3600_000;
+	const oneUrlServing = (manifest: object, payload: Uint8Array) =>
+		(async (input: string | URL | Request) => {
+			const u = new URL(String(input));
+			if (u.pathname.endsWith('/snapshot')) return new Response(JSON.stringify(manifest));
+			return new Response(new Uint8Array(payload).buffer as ArrayBuffer);
+		}) as typeof fetch;
+
+	it('rejects a snapshot older than the 7-day default; Infinity disables the check', async () => {
+		const old = build(Math.floor((NOW - 8 * DAY) / 1000), new Date(NOW - 8 * DAY).toISOString());
+		const fetchImpl = oneUrlServing(old.manifest, old.payload);
+
+		const strict = new OzoneClient({ trustedKeys: trusted, manifestUrls: ['https://ozone.example/api/v1/snapshot'], fetch: fetchImpl, clock: () => NOW });
+		await expect(strict.refresh()).rejects.toThrow(/refresh failed/);
+		expect(strict.info()).toBeUndefined();
+
+		const lenient = new OzoneClient({
+			trustedKeys: trusted,
+			manifestUrls: ['https://ozone.example/api/v1/snapshot'],
+			fetch: fetchImpl,
+			clock: () => NOW,
+			rejectOlderThanMs: Infinity
+		});
+		expect(await lenient.refresh()).toBe(true);
+		expect(lenient.info()?.version).toBe(String(old.manifest.version));
+	});
+
+	it('accepts a snapshot under 7 days old with no override', async () => {
+		const recent = build(Math.floor((NOW - 6 * DAY) / 1000), new Date(NOW - 6 * DAY).toISOString());
+		const c = new OzoneClient({
+			trustedKeys: trusted,
+			manifestUrls: ['https://ozone.example/api/v1/snapshot'],
+			fetch: oneUrlServing(recent.manifest, recent.payload),
+			clock: () => NOW
+		});
+		expect(await c.refresh()).toBe(true);
+	});
+
+	it('applies the same age check when a mirror only echoes back what is already loaded', async () => {
+		const version = Math.floor((NOW - 6 * DAY) / 1000);
+		const snap = build(version, new Date(NOW - 6 * DAY).toISOString());
+		let clockNow = NOW;
+		const c = new OzoneClient({
+			trustedKeys: trusted,
+			manifestUrls: ['https://ozone.example/api/v1/snapshot'],
+			fetch: oneUrlServing(snap.manifest, snap.payload),
+			clock: () => clockNow
+		});
+		expect(await c.refresh()).toBe(true); // first load: 'newer', 6 days old — within the default
+		expect(await c.refresh()).toBe(false); // same content, still within the default: unchanged
+
+		clockNow = NOW + 2 * DAY; // now 8 days old — past the 7-day default
+		await expect(c.refresh()).rejects.toThrow(/refresh failed/); // the mirror still only offers 'same', but it's now too old to accept
+		expect(c.info()?.version).toBe(String(version)); // the existing snapshot is kept, not discarded
+	});
+
+	it('tries a later URL when an earlier one offers only a stale "same" answer, and accepts what a later one has', async () => {
+		const staleVersion = Math.floor((NOW - 2 * DAY) / 1000);
+		const stale = build(staleVersion, new Date(NOW - 2 * DAY).toISOString());
+		const fresherVersion = staleVersion + 100;
+		const fresher = build(fresherVersion, new Date(NOW).toISOString());
+		const primaryHasFresher = { value: false };
+		const calls: string[] = [];
+		const fetchImpl = (async (input: string | URL | Request) => {
+			const url = String(input);
+			calls.push(url);
+			const snap = url.includes('mirror.example') ? stale : primaryHasFresher.value ? fresher : stale;
+			if (new URL(url).pathname.endsWith('/snapshot')) return new Response(JSON.stringify(snap.manifest));
+			return new Response(new Uint8Array(snap.payload).buffer as ArrayBuffer);
+		}) as typeof fetch;
+
+		const c = new OzoneClient({
+			trustedKeys: trusted,
+			manifestUrls: ['https://mirror.example/api/v1/snapshot', 'https://primary.example/api/v1/snapshot'],
+			fetch: fetchImpl,
+			clock: () => NOW,
+			staleAfterMs: DAY // 1 day — the 2-day-old stale snapshot counts as stale
+		});
+		// First load: both URLs agree on the (already 2-day-old) version —
+		// this is the client's first-ever load, not a "same" case.
+		expect(await c.refresh()).toBe(true);
+		expect(c.info()?.version).toBe(String(staleVersion));
+
+		// Second refresh: the mirror still only offers that same, now-stale
+		// version. The client must not settle for the first "same" it sees
+		// and should go on to ask primary, which has something newer.
+		calls.length = 0;
+		primaryHasFresher.value = true;
+		expect(await c.refresh()).toBe(true);
+		expect(c.info()?.version).toBe(String(fresherVersion));
+		expect(calls.some((u) => u.includes('mirror.example'))).toBe(true);
+		expect(calls.some((u) => u.includes('primary.example'))).toBe(true);
+	});
+
+	it('settles for "unchanged" (not a thrown failure) when every URL agrees, even past staleAfterMs', async () => {
+		const staleVersion = Math.floor((NOW - 2 * DAY) / 1000);
+		const stale = build(staleVersion, new Date(NOW - 2 * DAY).toISOString());
+		const fetchImpl = (async (input: string | URL | Request) => {
+			const u = new URL(String(input));
+			if (u.pathname.endsWith('/snapshot')) return new Response(JSON.stringify(stale.manifest));
+			return new Response(new Uint8Array(stale.payload).buffer as ArrayBuffer);
+		}) as typeof fetch;
+		const c = new OzoneClient({
+			trustedKeys: trusted,
+			manifestUrls: ['https://mirror-a.example/api/v1/snapshot', 'https://mirror-b.example/api/v1/snapshot'],
+			fetch: fetchImpl,
+			clock: () => NOW,
+			staleAfterMs: DAY
+		});
+		expect(await c.refresh()).toBe(true); // first load
+		expect(await c.refresh()).toBe(false); // every URL confirms: nothing fresher exists anywhere asked
+		expect(c.info()?.version).toBe(String(staleVersion));
+	});
+
+	it('createOzoneSnapshotSource().lookup() reports stale/ageSeconds', async () => {
+		const version = Math.floor((NOW - 2 * DAY) / 1000);
+		const snap = build(version, new Date(NOW - 2 * DAY).toISOString());
+		const source = createOzoneSnapshotSource({
+			trustedKeys: trusted,
+			manifestUrls: ['https://ozone.example/api/v1/snapshot'],
+			fetch: oneUrlServing(snap.manifest, snap.payload),
+			clock: () => NOW,
+			staleAfterMs: DAY // 1 day — a 2-day-old snapshot counts as stale
+		});
+		await source.refresh();
+		const clean = source.lookup({ address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', chain: 'BTC' });
+		expect(clean).toMatchObject({ status: 'clean', stale: true, ageSeconds: 2 * 24 * 3600 });
 	});
 });
 

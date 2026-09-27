@@ -66,7 +66,7 @@ const snapshot = createOzoneSnapshotSource({
   cacheDir: join(config.screening.stateDir, 'ozone-snapshot'),   // last verified snapshot survives restarts/outages
   refreshIntervalMs: config.screening.snapshotRefreshMs,         // default 10 min
   staleAfterMs: config.screening.snapshotMaxAgeMs,               // default 24 h
-  rejectOlderThanMs: config.screening.snapshotDegradedMaxAgeMs,  // a restarted node never loads a very old mirror copy
+  rejectOlderThanMs: config.screening.snapshotDegradedMaxAgeMs,  // default 7 days; a restarted node never loads a very old mirror copy — pass Infinity to disable, never leave it unset to mean "any age"
 })
 const provider = createOzoneProvider({ snapshot, online: createOzoneClient({ /* optional */ }) })
 provider.start()   // → snapshot.start(): loads the verified disk cache, fetches now, then every 10 min
@@ -80,10 +80,13 @@ What the adapter returns:
 | call | result |
 |------|--------|
 | `info()` | `{ version: '1790500000', createdAt: <build time ms>, sha256 }`, or `undefined` before the first verified snapshot |
-| `lookup({address, chain})` | `{ status: 'flagged', reference: 'oz:v1790500000:flagged:OFAC_SDN,TRACE_SWAP' }` / `{ status: 'clean', reference: 'oz:v…:clean' }` |
+| `lookup({address, chain})` | `{ status: 'flagged', reference: 'oz:v1790500000:flagged:OFAC_SDN,TRACE_SWAP', stale: false, ageSeconds: 42 }` / `{ status: 'clean', reference: 'oz:v…:clean', stale: false, ageSeconds: 42 }` |
+| | `stale: true` when the loaded snapshot is older than `staleAfterMs` — the status is still whatever it screened as; check `stale` if the caller wants to treat an old answer differently (e.g. refuse deposits instead of just logging it) |
 | | `{ status: 'unsupported_chain' }` for a chain code Ozone cannot validate (ADA, DOT, SUI, TAO, …) **or an address that is not valid for that chain** — the node refuses (unscreenable), which is the safe answer |
 | | throws `OzoneUnavailableError` if called with no snapshot loaded (the provider checks `info()` first) |
 | `refresh()` | first call loads the verified disk cache; then fetches the newest manifest from the first mirror that answers, verifies it, downloads + verifies the payload if newer; rejects on failure while keeping the loaded snapshot |
+| | a mirror that only echoes back the already-loaded version is *not* treated as fresh proof of liveness by itself: if that held snapshot is older than `staleAfterMs`, later URLs (e.g. Ozone itself, listed after a mirror) are tried too, in case one of them has something newer |
+| | any accepted manifest (including one that merely confirms "same") must still be within `rejectOlderThanMs` of now, or `refresh()` rejects — this applies to the on-disk cache on restart as well, not only network mirrors |
 | `start()` / `stop()` | immediate load (cache + network), then periodic refreshes (timer is `unref`'d) |
 
 Chain codes are THORNode's (`THOR`, `BTC`, `ETH`, `BSC`, `BASE`, `AVAX`,

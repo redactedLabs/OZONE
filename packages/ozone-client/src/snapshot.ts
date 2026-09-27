@@ -213,6 +213,9 @@ export function decodePayload(manifest: SnapshotManifestV1, bytes: Uint8Array, o
 	return index;
 }
 
+/** Default `staleAfterMs`: verdicts (and, since ozone-client's OzoneClient, mirror refreshes) older than this are treated as stale. */
+export const DEFAULT_STALE_AFTER_MS = 24 * 3600 * 1000;
+
 export interface ScreenOptions extends Policy {
 	/** Current time in ms (for the snapshot age). */
 	now?: number;
@@ -359,7 +362,7 @@ export class SnapshotIndex {
 		return packed ? packed.map((r) => this.unpack(key, r)) : [];
 	}
 
-	snapshotRef(now = Date.now(), staleAfterMs = 24 * 3600 * 1000): SnapshotRef {
+	snapshotRef(now = Date.now(), staleAfterMs = DEFAULT_STALE_AFTER_MS): SnapshotRef {
 		const built = Date.parse(this.builtAt);
 		const ageMs = Math.max(0, now - built);
 		return {
