@@ -5,8 +5,12 @@ import { manualFlags } from '$lib/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { parseListedAddress } from '$ozone/index.js';
 
-// GET all manual flags
-export const GET: RequestHandler = async () => {
+// GET all manual flags. Defense in depth alongside hooks.server.ts (see
+// ozone-hook-gate-encoded-pathname-bypass) — not a cron target, so a plain
+// session check with no CRON_SECRET fallback.
+export const GET: RequestHandler = async ({ locals }) => {
+	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
 	const flags = await db
 		.select()
 		.from(manualFlags)

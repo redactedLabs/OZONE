@@ -6,6 +6,7 @@ import { rujiraUsers, syncLog } from '$lib/server/db/schema';
 import { sql } from 'drizzle-orm';
 import pLimit from 'p-limit';
 import { runPublish, runSources, runUserScreening, syncInApp } from '$lib/server/ozone/jobs';
+import { isAuthorizedAdminRequest } from '$lib/server/request-auth';
 
 // Allow up to 300s (Vercel Pro max)
 export const config = { maxDuration: 300 };
@@ -74,5 +75,12 @@ async function runSync() {
 	return json({ duration: Date.now() - start, results, errors: errors.length > 0 ? errors : undefined });
 }
 
-export const GET: RequestHandler = async () => runSync();
-export const POST: RequestHandler = async () => runSync();
+// Cron target (vercel.json) as well as an admin action, so — unlike the
+// admin-only endpoints — this accepts either a session or CRON_SECRET's
+// bearer token. Defense in depth alongside hooks.server.ts (see
+// ozone-hook-gate-encoded-pathname-bypass).
+const guard = ({ request, locals }: { request: Request; locals: App.Locals }) =>
+	isAuthorizedAdminRequest(request, locals.user) ? null : json({ error: 'Unauthorized' }, { status: 401 });
+
+export const GET: RequestHandler = async (event) => guard(event) ?? runSync();
+export const POST: RequestHandler = async (event) => guard(event) ?? runSync();

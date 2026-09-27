@@ -1,4 +1,5 @@
 import { auth } from '$lib/server/auth';
+import { isAuthorizedAdminRequest } from '$lib/server/request-auth';
 import { redirect, type Handle } from '@sveltejs/kit';
 
 // Routes that require authentication (admin only)
@@ -12,23 +13,17 @@ const PROTECTED_ROUTES = [
 	'/admin',
 ];
 
-// Routes that are always public
-const PUBLIC_ROUTES = [
-	'/',
-	'/addresses',
-	'/screening',
-	'/login',
-	'/api/auth',
-	'/api/screen',
-	'/api/stats',
-];
-
-function isPublicRoute(path: string): boolean {
-	return PUBLIC_ROUTES.some(r => path === r || path.startsWith(r + '/'));
+function isProtectedRoute(routeKey: string): boolean {
+	return PROTECTED_ROUTES.some(r => routeKey === r || routeKey.startsWith(r + '/'));
 }
 
-function isProtectedRoute(path: string): boolean {
-	return PROTECTED_ROUTES.some(r => path === r || path.startsWith(r + '/'));
+/** event.url.pathname, percent-decoded — used only when nothing matched (route.id is null). */
+function decodedPathname(pathname: string): string {
+	try {
+		return decodeURIComponent(pathname);
+	} catch {
+		return pathname;
+	}
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -65,15 +60,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.locals.session = null;
 	}
 
-	// Only block protected routes if not authenticated
-	const path = event.url.pathname;
-	if (isProtectedRoute(path) && !event.locals.user) {
-		// Allow Vercel Cron with CRON_SECRET
-		const authHeader = event.request.headers.get('authorization');
-		const cronSecret = process.env.CRON_SECRET;
-		if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-			return resolve(event);
-		}
+	// Match on the resolved route pattern, not the raw pathname: SvelteKit's
+	// router decodes percent-encoding before matching and invoking a route
+	// (e.g. /api/%61dmin/transactions dispatches to /api/admin/transactions),
+	// but event.url.pathname keeps the client's original encoding — so a
+	// string compare against it can classify an encoded protected path as
+	// unprotected while the framework still runs the protected handler.
+	// route.id is null only when nothing matched (a 404), which is also
+	// worth decoding before the (harmless, 404-bound) comparison.
+	const routeKey = event.route.id ?? decodedPathname(event.url.pathname);
+	if (isProtectedRoute(routeKey) && !isAuthorizedAdminRequest(event.request, event.locals.user)) {
 		throw redirect(303, '/login');
 	}
 

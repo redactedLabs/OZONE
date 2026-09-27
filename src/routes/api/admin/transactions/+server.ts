@@ -4,7 +4,13 @@ import { db } from '$lib/server/db';
 import { transactions } from '$lib/server/db/schema';
 import { desc, eq, sql } from 'drizzle-orm';
 
-export const GET: RequestHandler = async ({ url }) => {
+// Not a cron target (unlike /api/sync/* and /api/cron/l1): a plain session
+// check, no CRON_SECRET fallback. Defense in depth alongside hooks.server.ts
+// — this must not depend solely on that hook's routing (see
+// ozone-hook-gate-encoded-pathname-bypass).
+export const GET: RequestHandler = async ({ url, locals }) => {
+	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
 	const limit = parseInt(url.searchParams.get('limit') || '50');
 	const memoType = url.searchParams.get('type') || '';
 

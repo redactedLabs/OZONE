@@ -5,14 +5,21 @@ import { db } from '$lib/server/db';
 import { rujiraUsers, l1Addresses } from '$lib/server/db/schema';
 import { eq, isNull, sql } from 'drizzle-orm';
 import pLimit from 'p-limit';
+import { isAuthorizedAdminRequest } from '$lib/server/request-auth';
 
 export const config = { maxDuration: 300 };
 
 /**
  * Fetches L1 addresses in batches that fit within Vercel's timeout.
  * Call repeatedly until done=true.
+ *
+ * Defense in depth alongside hooks.server.ts (see
+ * ozone-hook-gate-encoded-pathname-bypass) — not itself a cron target, but
+ * part of the /api/sync/* family, so kept consistent with its siblings.
  */
-export const POST: RequestHandler = async ({ url }) => {
+export const POST: RequestHandler = async ({ url, request, locals }) => {
+	if (!isAuthorizedAdminRequest(request, locals.user)) return json({ error: 'Unauthorized' }, { status: 401 });
+
 	const batchSize = parseInt(url.searchParams.get('batch') || '20');
 	const refetch = url.searchParams.get('refetch') === 'true';
 	const start = Date.now();

@@ -5,6 +5,7 @@ import { db } from '$lib/server/db';
 import { rujiraUsers, syncLog } from '$lib/server/db/schema';
 import { sql } from 'drizzle-orm';
 import pLimit from 'p-limit';
+import { isAuthorizedAdminRequest } from '$lib/server/request-auth';
 
 // Dedicated L1 discovery cron — lightweight, runs every 10 min
 // Processes 100 unfetched users per run = ~14,400/day
@@ -57,5 +58,11 @@ async function discoverL1() {
 	return json({ processed: unfetched.length, l1Found, remaining: Number(count), duration });
 }
 
-export const GET: RequestHandler = async () => discoverL1();
-export const POST: RequestHandler = async () => discoverL1();
+// Cron target (vercel.json) — accepts a session or CRON_SECRET's bearer
+// token. Defense in depth alongside hooks.server.ts (see
+// ozone-hook-gate-encoded-pathname-bypass).
+const guard = ({ request, locals }: { request: Request; locals: App.Locals }) =>
+	isAuthorizedAdminRequest(request, locals.user) ? null : json({ error: 'Unauthorized' }, { status: 401 });
+
+export const GET: RequestHandler = async (event) => guard(event) ?? discoverL1();
+export const POST: RequestHandler = async (event) => guard(event) ?? discoverL1();
