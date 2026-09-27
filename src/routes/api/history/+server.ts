@@ -1,23 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { randomBytes } from 'node:crypto';
 import { db } from '$lib/server/db';
 import { reports } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { fetchMidgardActions, fetchBalances, groupTransactions, isValidThorAddress, redactGroups, redactTransactions } from '$lib/server/historyService';
 import { globalThrottle } from '$lib/server/ozone/throttle';
-
-// A report id is the sole access control for an unauthenticated, shareable
-// report (POST returns shareUrl: /report/<id>; anyone with it can read it
-// back). Math.random() is V8's non-cryptographic xorshift128+ generator —
-// wrong for a capability token — so this uses the same crypto.randomBytes
-// approach as the sibling public submission id (lib/server/ozone/submissions.ts).
-const REPORT_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-export function generateReportId(): string {
-	let id = '';
-	for (const b of randomBytes(10)) id += REPORT_ID_ALPHABET[b % REPORT_ID_ALPHABET.length];
-	return id;
-}
+import { generateReportId } from '$lib/server/reportId';
 
 // Both unauthenticated and each able to trigger up to 100 sequential Midgard
 // requests plus a DB write — separate buckets so a burst of one doesn't use

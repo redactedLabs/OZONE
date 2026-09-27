@@ -339,7 +339,7 @@ describe('API routes', () => {
 	});
 
 	it('report ids are drawn from crypto.randomBytes, not Math.random', async () => {
-		const { generateReportId } = await import('../../../routes/api/history/+server');
+		const { generateReportId } = await import('../reportId');
 		const ids = new Set(Array.from({ length: 200 }, () => generateReportId()));
 		expect(ids.size).toBe(200); // no collisions in a small CSPRNG sample
 		for (const id of ids) {
