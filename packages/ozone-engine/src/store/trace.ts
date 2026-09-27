@@ -6,6 +6,7 @@ import { keyTwins, parseForChain, riskFromRank, riskRank, splitKey, type Categor
 import { isTraceOrigin, describeHit, type IndexEntry, type TraceHit } from '../trace/tracer.js';
 import type { Sql } from '../types.js';
 import { TWIN_CATEGORIES } from '../policy.js';
+import { CURATED } from '../sources/curated-data.js';
 import { batchInsert } from './db.js';
 
 export async function recordHits(sql: Sql, hits: TraceHit[]): Promise<{ edges: number; traced: number }> {
@@ -123,8 +124,13 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 		category: Category;
 		source: string;
 		entity: string | null;
-		listed_at: string | Date | null;
-	}>(`SELECT key, chain, address, risk, category, source, entity, listed_at FROM oz_entries WHERE removed_at IS NULL`);
+		cluster: string | null;
+	}>(`SELECT key, chain, address, risk, category, source, entity, meta->>'cluster' AS cluster FROM oz_entries WHERE removed_at IS NULL`);
+	// Hack-cluster members count from the start of their incident: earlier
+	// activity cannot be the proceeds. (Not from the recorded transfer: the
+	// expansion sees plain ETH transfers only, so a member is often funded
+	// earlier through contracts or internal transactions.)
+	const incidentStart = new Map(CURATED.clusters.map((c) => [c.id, Math.floor(Date.parse(c.window.from) / 1000)]));
 	const put = (e: IndexEntry) => {
 		const cur = index.get(e.key);
 		const better =
@@ -139,8 +145,7 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 	for (const r of listed.rows) {
 		if (!isTraceOrigin(r.category)) continue;
 		if (suppressed.has(r.key) && r.category !== 'sanctions' && r.category !== 'law_enforcement') continue;
-		// hack-cluster members are tainted from the transfer that made them members
-		const sinceTime = r.source === 'cluster' && r.listed_at ? Math.floor(new Date(r.listed_at).getTime() / 1000) : undefined;
+		const sinceTime = r.source === 'cluster' && r.cluster ? incidentStart.get(r.cluster) : undefined;
 		put({
 			key: r.key,
 			hop: 0,

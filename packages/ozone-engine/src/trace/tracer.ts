@@ -51,8 +51,8 @@ export interface IndexEntry {
 	since?: number;
 	/**
 	 * Only flows at or after this time (unix seconds) count — for addresses
-	 * that became tainted at a known moment, e.g. a hack-cluster member from
-	 * the transfer that made it one. Earlier activity is not the proceeds.
+	 * tainted by a dated incident, e.g. hack-cluster members from the start
+	 * of the hack. Earlier activity cannot be the proceeds.
 	 */
 	sinceTime?: number;
 	service?: boolean;
