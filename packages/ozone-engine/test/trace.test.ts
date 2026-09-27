@@ -5,6 +5,7 @@ import { loadTraceIndex, pendingChecks, queryForms, recordHits } from '../src/st
 import { toChecksumAddress } from '../src/util/evm.js';
 import { extractFlows } from '../src/trace/flows.js';
 import { runRealtimeTick, runTraceBackfill } from '../src/trace/jobs.js';
+import { collectSnapshot } from '../src/snapshot/builder.js';
 import type { MidgardAction } from '../src/trace/midgard.js';
 import { StaticPrices } from '../src/trace/prices.js';
 import { DEFAULT_TRACE_CONFIG, traceAction, traceRisk, type IndexEntry } from '../src/trace/tracer.js';
@@ -324,5 +325,52 @@ describe('trace store + backfill against an embedded Postgres', async () => {
 		const tasks = await pendingChecks(sql, index, DEFAULT_TRACE_CONFIG.maxHops);
 		expect(tasks.every((t) => t.hop < DEFAULT_TRACE_CONFIG.maxHops)).toBe(true);
 		for (let i = 1; i < tasks.length; i++) expect(tasks[i - 1].priority).toBeGreaterThanOrEqual(tasks[i].priority);
+	});
+});
+
+describe('structuring resistance: per-(origin, recipient) USD aggregation', async () => {
+	const { db, sql } = await memoryDb();
+	afterAll(() => db.close());
+
+	const origin = '0xfeed00000000000000000000000000000000dead';
+	const recipient = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+
+	it('ten $999 hop-1 flows (each demoted on its own) sum past the $1,000 full-USD threshold', async () => {
+		const res = emptyResult();
+		res.entries.push({
+			source: 'ethlabels',
+			key: `evm:${origin}`,
+			chain: 'ETH',
+			address: origin,
+			category: 'hack',
+			risk: 'high',
+			code: 'HACK_LABEL',
+			entity: 'Structuring test origin',
+			text: 'test fixture'
+		});
+		await applySourceResult(sql, { id: 'ethlabels', name: 'eth-labels', kind: 'community' }, res);
+
+		const actions = Array.from({ length: 10 }, (_, i) =>
+			action({
+				height: 500 + i,
+				in: [{ address: origin, asset: 'ETH.ETH', amount: 1 }],
+				out: [{ address: recipient, asset: 'BTC.BTC', amount: 1 }],
+				metadata: { swap: { outPriceUSD: '999' } }
+			})
+		);
+		const r = await runTraceBackfill(sql, new FakeMidgard(actions));
+		expect(r.errors).toBe(0);
+
+		// Each $999 flow is, on its own, below hop 1's $1,000 "full" amount, so
+		// every stored edge is individually demoted from high to medium.
+		const edgeRisks = await sql.query<{ risk: string }>(`SELECT risk FROM oz_trace_edges WHERE to_key = $1`, [`btc:${recipient}`]);
+		expect(edgeRisks.rows.length).toBeGreaterThan(0);
+		expect(edgeRisks.rows.every((x) => x.risk === 'medium')).toBe(true);
+
+		// Ten of them sum to $9,990 — well past $1,000 — so the snapshot
+		// publishes the recipient's reason at the undemoted (high) risk.
+		const snap = await collectSnapshot(sql);
+		const rec = snap.records.find((x) => x.key === `btc:${recipient}`);
+		expect(rec?.reasons.some((x) => x.risk === 'high')).toBe(true);
 	});
 });

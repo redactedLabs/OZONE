@@ -12,11 +12,11 @@ export { CURATED, type ClusterSpec, type CuratedIncident } from './sources/curat
 export { SOURCES, DERIVED_SOURCES, CORE_SOURCES, sourceById, parseCurated, type SourceDef, type SourceContext } from './sources/registry.js';
 export { migrate, batchInsert, withTransaction } from './store/db.js';
 export { applySourceResult, allEntries, manualEntries, SanityError, type ApplyStats } from './store/entries.js';
-export { recordHits, loadTraceIndex, pendingChecks, markChecked, queryForms, getState, setState } from './store/trace.js';
+export { recordHits, recordDustTotals, loadTraceIndex, pendingChecks, markChecked, queryForms, getState, setState } from './store/trace.js';
 export { Midgard, DEFAULT_MIDGARD_URL, type MidgardAction, type MidgardLike } from './trace/midgard.js';
 export { extractFlows, THORCHAIN_MODULES, type Flow } from './trace/flows.js';
 export { loadPoolPrices, StaticPrices, type PriceOracle } from './trace/prices.js';
-export { traceAction, traceRisk, describeHit, DEFAULT_TRACE_CONFIG, type TraceConfig, type TraceHit, type IndexEntry } from './trace/tracer.js';
+export { traceAction, traceRisk, describeHit, DEFAULT_TRACE_CONFIG, type TraceConfig, type TraceHit, type IndexEntry, type DustFlow } from './trace/tracer.js';
 export { runTraceBackfill, runRealtimeTick, scheduleRecheck, checkAddress } from './trace/jobs.js';
 export { expandCluster, clusterEntries } from './evm/expand.js';
 export {

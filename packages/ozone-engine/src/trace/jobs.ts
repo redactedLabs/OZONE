@@ -2,13 +2,13 @@
  * Tracing jobs: history backfill (per flagged address, highest risk first)
  * and the real-time follower (new THORChain actions since a cursor).
  */
-import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recordHits, setState } from '../store/trace.js';
+import { markChecked, getState, loadTraceIndex, pendingChecks, queryForms, recordDustTotals, recordHits, setState } from '../store/trace.js';
 import type { Logger, Sql } from '../types.js';
 import { silentLogger } from '../types.js';
 import { toChecksumAddress } from '../util/evm.js';
 import type { MidgardLike as Midgard } from './midgard.js';
 import { loadPoolPrices, type PriceOracle } from './prices.js';
-import { DEFAULT_TRACE_CONFIG, traceAction, type IndexEntry, type TraceConfig, type TraceHit } from './tracer.js';
+import { DEFAULT_TRACE_CONFIG, traceAction, type DustFlow, type IndexEntry, type TraceConfig, type TraceHit } from './tracer.js';
 import { actionTxid, parseTxAddress } from './flows.js';
 
 /** An address with more THORChain actions than this is treated as a service and not propagated. */
@@ -55,8 +55,9 @@ export async function checkAddress(
 	lookup: (key: string) => IndexEntry | undefined,
 	prices: PriceOracle | undefined,
 	cfg: TraceConfig
-): Promise<{ hits: TraceHit[]; actions: number; maxHeight: number; service: boolean }> {
+): Promise<{ hits: TraceHit[]; dust: DustFlow[]; actions: number; maxHeight: number; service: boolean }> {
 	const hits: TraceHit[] = [];
+	const dust: DustFlow[] = [];
 	let actions = 0;
 	let maxHeight = fromHeight;
 	let service = false;
@@ -70,11 +71,11 @@ export async function checkAddress(
 			seenActions.add(id);
 			actions++;
 			maxHeight = Math.max(maxHeight, Number(a.height));
-			hits.push(...traceAction(a, lookup, prices, cfg));
+			hits.push(...traceAction(a, lookup, prices, cfg, (d) => dust.push(d)));
 		}
 		if (n >= SERVICE_ACTIONS) service = true;
 	}
-	return { hits: dedupe(hits), actions, maxHeight, service };
+	return { hits: dedupe(hits), dust, actions, maxHeight, service };
 }
 
 export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: BackfillOptions = {}): Promise<BackfillResult> {
@@ -111,6 +112,7 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 						res.traced += rec.traced;
 						log.info(`trace ${task.key}: ${r.actions} actions, ${r.hits.length} flows flagged`);
 					}
+					if (r.dust.length) await recordDustTotals(sql, r.dust);
 					res.actions += r.actions;
 					res.checked++;
 					if (r.service) res.services++;
@@ -167,7 +169,9 @@ export async function runRealtimeTick(
 	const { actions, complete, head } = await midgard.actionsSince(from, opts.maxPages ?? 40);
 	const index = opts.index ?? (await loadTraceIndex(sql));
 	const lookup = (k: string) => index.get(k);
-	const hits = dedupe(actions.flatMap((a) => traceAction(a, lookup, opts.prices, cfg)));
+	const dust: DustFlow[] = [];
+	const onDust = (d: DustFlow) => dust.push(d);
+	const hits = dedupe(actions.flatMap((a) => traceAction(a, lookup, opts.prices, cfg, onDust)));
 
 	// Streaming swaps (and delayed outbounds) are reported as `pending` with no
 	// outputs yet: remember those that start at a flagged address and re-read
@@ -189,12 +193,13 @@ export async function runRealtimeTick(
 			still.push(p);
 			continue;
 		}
-		for (const a of settled) hits.push(...traceAction(a, lookup, opts.prices, cfg));
+		for (const a of settled) hits.push(...traceAction(a, lookup, opts.prices, cfg, onDust));
 	}
 	still.push(...pending.slice(25));
 	await setState(sql, 'trace:pending', still);
 
 	const rec = await recordHits(sql, dedupe(hits));
+	if (dust.length) await recordDustTotals(sql, dust);
 	const to = complete ? head : Math.max(from, ...actions.map((a) => Number(a.height)));
 	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { gapFrom: from }) });
 	if (!complete) {

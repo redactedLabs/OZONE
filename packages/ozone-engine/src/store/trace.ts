@@ -104,6 +104,30 @@ export async function recordHits(sql: Sql, hits: TraceHit[]): Promise<{ edges: n
 	return { edges: hits.length, traced: best.size };
 }
 
+/**
+ * Adds to the running per-(origin, recipient, hop) USD total for value flows
+ * that were under the dust limit on their own (traceAction's `onDust`).
+ * These never get an oz_trace_edges row of their own; the snapshot builder
+ * reads this table to add them into that pair's sum.
+ */
+export async function recordDustTotals(sql: Sql, dust: Array<{ originKey: string; toKey: string; hop: number; usd: number }>): Promise<void> {
+	if (!dust.length) return;
+	const merged = new Map<string, { originKey: string; toKey: string; hop: number; usd: number }>();
+	for (const d of dust) {
+		const k = `${d.originKey}\u0000${d.toKey}\u0000${d.hop}`;
+		const cur = merged.get(k);
+		if (cur) cur.usd += d.usd;
+		else merged.set(k, { ...d });
+	}
+	await batchInsert(
+		sql,
+		`INSERT INTO oz_trace_dust_totals (origin_key, to_key, hop, usd, updated_at)`,
+		5,
+		[...merged.values()].map((d) => [d.originKey, d.toKey, d.hop, d.usd, new Date()]),
+		`ON CONFLICT (origin_key, to_key, hop) DO UPDATE SET usd = oz_trace_dust_totals.usd + EXCLUDED.usd, updated_at = EXCLUDED.updated_at`
+	);
+}
+
 const lowerRisk = (r: Risk): Risk => riskFromRank(Math.max(riskRank('low'), riskRank(r) - 1));
 
 /**

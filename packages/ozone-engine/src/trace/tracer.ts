@@ -68,6 +68,14 @@ export interface TraceHit extends Flow {
 	originCategory: Category;
 }
 
+/** A value flow dropped for being under the dust limit on its own. */
+export interface DustFlow {
+	originKey: string;
+	toKey: string;
+	hop: number;
+	usd: number;
+}
+
 const ORIGIN_CATEGORIES: ReadonlySet<Category> = new Set([
 	'sanctions',
 	'law_enforcement',
@@ -101,12 +109,18 @@ export function traceRisk(
 	return riskFromRank(rank);
 }
 
-/** Flows of one action that leave a flagged address. */
+/**
+ * Flows of one action that leave a flagged address. `onDust`, when given,
+ * is called for value flows under the dust limit that flag nothing on their
+ * own, so a caller can accumulate them (see store/trace.ts recordDustTotals)
+ * — many such flows from the same origin to the same recipient still add up.
+ */
 export function traceAction(
 	action: MidgardAction,
 	lookup: (key: string) => IndexEntry | undefined,
 	prices?: PriceOracle,
-	cfg: TraceConfig = DEFAULT_TRACE_CONFIG
+	cfg: TraceConfig = DEFAULT_TRACE_CONFIG,
+	onDust?: (dust: DustFlow) => void
 ): TraceHit[] {
 	const hits: TraceHit[] = [];
 	for (const flow of extractFlows(action, prices)) {
@@ -118,7 +132,12 @@ export function traceAction(
 		if (target && target.hop === 0) continue; // already listed in its own right
 		const hop = flow.relation === 'value' ? src.hop + 1 : Math.max(1, src.hop);
 		const risk = traceRisk(src.originRisk, hop, flow.usd, flow.relation, cfg);
-		if (!risk) continue;
+		if (!risk) {
+			if (onDust && flow.relation === 'value' && flow.usd !== undefined && flow.usd > 0 && flow.usd < cfg.dustUsd && hop >= 1 && hop <= cfg.maxHops) {
+				onDust({ originKey: src.originKey, toKey: flow.toKey, hop, usd: flow.usd });
+			}
+			continue;
+		}
 		hits.push({
 			...flow,
 			hop,

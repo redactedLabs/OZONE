@@ -23,6 +23,7 @@ import { CORE_SOURCES, DERIVED_SOURCES, SOURCES } from '../sources/registry.js';
 import { allEntries } from '../store/entries.js';
 import { isoOf } from '../store/db.js';
 import { getState, setState } from '../store/trace.js';
+import { DEFAULT_TRACE_CONFIG } from '../trace/tracer.js';
 import { TWIN_CATEGORIES } from '../policy.js';
 import type { Sql } from '../types.js';
 
@@ -140,11 +141,12 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 		hop: number;
 		risk: Risk;
 		origin_key: string;
+		origin_risk: Risk;
 		origin_source: string;
 		origin_entity: string | null;
 		reason: string;
 	}>(
-		`SELECT to_key, to_chain, txid, from_address, from_chain, action, relation, height, ts, amount, usd, hop, risk, origin_key, origin_source, origin_entity, reason
+		`SELECT to_key, to_chain, txid, from_address, from_chain, action, relation, height, ts, amount, usd, hop, risk, origin_key, origin_risk, origin_source, origin_entity, reason
 		 FROM oz_trace_edges ORDER BY to_key, hop ASC, usd DESC NULLS LAST, ts ASC`
 	);
 	const edgesByKey = new Map<string, typeof edges.rows>();
@@ -153,15 +155,43 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 		if (!list) edgesByKey.set(e.to_key, [e]);
 		else if (list.length < MAX_TRACE_REASONS) list.push(e);
 	}
+
+	// Per-flow USD thresholds demote a flow that is, on its own, below the
+	// "full" amount for its hop — but several such flows from the same origin
+	// to the same recipient still add up (structuring). Aggregate every
+	// known-usd value edge by (origin, recipient, hop), plus flows that never
+	// got their own edge for being under the dust limit (oz_trace_dust_totals,
+	// written by traceAction's onDust callback), and republish at the
+	// undemoted risk once the sum reaches the hop's full-USD threshold.
+	const groupKey = (originKey: string, toKey: string, hop: number) => `${originKey}\u0000${toKey}\u0000${hop}`;
+	const groupTotals = new Map<string, number>();
+	for (const e of edges.rows) {
+		if (e.relation !== 'value' || e.usd === null) continue;
+		const k = groupKey(e.origin_key, e.to_key, e.hop);
+		groupTotals.set(k, (groupTotals.get(k) ?? 0) + Number(e.usd));
+	}
+	const dustTotals = await sql.query<{ origin_key: string; to_key: string; hop: number; usd: string | number }>(
+		`SELECT origin_key, to_key, hop, usd FROM oz_trace_dust_totals`
+	);
+	for (const d of dustTotals.rows) {
+		const k = groupKey(d.origin_key, d.to_key, d.hop);
+		groupTotals.set(k, (groupTotals.get(k) ?? 0) + Number(d.usd));
+	}
+	const undemotedRisk = (originRisk: Risk, hop: number): Risk =>
+		riskFromRank(Math.max(Math.min(riskRank(originRisk), riskRank('high')) - (hop - 1), riskRank('low')));
+	const crossesFullUsd = (hop: number, sum: number) => sum >= (hop === 1 ? DEFAULT_TRACE_CONFIG.hop1FullUsd : DEFAULT_TRACE_CONFIG.deepFullUsd);
+
 	let tracedCount = 0;
 	for (const t of traced.rows) {
 		if (listedKeys.has(t.key)) continue; // listed in its own right; trace adds nothing to the verdict
 		for (const e of edgesByKey.get(t.key) ?? []) {
+			const sum = e.relation === 'value' ? groupTotals.get(groupKey(e.origin_key, e.to_key, e.hop)) : undefined;
+			const risk = sum !== undefined && crossesFullUsd(e.hop, sum) ? undemotedRisk(e.origin_risk, e.hop) : e.risk;
 			add(t.key, {
 				code: e.relation === 'value' ? `TRACE_${String(e.action).toUpperCase()}` : `TRACE_${e.relation.toUpperCase()}`,
 				source: 'thorchain_trace',
 				category: 'traced',
-				risk: e.risk,
+				risk,
 				text: e.reason,
 				chain: e.to_chain,
 				refId: e.txid,
