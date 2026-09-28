@@ -70,7 +70,11 @@ signed snapshot right away, typically within minutes.
   cluster and per run; pasted maintainer incidents immediately. Explorers:
   routescan (Ethereum, Avalanche; keyless), public Esplora servers (Bitcoin,
   Litecoin), Blockscout instances (other EVM chains; about 10 keyless
-  requests an hour), and optionally `ETHERSCAN_API_KEY` / `BLOCKSCOUT_API_KEY`.
+  requests an hour), and optionally `ROUTESCAN_API_KEY` (free: 100,000 calls a
+  day), `BLOCKSCOUT_API_KEY` or `ETHERSCAN_API_KEY` (Etherscan's API terms
+  limit the free key to personal use and forbid automated dataset creation
+  without its written permission). Routescan asks for the attribution
+  "Powered by Routescan.io APIs", which the methodology page carries.
   The expansion leaves the last 1,500 requests of a host's daily quota to the
   inbound watcher, so a large run never starves the look-backs.
 - The worker's real-time follower queues every THORChain inbound of at least

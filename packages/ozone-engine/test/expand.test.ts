@@ -281,3 +281,19 @@ describe('cluster runs: per-cluster store, union source, delisting', async () =>
 		await db2.close();
 	});
 });
+
+describe('explorer keys', () => {
+	it('uses a routescan key when set (more capacity), Etherscan only for chains its tier covers', async () => {
+		fastHosts();
+		const { evmProviders, resetHostBudgets } = await import('../src/index.js');
+		resetHostBudgets();
+		const keyed = evmProviders('ETH', { ROUTESCAN_API_KEY: 'rk' });
+		expect(keyed.map((p) => p.name)).toEqual(['routescan', 'blockscout']);
+		expect(keyed[0].params).toEqual({ apikey: 'rk' });
+		expect(keyed[0].budget.policy.perWindow).toBe(90_000);
+		expect(evmProviders('BASE', { ETHERSCAN_API_KEY: 'ek' }).map((p) => p.name)).toEqual(['blockscout']); // free tier excludes Base
+		expect(evmProviders('BASE', { ETHERSCAN_API_KEY: 'ek', ETHERSCAN_PAID: '1' }).map((p) => p.name)).toEqual(['etherscan', 'blockscout']);
+		expect(evmProviders('BSC', {}).map((p) => p.name)).toEqual([]);
+		resetHostBudgets();
+	});
+});

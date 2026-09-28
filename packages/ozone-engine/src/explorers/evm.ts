@@ -2,12 +2,18 @@
  * Etherscan-compatible explorer APIs for the EVM chains Ozone expands and
  * looks back on, tried in order until one answers:
  *
- * 1. Etherscan API v2 with the owner's `ETHERSCAN_API_KEY` (free: 5 calls/s,
+ * 1. Etherscan API v2 with the owner's `ETHERSCAN_API_KEY` (5 calls/s,
  *    100,000 a day; since 2025 the free tier excludes Avalanche, Base, BNB
- *    Chain and OP — set `ETHERSCAN_PAID=1` for a plan that includes them);
+ *    Chain and OP — set `ETHERSCAN_PAID=1` for a plan that includes them).
+ *    Etherscan's API terms limit the free key to personal use and forbid
+ *    automated data collection and dataset creation without its written
+ *    permission: only set it with that permission;
  * 2. the Blockscout PRO API with `BLOCKSCOUT_API_KEY` (free: 5 calls/s,
  *    about 5,000 calls a day);
- * 3. routescan, keyless (2 calls/s, 10,000 a day; Ethereum and Avalanche);
+ * 3. routescan (Ethereum and Avalanche): keyless 2 calls/s and 10,000 a day,
+ *    with a free `ROUTESCAN_API_KEY` 5 calls/s and 100,000 a day; outside
+ *    personal use its terms ask for the attribution "Powered by
+ *    Routescan.io APIs" (on the methodology page);
  * 4. the chain's own Blockscout instance, keyless — measured 2026-09-28 at
  *    10 requests per IP and hour, so it only serves a trickle.
  *
@@ -67,6 +73,7 @@ export interface ExplorerEnv {
 	ETHERSCAN_API_KEY?: string;
 	ETHERSCAN_PAID?: string;
 	BLOCKSCOUT_API_KEY?: string;
+	ROUTESCAN_API_KEY?: string;
 }
 
 export interface EvmProvider {
@@ -106,13 +113,14 @@ export function evmProviders(chain: EvmChain, env: ExplorerEnv = process.env): E
 	}
 	const rs = ROUTESCAN[chain];
 	if (rs) {
+		const key = env.ROUTESCAN_API_KEY;
 		out.push({
 			name: 'routescan',
 			chain,
 			url: rs,
-			params: {},
+			params: key ? { apikey: key } : {},
 			filterBy: false,
-			budget: hostBudget('api.routescan.io', { minIntervalMs: 600, perWindow: 9_000, windowMs: DAY })
+			budget: hostBudget('api.routescan.io', key ? { minIntervalMs: 250, perWindow: 90_000, windowMs: DAY } : { minIntervalMs: 600, perWindow: 9_000, windowMs: DAY })
 		});
 	}
 	const bs = BLOCKSCOUT_INSTANCES[chain];
