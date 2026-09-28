@@ -86,11 +86,13 @@ describe('which inbounds are watched', () => {
 			swapIn(LISTED, 50, 102), // listed: the normal tracing covers it
 			action({ height: 103, in: [{ address: 'thor1zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg386we8s', asset: 'THOR.RUNE', amount: 100_000 }], out: [] }), // RUNE: not an L1 inbound
 			action({ height: 104, in: [{ address: evm(0xd2), asset: 'ETH~ETH', amount: 30 }], out: [] }), // a trade asset
-			action({ height: 105, type: 'addLiquidity', in: [{ address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT', asset: 'BTC.BTC', amount: 1 }], out: [] }) // $90k BTC add
+			action({ height: 105, type: 'addLiquidity', in: [{ address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT', asset: 'BTC.BTC', amount: 1 }], out: [] }), // $90k BTC add
+			action({ height: 106, in: [{ address: 'DHzAVdEoL3PjGeLWNdEJwwMA1CeQ9J9Cpo', asset: 'DOGE.DOGE', amount: 400_000 }], out: [], metadata: { swap: { inPriceUSD: '0.2' } } }) // $80k DOGE: queued, no look-back
 		];
 		const c = watchCandidates(actions, lookup, prices);
 		expect(c.map((x) => [x.key, Math.round(x.usd), x.action])).toEqual([
 			['btc:1BoatSLRHtKNngkdXEeobR76b53LETtpyT', 90_000, 'addLiquidity'],
+			['doge:DHzAVdEoL3PjGeLWNdEJwwMA1CeQ9J9Cpo', 80_000, 'swap'],
 			[`evm:${DEPOSITOR}`, 60_000, 'swap']
 		]);
 		expect(watchCandidates(actions, lookup, prices, { ...DEFAULT_WATCH_CONFIG, minUsd: 100_000 })).toEqual([]);
@@ -173,9 +175,12 @@ describe('look-backs', async () => {
 		const kAgg = await enqueue(aggregator, 25);
 		const kBsc = `evm:${evm(0xb5c)}`;
 		await enqueueWatch(sql, [{ key: kBsc, chain: 'BSC', address: evm(0xb5c), txid: 'X', height: 1, date: DEPOSIT_TIME, usd: 50_000, asset: 'BSC.BNB', action: 'swap' }]);
+		const kDoge = 'doge:DHzAVdEoL3PjGeLWNdEJwwMA1CeQ9J9Cpo';
+		await enqueueWatch(sql, [{ key: kDoge, chain: 'DOGE', address: 'DHzAVdEoL3PjGeLWNdEJwwMA1CeQ9J9Cpo', txid: 'Y', height: 1, date: DEPOSIT_TIME, usd: 80_000, asset: 'DOGE.DOGE', action: 'swap' }]);
 		const m = await processWatchQueue(sql, { http: { fetch, retries: 0 }, env: {} });
 		expect(m.hits).toBe(0);
-		expect(m.skipped).toMatchObject({ service: 1, contract: 1, noExplorer: 1 });
+		expect(m.skipped).toMatchObject({ service: 1, contract: 1, noExplorer: 1, noLookback: 1 });
+		expect((await queue(kDoge)).reason).toMatch(/no look-back for DOGE/);
 		expect((await queue(kBusy)).reason).toMatch(/service/);
 		expect((await queue(kAgg)).reason).toMatch(/contract/);
 		expect((await queue(kBsc)).reason).toMatch(/no explorer API for BSC/);

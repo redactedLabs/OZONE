@@ -104,7 +104,9 @@ export function watchCandidates(
 			const coin = t.coins?.[0];
 			if (!coin || /[~/]/.test(coin.asset) || /^[A-Z0-9]+-/.test(coin.asset)) continue; // trade / synth / secured: not an L1 inbound
 			const chain = chainOfAsset(coin.asset);
-			if (!chain || chain === 'THOR' || !isLookbackChain(chain)) continue;
+			// chains without a look-back (DOGE, BCH, TRON, XRP, SOL, GAIA) are queued too and
+			// recorded as skipped, so the metrics show what the watcher cannot see
+			if (!chain || chain === 'THOR') continue;
 			const p = parseTxAddress(t);
 			if (!p || lookup(p.key)) continue; // already listed or traced: the normal tracing covers it
 			const inPrice = Number(a.metadata?.swap?.inPriceUSD);
@@ -486,8 +488,8 @@ export async function processWatchQueue(sql: Sql, opts: WatchOptions = {}): Prom
 				continue;
 			}
 		} else if (!isUtxoChain(chain)) {
-			await finish(row, 'skipped', `no look-back for ${chain}`);
-			skip(chain, 'noExplorer');
+			await finish(row, 'skipped', `no look-back for ${chain} (no keyless explorer integrated)`);
+			skip(chain, 'noLookback');
 			continue;
 		}
 		const beforeUnix = Math.floor(new Date(row.ts ?? Date.now()).getTime() / 1000);
