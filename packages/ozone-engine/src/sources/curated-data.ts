@@ -357,6 +357,23 @@ export const CURATED: CuratedData = {
 			]
 		},
 		{
+			id: 'bigone-2025',
+			name: 'BigONE hot-wallet hack (2025-07-15)',
+			date: '2025-07-15',
+			category: 'hack',
+			attribution: 'unknown (supply-chain attack on the production environment, per BigONE)',
+			ref: 'https://rekt.news/bigone-rekt',
+			verification: 'Checked 2026-09-28: every address is valid for its chain (checksums) and appears verbatim on its cited page (rekt.news).',
+			lossUsd: 27_000_000,
+			thorchain: { used: 'unknown' },
+			addresses: [
+				{ chain: 'ETH', address: '0x9Bf7a4dDcA405929dba1FBB136F764F5892A8a7a', role: 'exploiter', ref: 'https://rekt.news/bigone-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: where the stolen funds flowed on Ethereum (the same address on BSC)' },
+				{ chain: 'BTC', address: 'bc1qwxm53zya6cuflxhcxy84t4c4wrmgrwqzd07jxm', role: 'exploiter', ref: 'https://rekt.news/bigone-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: where the stolen funds flowed on Bitcoin' },
+				{ chain: 'TRON', address: 'TKKGH8bwmEEvyp3QkzDCbK61EwCHXdo17c', role: 'exploiter', ref: 'https://rekt.news/bigone-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: where the stolen funds flowed on TRON' },
+				{ chain: 'SOL', address: 'HSr1FNv266zCnVtUdZhfYrhgWx1a4LNEpMPDymQzPg4R', role: 'exploiter', ref: 'https://rekt.news/bigone-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: where the stolen funds flowed on Solana' }
+			]
+		},
+		{
 			id: 'gmx-2025',
 			name: 'GMX V1 exploit (2025-07-09)',
 			date: '2025-07-09',
@@ -369,6 +386,21 @@ export const CURATED: CuratedData = {
 			expand: false,
 			addresses: [
 				{ chain: 'ARB', address: '0xDF3340A436c27655bA62F8281565C9925C3a5221', role: 'exploiter', ref: 'https://www.certik.com/blog/gmx-incident-analysis', refType: 'investigator', confidence: 'medium', note: 'Labeled \'GMX Exploiter 1\' on Arbiscan; GMX publicly thanked this address after it returned the bulk of the funds.', delisted: { date: '2025-07-11', reason: 'funds returned to GMX under a bounty agreement' } }
+			]
+		},
+		{
+			id: 'cork-2025',
+			name: 'Cork Protocol exploit (2025-05-28)',
+			date: '2025-05-28',
+			category: 'exploit',
+			attribution: 'unknown',
+			ref: 'https://rekt.news/cork-protocol-rekt',
+			verification: 'Checked 2026-09-28: every address is valid for its chain (checksums) and appears verbatim on its cited page (rekt.news). The funding wallet rekt.news names is described as funded by a service provider and is left out.',
+			lossUsd: 12_000_000,
+			thorchain: { used: 'unknown' },
+			addresses: [
+				{ chain: 'ETH', address: '0xEA6f30e360192bae715599E15e2F765B49E4da98', role: 'exploiter', ref: 'https://rekt.news/cork-protocol-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: attacker address' },
+				{ chain: 'ETH', address: '0x9Af3dCE0813FD7428c47F57A39da2F6Dd7C9bb09', role: 'exploiter', ref: 'https://rekt.news/cork-protocol-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: attacker\'s malicious callback contract' }
 			]
 		},
 		{
@@ -429,6 +461,26 @@ export const CURATED: CuratedData = {
 			addresses: [
 				{ chain: 'ETH', address: '0x47666Fab8bd0Ac7003bce3f5C3585383F09486E2', role: 'exploiter', ref: 'https://amlcrypto.io/en/blog/event-chronology-bybit-hack', refType: 'investigator', confidence: 'medium', note: 'Labeled \'Exploiter address\' in AMLCrypto.io chronology (AML/KYT analytics firm, not on rules\' example list but same category as…' },
 				{ chain: 'ETH', address: '0xfce75385e6b80a81f3074afcc21b19447f106503', role: 'laundering', ref: 'https://www.merklescience.com/blog/hack-track-bybit-hack-wazirx-connection', refType: 'investigator', confidence: 'medium', note: 'Bybit-hack address in Merkle Science\'s Bybit/WazirX link analysis' }
+			]
+		},
+		{
+			id: 'zklend-2025',
+			name: 'zkLend exploit, Ethereum side (2025-02-12)',
+			date: '2025-02-12',
+			category: 'exploit',
+			attribution: 'unknown; linked by SlowMist to the EraLend exploit of 2023',
+			ref: 'https://rekt.news/zklend-rekt',
+			verification: 'Checked 2026-09-28: every address is valid for its chain (checksums) and appears verbatim on its cited page (rekt.news). The exploit itself ran on Starknet, which Ozone does not parse.',
+			lossUsd: 9_570_000,
+			thorchain: { used: 'unknown' },
+			addresses: [
+				{ chain: 'ETH', address: '0x645c77833833A6654F7EdaA977eBEaBc680a9109', role: 'exploiter', ref: 'https://rekt.news/zklend-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: attacker on Ethereum' },
+				{ chain: 'ETH', address: '0xCf677c7520E02acA89BC70431eAC891e94273E8a', role: 'laundering', ref: 'https://rekt.news/zklend-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: attacker\'s address used for Railgun' },
+				{ chain: 'ETH', address: '0x0B7D061D91018AaB823A755020e625FfE8B93074', role: 'laundering', ref: 'https://rekt.news/zklend-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: second wallet (about $720k)' },
+				{ chain: 'ETH', address: '0xcd1c290198E12c4c1809271e683572FBF977Bb63', role: 'laundering', ref: 'https://rekt.news/zklend-rekt', refType: 'investigator', confidence: 'medium', note: 'rekt.news: another wallet (about $19k)' },
+				{ chain: 'ETH', address: '0xd95b3c1e638ce3cdc070ad6d4f385c61e2ee8662', role: 'exploiter', ref: 'https://rekt.news/zklend-rekt', refType: 'investigator', confidence: 'medium', note: 'attacker\'s L1 test address (SlowMist, via rekt.news)' },
+				{ chain: 'ETH', address: '0x93920786e0fda8496248c4447e2e082da69b6c40', role: 'exploiter', ref: 'https://rekt.news/zklend-rekt', refType: 'investigator', confidence: 'medium', note: 'attacker\'s L1 test address, also received EraLend exploit funds (SlowMist, via rekt.news)' },
+				{ chain: 'ETH', address: '0x34e5dc779cb705200e951239b6a89aaf5c7dbfc1', role: 'exploiter', ref: 'https://rekt.news/zklend-rekt', refType: 'investigator', confidence: 'medium', note: 'attacker\'s L1 test address, also received EraLend exploit funds (SlowMist, via rekt.news)' }
 			]
 		},
 		{

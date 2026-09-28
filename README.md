@@ -39,7 +39,7 @@ and the [methodology page](https://ozone.redacted.gg/methodology) for how verdic
 | **FBI / IC3** | Law enforcement | DPRK (TraderTraitor/Lazarus) laundering addresses, e.g. the Bybit PSA |
 | **Chainalysis sanctions oracle** | On-chain | add/remove events (no API key) on Ethereum, Arbitrum, Optimism, Polygon, Avalanche and Base, e.g. the Tornado Cash delisting |
 | **Tether / USDT0 / Circle** | On-chain | USDT freezes (ETH, TRON, AVAX), USDT0 freezes (Arbitrum, Polygon), USDC blacklist (ETH, BASE, AVAX, Arbitrum, Optimism, Polygon), incl. unfreezes |
-| **Hack incidents** | Curated | 59 thefts and exploits (2019–2026, 233 addresses), each address with the public page that names it and a confidence: law enforcement, sanctions or the victim → risk severe; established investigators → risk high. Returned-funds incidents are kept as history. [Dataset](packages/ozone-engine/src/sources/curated-data.ts) |
+| **Hack incidents** | Curated | 62 thefts and exploits (2019–2026, 246 addresses), each address with the public page that names it and a confidence: law enforcement, sanctions or the victim → risk severe; established investigators → risk high. Returned-funds incidents are kept as history. [Dataset](packages/ozone-engine/src/sources/curated-data.ts) |
 | **Hack clusters** | Derived | per incident and chain (Ethereum and EVM chains, Bitcoin, Litecoin): fan-out of its attacker addresses inside the laundering window, above a value threshold, stopping at services, contracts, contract calls, CoinJoins and THORChain deposits |
 | **eth-labels / ScamSniffer** | Community | exploiter, heist and phishing labels; drainer addresses |
 | **Maintainers** | Curated | maintainer flags, incl. the incident path for freshly announced hacks |
