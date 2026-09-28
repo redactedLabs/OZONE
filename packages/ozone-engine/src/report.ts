@@ -39,6 +39,10 @@ export interface CoverageReport {
 		flaggedByRisk: Array<{ risk: string; accounts: number }>;
 	};
 	snapshot: { version: number; builtAt: string; size: number; keys: number } | null;
+	/** Cluster expansion (null before migration 0005). */
+	clusters: { clusters: number; members: number; partial: number; lastRunAt: string | null } | null;
+	/** THORChain inbound watcher (null before migration 0005). */
+	watch: { pending: number; lookedBack: number; hits: number; skipped: number; lastRunAt: string | null } | null;
 }
 
 const num = (v: unknown) => Number(v ?? 0);
@@ -103,6 +107,17 @@ export async function coverageReport(sql: Sql): Promise<CoverageReport> {
 	);
 	const snapStats = snap ? (typeof snap.stats === 'string' ? JSON.parse(snap.stats) : snap.stats) : null;
 
+	// pass-E tables: absent until the worker has applied migration 0005 (the app may be deployed first)
+	const clusters = await q<{ clusters: number; members: number; partial: number; last: string | null }>(
+		`SELECT (SELECT count(*)::int FROM oz_cluster_runs) AS clusters, (SELECT count(DISTINCT key)::int FROM oz_cluster_members) AS members,
+		        (SELECT count(*)::int FROM oz_cluster_runs WHERE NOT complete) AS partial, (SELECT max(ran_at)::text FROM oz_cluster_runs) AS last`
+	).catch(() => null);
+	const watch = await q<{ pending: number; looked: number; hits: number; skipped: number; last: string | null }>(
+		`SELECT count(*) FILTER (WHERE status = 'pending')::int AS pending, count(*) FILTER (WHERE status IN ('done','hit'))::int AS looked,
+		        count(*) FILTER (WHERE status = 'hit')::int AS hits, count(*) FILTER (WHERE status = 'skipped')::int AS skipped, max(checked_at)::text AS last
+		 FROM oz_watch_queue`
+	).catch(() => null);
+
 	return {
 		generatedAt: new Date().toISOString(),
 		listed: {
@@ -140,6 +155,23 @@ export async function coverageReport(sql: Sql): Promise<CoverageReport> {
 		},
 		snapshot: snap
 			? { version: Number(snap.version), builtAt: new Date(snap.built_at).toISOString(), size: num(snap.size), keys: num(snapStats?.keys) }
+			: null,
+		clusters: clusters?.[0]
+			? {
+					clusters: num(clusters[0].clusters),
+					members: num(clusters[0].members),
+					partial: num(clusters[0].partial),
+					lastRunAt: clusters[0].last ? new Date(clusters[0].last).toISOString() : null
+				}
+			: null,
+		watch: watch?.[0]
+			? {
+					pending: num(watch[0].pending),
+					lookedBack: num(watch[0].looked),
+					hits: num(watch[0].hits),
+					skipped: num(watch[0].skipped),
+					lastRunAt: watch[0].last ? new Date(watch[0].last).toISOString() : null
+				}
 			: null
 	};
 }

@@ -61,6 +61,7 @@ export {
 	traceRisk,
 	describeHit,
 	describeSmallTransfers,
+	L1_FUNDING_ACTIONS,
 	DEFAULT_TRACE_CONFIG,
 	SMALL_TRANSFERS,
 	type TraceConfig,
@@ -80,6 +81,20 @@ export { Esplora, isDepositMemo, opReturnText, isCoinJoin, isUtxoChain, type Utx
 export { hostBudget, hostRequests, resetHostBudgets, configureHost, QuotaExceeded, HostBudget, type HostPolicy } from './explorers/budget.js';
 export { thorchainInbound, resetThorchainInboundCache, DEFAULT_THORNODE_URL } from './explorers/thornode.js';
 export { l1TxUrl, thorchainTxUrl } from './explorers/links.js';
+export {
+	watchCandidates,
+	enqueueWatch,
+	processWatchQueue,
+	watchMetrics,
+	watchConfigFromEnv,
+	tokenContract,
+	isLookbackChain,
+	DEFAULT_WATCH_CONFIG,
+	type WatchConfig,
+	type WatchCandidate,
+	type WatchRunMetrics,
+	type WatchOptions
+} from './trace/watcher.js';
 export {
 	collectSnapshot,
 	buildAndStoreSnapshot,

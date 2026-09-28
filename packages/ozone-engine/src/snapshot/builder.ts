@@ -24,7 +24,8 @@ import { CORE_SOURCES, DERIVED_SOURCES, SOURCES } from '../sources/registry.js';
 import { allEntries } from '../store/entries.js';
 import { isoOf } from '../store/db.js';
 import { dustTotals, getState, loadDustGroups, setState } from '../store/trace.js';
-import { DEFAULT_TRACE_CONFIG, SMALL_TRANSFERS, describeSmallTransfers, traceRisk, type SmallTransferTotal } from '../trace/tracer.js';
+import { DEFAULT_TRACE_CONFIG, L1_FUNDING_ACTIONS, SMALL_TRANSFERS, describeSmallTransfers, traceRisk, type SmallTransferTotal } from '../trace/tracer.js';
+import { l1TxUrl, thorchainTxUrl } from '../explorers/links.js';
 import { TWIN_CATEGORIES } from '../policy.js';
 import type { Sql } from '../types.js';
 
@@ -168,7 +169,8 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 		text: e.reason,
 		chain: e.to_chain,
 		refId: e.txid,
-		ref: `https://runescan.io/tx/${e.txid}`,
+		// the watcher's funding edges are L1 transactions; everything else is a THORChain action
+		ref: (L1_FUNDING_ACTIONS.has(e.action) ? l1TxUrl(e.from_chain, e.txid) : undefined) ?? thorchainTxUrl(e.txid),
 		trace: {
 			hop: Number(e.hop),
 			action: e.action,
@@ -236,7 +238,7 @@ export async function collectSnapshot(sql: Sql, opts: SnapshotBuildOptions = {})
 			text: describeSmallTransfers(st, trace),
 			chain: st.toChain,
 			refId: c.txid,
-			ref: `https://runescan.io/tx/${c.txid}`,
+			ref: thorchainTxUrl(c.txid),
 			trace: {
 				hop: st.hop,
 				action: SMALL_TRANSFERS,

@@ -11,6 +11,7 @@ import type { ForwardRead, MidgardLike as Midgard } from './midgard.js';
 import { loadPoolPrices, type PriceOracle } from './prices.js';
 import { DEFAULT_TRACE_CONFIG, traceAction, traceRisk, type DustFlow, type IndexEntry, type TraceConfig, type TraceHit } from './tracer.js';
 import { actionTxid, parseTxAddress } from './flows.js';
+import { enqueueWatch, watchCandidates, type WatchConfig } from './watcher.js';
 
 /** An address with more THORChain actions than this is treated as a service and not propagated. */
 export const SERVICE_ACTIONS = 2000;
@@ -254,6 +255,8 @@ export interface RealtimeResult {
 	to: number;
 	/** The cursor reached the newest action (false: still catching up, continued by the next tick). */
 	complete: boolean;
+	/** Inbound watcher: large L1 inbounds found in this tick and queued for a look-back at their funders. */
+	watch?: { candidates: number; queued: number; error?: string };
 }
 
 /**
@@ -266,7 +269,15 @@ export interface RealtimeResult {
 export async function runRealtimeTick(
 	sql: Sql,
 	midgard: Midgard,
-	opts: { cfg?: TraceConfig; prices?: PriceOracle; maxPages?: number; index?: Map<string, IndexEntry>; logger?: Logger } = {}
+	opts: {
+		cfg?: TraceConfig;
+		prices?: PriceOracle;
+		maxPages?: number;
+		index?: Map<string, IndexEntry>;
+		logger?: Logger;
+		/** Queue large inbounds from unflagged L1 addresses for a funder look-back (trace/watcher.ts). */
+		watch?: WatchConfig;
+	} = {}
 ): Promise<RealtimeResult> {
 	const cfg = opts.cfg ?? DEFAULT_TRACE_CONFIG;
 	const log = opts.logger ?? silentLogger;
@@ -322,8 +333,21 @@ export async function runRealtimeTick(
 		log.warn(`trace: real-time follower moved past height ${head} after reading ${actions.length} actions of it in one tick`);
 	}
 	if (!complete) log.info(`trace: real-time follower catching up: ${actions.length} actions up to height ${to}`);
+	// The watcher only enqueues here (a bounded insert): a look-back never runs
+	// inside the follower, and an error here never stops the follower.
+	let watch: RealtimeResult['watch'];
+	if (opts.watch) {
+		try {
+			const candidates = watchCandidates(actions, lookup, opts.prices, opts.watch);
+			const { queued } = candidates.length ? await enqueueWatch(sql, candidates, opts.watch) : { queued: 0 };
+			watch = { candidates: candidates.length, queued };
+		} catch (e) {
+			watch = { candidates: 0, queued: 0, error: (e as Error).message };
+			log.warn(`watch: enqueue failed (the follower continues): ${(e as Error).message}`);
+		}
+	}
 	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { behind: true }) });
-	return { processed: actions.length, hits: rec.edges, traced: rec.traced, dustTraced: small.traced, from, to, complete };
+	return { processed: actions.length, hits: rec.edges, traced: rec.traced, dustTraced: small.traced, from, to, complete, ...(watch ? { watch } : {}) };
 }
 
 /** Marks every checked address for an incremental re-read (e.g. daily). */

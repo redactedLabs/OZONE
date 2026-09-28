@@ -237,11 +237,25 @@ const RELATION_TEXT: Record<Relation, string> = {
 	thorname: 'is linked by a THORName to'
 };
 
+/**
+ * Actions of the THORChain inbound watcher (trace/watcher.ts): an L1
+ * transfer that funded an address one or two hops before it deposited into
+ * THORChain. `txid` is the L1 transaction, not a THORChain one.
+ */
+export const L1_FUNDING_ACTIONS: ReadonlySet<string> = new Set(['l1_funding', 'l1_funding2']);
+
 /** Human-readable reason for a hit. */
 export function describeHit(h: TraceHit): string {
 	const origin = h.originEntity ? `${h.originEntity} (${h.originSource})` : h.originSource;
-	const via = h.action === 'swap' ? 'THORChain swap' : `THORChain ${h.action}`;
 	const date = h.date.slice(0, 10);
+	if (h.action === 'l1_funding') {
+		const listed = h.hop === 1 ? `listed by ${origin}` : `${h.hop - 1} hop${h.hop > 2 ? 's' : ''} from ${origin}`;
+		return `Funded by ${h.fromAddress} (${listed}) one hop before THORChain: received ${h.amount ?? 'value'} on ${date} (${h.fromChain} transaction ${h.txid}), then deposited ~$${Math.round(h.usd ?? 0).toLocaleString('en-US')} into THORChain`;
+	}
+	if (h.action === 'l1_funding2') {
+		return `Funded two hops before THORChain from ${origin}: ${h.fromAddress}, itself funded by it, sent ${h.amount ?? 'value'} on ${date} (${h.fromChain} transaction ${h.txid}), then ~$${Math.round(h.usd ?? 0).toLocaleString('en-US')} was deposited into THORChain`;
+	}
+	const via = h.action === 'swap' ? 'THORChain swap' : `THORChain ${h.action}`;
 	if (h.relation !== 'value') {
 		return `${RELATION_TEXT[h.relation]} ${h.fromAddress}, flagged via ${origin}; ${via} ${h.txid} on ${date}`;
 	}
