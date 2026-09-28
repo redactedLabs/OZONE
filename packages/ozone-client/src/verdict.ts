@@ -132,6 +132,9 @@ export interface Policy {
 
 export const DEFAULT_FLAG_AT: Risk = 'high';
 
+/** Categories published by a government body: listed first among reasons of equal risk. */
+const OFFICIAL_CATEGORIES: ReadonlySet<Category> = new Set(['sanctions', 'law_enforcement']);
+
 export function isActive(r: Reason): boolean {
 	return !r.removedAt;
 }
@@ -159,6 +162,10 @@ export function evaluate(
 		const ha = a.trace?.hop ?? 0;
 		const hb = b.trace?.hop ?? 0;
 		if (ha !== hb) return ha - hb;
+		// at equal strength an official listing (sanctions, law enforcement) leads
+		const oa = OFFICIAL_CATEGORIES.has(a.category) ? 0 : 1;
+		const ob = OFFICIAL_CATEGORIES.has(b.category) ? 0 : 1;
+		if (oa !== ob) return oa - ob;
 		return a.code.localeCompare(b.code);
 	});
 	return { status: riskRank(risk) >= flagAt && active.length ? 'flagged' : 'clean', risk, reasons: sorted };

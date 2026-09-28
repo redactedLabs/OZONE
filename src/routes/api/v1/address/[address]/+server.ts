@@ -23,7 +23,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	if (!res.snapshot) return json({ error: 'Screening data unavailable' }, { status: 503, headers });
 	const entries = await sql.query(
 		`SELECT source, chain, address, category, risk, code, entity, reason, ref_url, ref_id, listed_at, first_seen, removed_at
-		 FROM oz_entries WHERE key = ANY($1::text[]) ORDER BY removed_at NULLS FIRST, source`,
+		 FROM oz_entries WHERE key = ANY($1::text[])
+		 ORDER BY removed_at NULLS FIRST, CASE WHEN category IN ('sanctions', 'law_enforcement') THEN 0 ELSE 1 END,
+		   array_position(ARRAY['severe','high','medium','low','info','none'], risk), source`,
 		[keys]
 	);
 	const received = await sql.query(
