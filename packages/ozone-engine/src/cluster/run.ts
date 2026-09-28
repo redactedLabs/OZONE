@@ -244,6 +244,20 @@ export async function clusterSourceResult(sql: Sql, specs: ClusterSpec[]): Promi
 	return res;
 }
 
+/**
+ * The union rebuild (read every cluster's members, apply the `cluster`
+ * source) is serialized within the process: the scheduled run and the
+ * incident path can expand at the same time, but one must never apply a
+ * union it read before the other saved its members (that would delist them
+ * until the next run).
+ */
+let unionChain: Promise<unknown> = Promise.resolve();
+function serializedUnion<T>(fn: () => Promise<T>): Promise<T> {
+	const run = unionChain.then(fn, fn);
+	unionChain = run.catch(() => undefined);
+	return run;
+}
+
 export async function runClusterExpansion(sql: Sql, opts: ClusterRunOptions = {}): Promise<ClusterRunResult> {
 	const t0 = Date.now();
 	const log: Logger = opts.logger ?? silentLogger;
@@ -337,9 +351,14 @@ export async function runClusterExpansion(sql: Sql, opts: ClusterRunOptions = {}
 				}
 			})
 		);
-		const merged = await clusterSourceResult(sql, specs);
-		for (const r of runs) if (r.status !== 'complete' && r.status !== 'adopted' && r.why !== 'complete (window closed)' && r.why !== 'window open; ran recently') merged.notes.push(`${r.cluster}: ${r.status}${r.stop ? ` (${r.stop}, ${r.frontierLeft} left)` : ''}${r.why ? ` — ${r.why}` : ''}`);
-		const stats = await applySourceResult(sql, CLUSTER_SOURCE, merged);
+		const stats = await serializedUnion(async () => {
+			const merged = await clusterSourceResult(sql, specs);
+			for (const r of runs) {
+				if (r.status === 'complete' || r.status === 'adopted' || r.why === 'complete (window closed)' || r.why === 'window open; ran recently') continue;
+				merged.notes.push(`${r.cluster}: ${r.status}${r.stop ? ` (${r.stop}, ${r.frontierLeft} left)` : ''}${r.why ? ` — ${r.why}` : ''}`);
+			}
+			return applySourceResult(sql, CLUSTER_SOURCE, merged);
+		});
 		await sql.query(
 			`INSERT INTO sync_log (type, status, records_processed, flags_found, duration, error) VALUES ('OZ:cluster', 'success', $1, $2, $3, NULL)`,
 			[stats.active, runs.filter((r) => r.status === 'partial').length, Date.now() - t0]
