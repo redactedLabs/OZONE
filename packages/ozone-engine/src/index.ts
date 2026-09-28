@@ -71,7 +71,7 @@ export {
 	type SmallTransferTotal
 } from './trace/tracer.js';
 export { runTraceBackfill, runRealtimeTick, scheduleRecheck, checkAddress, SERVICE_ACTIONS, CHECK_PAGES, CHECK_PAGES_NEVER_SERVICE, type BackfillResult, type RealtimeResult } from './trace/jobs.js';
-export { expandEvm, type ExpandOptions } from './evm/expand.js';
+export { expandEvm, EXPANSION_RESERVE, type ExpandOptions } from './evm/expand.js';
 export { expandUtxo } from './utxo/expand.js';
 export { curatedClusterSpecs, manualClusterSpecs, planRun, specHash, CHAIN_DEFAULTS, DEFAULT_WINDOW_DAYS, isExpandableChain, type RunPlan, type ClusterRunRow } from './cluster/specs.js';
 export { clusterRisk } from './cluster/run.js';

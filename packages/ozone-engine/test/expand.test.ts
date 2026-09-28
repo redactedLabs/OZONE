@@ -104,11 +104,25 @@ describe('EVM expansion', () => {
 		// a window of its own, so both block lookups use the quota (1 + 1), then the seed (1)
 		const s = spec({ window: { from: new Date((T0 - 5) * 1000).toISOString(), to: new Date((T0 + 29 * DAY) * 1000).toISOString() } });
 		const t = Date.now();
-		const r = await expandEvm(s, [SEED], { http: { fetch, retries: 0 }, now: (T0 + 40 * DAY) * 1000 });
+		const r = await expandEvm(s, [SEED], { http: { fetch, retries: 0 }, now: (T0 + 40 * DAY) * 1000, reserve: 0 });
 		expect(Date.now() - t).toBeLessThan(2000);
 		expect(r.truncated).toBe(true);
 		expect(r.stop).toBe('quota');
 		expect(r.frontier.map((f) => f.address)).toEqual([A]);
+	});
+
+	it('leaves a reserve of a quota\'d host to the watcher', async () => {
+		configureHost('api.routescan.io', { minIntervalMs: 0, perWindow: 1_505, windowMs: 24 * 3600_000 });
+		configureHost('eth.blockscout.com', { minIntervalMs: 0, perWindow: 0, windowMs: 3600_000 });
+		const fetch = fakeExplorers({ txs: laundering(), contracts: [C] });
+		const s = spec({ window: { from: new Date((T0 - 7) * 1000).toISOString(), to: new Date((T0 + 28 * DAY) * 1000).toISOString() } });
+		const r = await expandEvm(s, [SEED], { http: { fetch, retries: 0 }, now: (T0 + 40 * DAY) * 1000 });
+		// 2 block lookups + 3 nodes = 5 requests, then the last 1,500 stay for the watcher
+		expect(r.stop).toBe('quota');
+		expect(r.requests).toBe(5);
+		const { evmTxList } = await import('../src/explorers/evm.js');
+		const w = await evmTxList('ETH', A, { startblock: 0, endblock: 9_999_999_999, direction: 'to', maxPages: 1, http: { fetch, retries: 0 } });
+		expect(w.txs.length).toBeGreaterThan(0); // the watcher (no reserve) still gets through
 	});
 
 	it('lists nobody whose contract status could not be read', async () => {

@@ -159,10 +159,15 @@ const NOT_SUPPORTED = /chain not supported|not supported|invalid api key|missing
 export async function evmCall<T = unknown>(
 	chain: EvmChain,
 	params: Record<string, string | number>,
-	opts: { http?: HttpOptions; env?: ExplorerEnv } = {}
+	opts: { http?: HttpOptions; env?: ExplorerEnv; reserve?: number } = {}
 ): Promise<{ result: T; provider: EvmProvider['name'] }> {
 	let lastError: unknown;
 	for (const p of evmProviders(chain, opts.env)) {
+		// a caller with a reserve (the cluster expansion) leaves the last requests of a quota to others (the watcher)
+		if (opts.reserve && p.budget.policy.perWindow !== undefined && p.budget.remaining() <= opts.reserve) {
+			lastError = new QuotaExceeded(p.budget.host, p.budget.retryAt());
+			continue;
+		}
 		const q = new URLSearchParams();
 		for (const [k, v] of Object.entries(params)) {
 			if (k === 'filter_by' && !p.filterBy) continue;
@@ -199,7 +204,7 @@ export async function evmCall<T = unknown>(
 }
 
 /** Block at (or before/after) a unix time. */
-export async function evmBlockAt(chain: EvmChain, unix: number, closest: 'before' | 'after', opts: { http?: HttpOptions; env?: ExplorerEnv } = {}): Promise<number> {
+export async function evmBlockAt(chain: EvmChain, unix: number, closest: 'before' | 'after', opts: { http?: HttpOptions; env?: ExplorerEnv; reserve?: number } = {}): Promise<number> {
 	const { result } = await evmCall<{ blockNumber?: string } | string>(chain, { module: 'block', action: 'getblocknobytime', timestamp: unix, closest }, opts);
 	const n = Number(typeof result === 'object' && result !== null ? result.blockNumber : result);
 	if (!Number.isFinite(n) || n <= 0) throw new Error(`${chain}: getblocknobytime failed`);
@@ -226,7 +231,7 @@ export interface EvmTx {
 export async function evmTxList(
 	chain: EvmChain,
 	address: string,
-	o: { startblock: number; endblock: number; direction: 'from' | 'to' | 'any'; sort?: 'asc' | 'desc'; maxPages?: number; pageSize?: number; http?: HttpOptions; env?: ExplorerEnv }
+	o: { startblock: number; endblock: number; direction: 'from' | 'to' | 'any'; sort?: 'asc' | 'desc'; maxPages?: number; pageSize?: number; http?: HttpOptions; env?: ExplorerEnv; reserve?: number }
 ): Promise<{ txs: EvmTx[]; requests: number; more: boolean }> {
 	const a = address.toLowerCase();
 	const out: EvmTx[] = [];
@@ -246,7 +251,7 @@ export async function evmTxList(
 				page,
 				offset: pageSize
 			},
-			{ http: o.http, env: o.env }
+			{ http: o.http, env: o.env, reserve: o.reserve }
 		);
 		requests++;
 		const list = Array.isArray(result) ? result : [];

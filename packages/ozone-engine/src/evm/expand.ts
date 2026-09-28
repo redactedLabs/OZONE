@@ -22,7 +22,7 @@
 import { parseForChain } from '../../../ozone-client/src/index.js';
 import { emptyExpandResult, type ClusterMember, type ExpandResult, type FrontierNode, type ResumeState } from '../cluster/types.js';
 import { QuotaExceeded } from '../explorers/budget.js';
-import { evmBlockAt, evmContracts, evmTxList, LATEST_BLOCK, NoExplorer, type EvmChain, type ExplorerEnv } from '../explorers/evm.js';
+import { evmBlockAt, evmContracts, evmProviders, evmTxList, LATEST_BLOCK, NoExplorer, type EvmChain, type ExplorerEnv } from '../explorers/evm.js';
 import type { ClusterSpec } from '../sources/curated-data.js';
 import type { Logger } from '../types.js';
 import type { HttpOptions } from '../util/http.js';
@@ -39,7 +39,16 @@ export interface ExpandOptions {
 	/** Addresses never followed or listed (current THORChain vaults and routers, known services). */
 	exclude?: Set<string>;
 	now?: number;
+	/**
+	 * Requests of a quota'd explorer host left untouched for the inbound
+	 * watcher (default EXPANSION_RESERVE): the expansion stops (resumably)
+	 * instead of spending a host's last requests of the day.
+	 */
+	reserve?: number;
 }
+
+/** Requests per quota'd explorer host the cluster expansion leaves for the watcher. */
+export const EXPANSION_RESERVE = 1_500;
 
 const blockCache = new Map<string, number>();
 
@@ -47,7 +56,7 @@ async function blockAt(chain: EvmChain, unix: number, closest: 'before' | 'after
 	const id = `${chain}:${unix}:${closest}`;
 	const hit = blockCache.get(id);
 	if (hit !== undefined) return { block: hit, requests: 0 };
-	const block = await evmBlockAt(chain, unix, closest, { http: o.http, env: o.env });
+	const block = await evmBlockAt(chain, unix, closest, { http: o.http, env: o.env, reserve: o.reserve ?? EXPANSION_RESERVE });
 	blockCache.set(id, block);
 	return { block, requests: 1 };
 }
@@ -93,7 +102,7 @@ export async function expandEvm(spec: ClusterSpec, seeds: string[], o: ExpandOpt
 			res.requests += e.requests;
 		}
 	} catch (e) {
-		return cut(isQuota(e) ? 'noProvider' : 'error', frontier, (e as Error).message);
+		return cut(isQuota(e) ? (evmProviders(chain, o.env).length ? 'quota' : 'noProvider') : 'error', frontier, (e as Error).message);
 	}
 
 	const threshold = minWei(spec.minValue);
@@ -111,9 +120,9 @@ export async function expandEvm(spec: ClusterSpec, seeds: string[], o: ExpandOpt
 			if (stopped) break;
 			let list: Awaited<ReturnType<typeof evmTxList>>;
 			try {
-				list = await evmTxList(chain, node.address, { startblock, endblock, direction: 'from', sort: 'asc', maxPages: pages, http: o.http, env: o.env });
+				list = await evmTxList(chain, node.address, { startblock, endblock, direction: 'from', sort: 'asc', maxPages: pages, http: o.http, env: o.env, reserve: o.reserve ?? EXPANSION_RESERVE });
 			} catch (e) {
-				stopped = { stop: isQuota(e) ? 'quota' : 'error', left: level.slice(i), error: (e as Error).message };
+				stopped = { stop: isQuota(e) ? (evmProviders(chain, o.env).length ? 'quota' : 'noProvider') : 'error', left: level.slice(i), error: (e as Error).message };
 				break;
 			}
 			res.requests += list.requests;

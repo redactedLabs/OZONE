@@ -71,6 +71,8 @@ signed snapshot right away, typically within minutes.
   routescan (Ethereum, Avalanche; keyless), public Esplora servers (Bitcoin,
   Litecoin), Blockscout instances (other EVM chains; about 10 keyless
   requests an hour), and optionally `ETHERSCAN_API_KEY` / `BLOCKSCOUT_API_KEY`.
+  The expansion leaves the last 1,500 requests of a host's daily quota to the
+  inbound watcher, so a large run never starves the look-backs.
 - The worker's real-time follower queues every THORChain inbound of at least
   $25,000 (`OZONE_WATCH_MIN_USD`) from an unflagged L1 address; a separate job
   looks back one and two hops at its funders (`trace/watcher.ts`). A listed or
