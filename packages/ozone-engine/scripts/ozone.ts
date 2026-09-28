@@ -6,7 +6,10 @@
  *
  * Commands:
  *   sync [source…]            fetch + apply lists (default: all)
- *   cluster [--max-requests N] expand hack clusters on Ethereum (Blockscout)
+ *   cluster [--max-requests N] [--force] [--only text]
+ *                             expand the hack clusters that are due (one per incident and chain)
+ *   watch [--minutes M]       work through the THORChain inbound look-back queue once
+ *   incidents                 the curated incident dataset (validation, counts; no network)
  *   trace [--minutes M] [--max N] [--only ns|source] [--concurrency C]
  *                             THORChain history backfill (Midgard)
  *   tick                      one real-time follower step
@@ -29,7 +32,11 @@ import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 import { generateSigningKey, loadPrivateKey } from '../../ozone-client/src/index.js';
 import {
 	consoleLogger,
+	CURATED,
+	incidentStats,
 	latestSnapshot,
+	processWatchQueue,
+	validateIncidents,
 	loadLatestIndex,
 	Midgard,
 	migrate,
@@ -92,8 +99,25 @@ async function main() {
 			break;
 		}
 		case 'cluster': {
-			const r = await runClusterExpansion(sql, { logger: consoleLogger, maxRequests: Number(flag('max-requests') ?? 20000) });
-			console.log(r);
+			const only = flag('only');
+			const r = await runClusterExpansion(sql, {
+				logger: consoleLogger,
+				maxRequests: Number(flag('max-requests') ?? 15000),
+				force: args.includes('--force'),
+				...(only ? { only: (s) => s.id.includes(only) || s.name.toLowerCase().includes(only.toLowerCase()) } : {})
+			});
+			console.table(r.runs.map((x) => ({ cluster: x.cluster, plan: x.plan, status: x.status, members: x.members, new: x.newMembers, requests: x.requests, stop: x.stop ?? '', why: x.why ?? '' })));
+			console.log({ ok: r.ok, error: r.error, stats: r.stats });
+			break;
+		}
+		case 'watch': {
+			console.log(await processWatchQueue(sql, { logger: consoleLogger, budgetMs: Number(flag('minutes') ?? 1) * 60_000 }));
+			break;
+		}
+		case 'incidents': {
+			const problems = validateIncidents();
+			console.log({ ...incidentStats(), problems });
+			console.table(CURATED.incidents.map((i) => ({ incident: i.name.slice(0, 60), thorchain: i.thorchain.used, addresses: i.addresses.length, chains: [...new Set(i.addresses.map((a) => a.chain))].join(' ') })));
 			break;
 		}
 		case 'trace': {

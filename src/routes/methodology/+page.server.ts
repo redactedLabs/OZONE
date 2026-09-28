@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { SOURCES, DERIVED_SOURCES, DEFAULT_TRACE_CONFIG, CURATED } from '$engine/index.js';
+import { SOURCES, DERIVED_SOURCES, DEFAULT_TRACE_CONFIG, CURATED, CHAIN_DEFAULTS, DEFAULT_WATCH_CONFIG, DEFAULT_WINDOW_DAYS } from '$engine/index.js';
 import { coverage } from '$lib/server/ozone/stats';
 
 export const load: PageServerLoad = async () => {
@@ -24,7 +24,23 @@ export const load: PageServerLoad = async () => {
 	return {
 		sources,
 		trace: DEFAULT_TRACE_CONFIG,
-		clusters: CURATED.clusters.map((k) => ({ id: k.id, name: k.name, window: k.window, minValueEth: k.minValue, maxDepth: k.maxDepth, ref: k.ref })),
+		clusters: CURATED.clusters.map((k) => ({ id: k.id, name: k.name, window: k.window, minValue: k.minValue, chain: k.chain, maxDepth: k.maxDepth, ref: k.ref })),
+		chainDefaults: Object.entries(CHAIN_DEFAULTS).map(([chain, p]) => ({ chain, minValue: p.minValue, maxDepth: p.maxDepth, maxRequests: p.maxRequests })),
+		windowDays: DEFAULT_WINDOW_DAYS,
+		watch: { minUsd: DEFAULT_WATCH_CONFIG.minUsd, hops: DEFAULT_WATCH_CONFIG.hops, lookbackDays: DEFAULT_WATCH_CONFIG.lookbackDays, maxFunders: DEFAULT_WATCH_CONFIG.maxFunders },
+		incidents: CURATED.incidents.map((i) => ({
+			id: i.id,
+			name: i.name,
+			date: i.date,
+			ref: i.ref,
+			chains: [...new Set(i.addresses.map((a) => a.chain))],
+			addresses: i.addresses.filter((a) => !a.delisted).length,
+			delisted: i.addresses.filter((a) => a.delisted).length,
+			thorchain: i.thorchain,
+			sourceTypes: [...new Set(i.addresses.map((a) => a.refType))],
+			confidence: [...new Set(i.addresses.map((a) => a.confidence))]
+		})),
+		searched: CURATED.searched,
 		curatedPolicy: CURATED.policy,
 		coverage: c
 			? {

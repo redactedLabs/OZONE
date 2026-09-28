@@ -14,11 +14,12 @@ Ozone aggregates sanctions lists, hack databases, on-chain blacklists, and commu
 Public sources (no API keys)            OZONE-WORKER (long-running)               OZONE (this repo, Vercel)
 ────────────────────────────            ───────────────────────────               ─────────────────────────
 OFAC SDN · UK FCDO · EU FSF ──┐         list sync (sanity-checked, delistings)     /api/v1/screen   signed verdicts
-FBI / IC3 · curated         ──┤         Ethereum hack-cluster expansion            /api/v1/snapshot signed snapshots
+FBI / IC3 · hack incidents  ──┤         hack-cluster expansion (EVM, BTC, LTC)     /api/v1/snapshot signed snapshots
 Chainalysis oracle events   ──┼──────▶  THORChain flow tracing                ──▶  /api/v1/keys     public keys
 Tether · Circle freeze events ┤          (Midgard backfill + real time)            /api/health
 eth-labels · ScamSniffer    ──┘         signed snapshot every 10 min               methodology · reports · appeals
-Midgard (THORChain history) ─────────▶  THORChain user screening                   dashboard (Svelte)
+Midgard (THORChain history) ─────────▶  THORChain inbound watcher (L1 funders)     dashboard (Svelte)
+Explorers (routescan, Esplora) ──────▶  THORChain user screening
                                               │
                                               └──▶ relayer nodes download the snapshot, verify, screen locally
 ```
@@ -38,9 +39,10 @@ and the [methodology page](https://ozone.redacted.gg/methodology) for how verdic
 | **FBI / IC3** | Law enforcement | DPRK (TraderTraitor/Lazarus) laundering addresses, e.g. the Bybit PSA |
 | **Chainalysis sanctions oracle** | On-chain | add/remove events (no API key) on Ethereum, Arbitrum, Optimism, Polygon, Avalanche and Base, e.g. the Tornado Cash delisting |
 | **Tether / USDT0 / Circle** | On-chain | USDT freezes (ETH, TRON, AVAX), USDT0 freezes (Arbitrum, Polygon), USDC blacklist (ETH, BASE, AVAX, Arbitrum, Optimism, Polygon), incl. unfreezes |
-| **Hack clusters** | Derived | Ethereum fan-out of attributed hack addresses inside the laundering window (Bybit) |
+| **Hack incidents** | Curated | 59 thefts and exploits (2019–2026, 233 addresses), each address with the public page that names it and a confidence: law enforcement, sanctions or the victim → risk severe; established investigators → risk high. Returned-funds incidents are kept as history. [Dataset](packages/ozone-engine/src/sources/curated-data.ts) |
+| **Hack clusters** | Derived | per incident and chain (Ethereum and EVM chains, Bitcoin, Litecoin): fan-out of its attacker addresses inside the laundering window, above a value threshold, stopping at services, contracts, contract calls, CoinJoins and THORChain deposits |
 | **eth-labels / ScamSniffer** | Community | exploiter, heist and phishing labels; drainer addresses |
-| **Curated / maintainers** | Curated | verified attributions with a named primary source; maintainer flags, incl. the incident path for freshly announced hacks |
+| **Maintainers** | Curated | maintainer flags, incl. the incident path for freshly announced hacks |
 | **Chainabuse** (optional) | Community | moderator-verified scam reports, risk medium; only with `CHAINABUSE_API_KEY` (free account, 10 calls/month) |
 | **THORChain tracing** | Derived | recipients of value from listed addresses through THORChain, with the tx as evidence |
 
@@ -54,6 +56,26 @@ public source. They become maintainer flags marked urgent for 48 h
 on a change it lists them, reads their THORChain history — and that of every
 recipient it finds, hop after hop — before anything else, and publishes a
 signed snapshot right away, typically within minutes.
+
+### Hack incidents, clusters and new hack money arriving at THORChain
+
+- `packages/ozone-engine/src/sources/curated-data.ts` holds the incident
+  dataset (`CURATED.incidents`, validated at every sync: checksums, EIP-55,
+  one https source per address, role and confidence) and what was researched
+  without a usable address list (`CURATED.searched`). To delist an address,
+  keep it with `delisted: {date, reason}`; removing an incident delists it.
+- Every incident is expanded on its own chains (`cluster/`): due clusters run
+  in the worker every 6 h (open laundering windows weekly, closed ones once,
+  cut-short runs resume where they stopped), within a request budget per
+  cluster and per run; pasted maintainer incidents immediately. Explorers:
+  routescan (Ethereum, Avalanche; keyless), public Esplora servers (Bitcoin,
+  Litecoin), Blockscout instances (other EVM chains; about 10 keyless
+  requests an hour), and optionally `ETHERSCAN_API_KEY` / `BLOCKSCOUT_API_KEY`.
+- The worker's real-time follower queues every THORChain inbound of at least
+  $25,000 (`OZONE_WATCH_MIN_USD`) from an unflagged L1 address; a separate job
+  looks back one and two hops at its funders (`trace/watcher.ts`). A listed or
+  traced funder makes the depositor traced (`TRACE_L1_FUNDING`), and its
+  THORChain outputs are traced as usual.
 
 ### Tracing coverage
 
@@ -111,7 +133,10 @@ Engine locally (embedded Postgres, never a remote DB):
 
 ```bash
 npx tsx packages/ozone-engine/scripts/ozone.ts sync        # all lists
-npx tsx packages/ozone-engine/scripts/ozone.ts cluster     # hack-cluster expansion
+npx tsx packages/ozone-engine/scripts/ozone.ts incidents   # the incident dataset (validation, counts)
+npx tsx packages/ozone-engine/scripts/ozone.ts cluster     # hack-cluster expansion (due clusters; --force, --only)
+npx tsx packages/ozone-engine/scripts/ozone.ts watch       # one pass over the inbound look-back queue
+npx tsx packages/ozone-engine/scripts/incidents-eval.ts    # per incident: listed, cluster, traced (public data)
 npx tsx packages/ozone-engine/scripts/ozone.ts trace --minutes 30
 npx tsx packages/ozone-engine/scripts/ozone.ts snapshot && npx tsx packages/ozone-engine/scripts/ozone.ts stats
 npx tsx packages/ozone-engine/scripts/evaluate.ts          # quality gates + coverage before/after
@@ -120,7 +145,7 @@ npx tsx packages/ozone-engine/scripts/serve-db.ts          # serve it on 127.0.0
 
 ## Database Schema
 
-Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migrations `packages/ozone-engine/migrations/0001_ozone_next.sql` … `0004_manual_incidents.sql` (apply in order with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
+Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migrations `packages/ozone-engine/migrations/0001_ozone_next.sql` … `0005_incidents_watch.sql` (apply in order with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
 
 ### Core tables
 

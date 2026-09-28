@@ -96,7 +96,32 @@
 				</tbody>
 			</table>
 		</div>
-		<p class="p mt-4"><strong>Curated attributions.</strong> {data.curatedPolicy}</p>
+		<p class="p mt-4" id="hack-incidents"><strong>Hack incidents.</strong> {data.curatedPolicy}</p>
+		<div class="overflow-x-auto mt-3">
+			<table class="w-full text-left text-[11px]">
+				<thead>
+					<tr style="border-bottom: 1px solid var(--app-border);">
+						<th class="py-2 pr-3 font-medium" style="color: var(--text-muted);">Incident</th>
+						<th class="py-2 pr-3 font-medium" style="color: var(--text-muted);">Chains</th>
+						<th class="py-2 pr-3 font-medium" style="color: var(--text-muted);">Addresses</th>
+						<th class="py-2 pr-3 font-medium" style="color: var(--text-muted);">Through THORChain</th>
+						<th class="py-2 font-medium" style="color: var(--text-muted);">Sources</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each data.incidents as inc}
+						<tr style="border-bottom: 1px solid var(--app-border-subtle);">
+							<td class="py-1.5 pr-3"><a href={inc.ref} target="_blank" rel="noopener" style="color: var(--app-accent);">{inc.name}</a></td>
+							<td class="py-1.5 pr-3 font-mono" style="color: var(--text-muted);">{inc.chains.join(' ')}</td>
+							<td class="py-1.5 pr-3 font-mono" style="color: var(--text);">{inc.addresses}{#if inc.delisted} <span style="color: var(--text-faint);">(+{inc.delisted} history)</span>{/if}</td>
+							<td class="py-1.5 pr-3">{#if inc.thorchain.ref}<a href={inc.thorchain.ref} target="_blank" rel="noopener" style="color: var(--app-accent);">{inc.thorchain.used}</a>{:else}<span style="color: var(--text-muted);">{inc.thorchain.used}</span>{/if}</td>
+							<td class="py-1.5" style="color: var(--text-muted);">{inc.sourceTypes.join(', ')} · {inc.confidence.join('/')}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+		<p class="p mt-3"><strong>Researched without a usable address list:</strong> {data.searched.map((s) => `${s.name} (${s.date})`).join('; ')}. Each entry says why in the dataset.</p>
 		<p class="p"><strong>Not used:</strong> Israel's NBCTF seizure lists (the site blocks automated access), commercial APIs that need keys, and OpenSanctions' processed data (non-commercial licence) — Ozone reads the primary lists directly. (Only when the EU's own endpoint fails does Ozone fetch OpenSanctions' unmodified copy of the same official EU XML file.)</p>
 	</section>
 
@@ -126,12 +151,16 @@
 			<li><strong>Coverage</strong>: history is backfilled per flagged address — oldest first and to the end, over several passes for long histories — and a real-time follower processes every new THORChain action in chain order; after an outage it catches up from where it stopped instead of skipping ahead. The backfill reads incident keys first (see below), then by risk; within one risk level it reads traced addresses first (they are proven THORChain users), then attributions (sanctions, law enforcement, hacks, maintainer flags), then bulk lists (issuer freezes, phishing lists), then same-key twins. (Midgard's address filter is case-sensitive: senders are stored as observed on chain — lower-case for EVM — which is the form the backfill queries; memo destinations keep the user's spelling, which is why normalization happens on Ozone's side.)</li>
 			<li id="incidents"><strong>Freshly announced hacks</strong>: no public list carries a new hacker's addresses on day one. A maintainer pastes them, with the public source (post-mortem, law-enforcement release, investigator thread), as maintainer flags marked urgent. The worker notices within seconds, lists them, reads their THORChain history — and that of every recipient it finds, hop after hop — before anything else, and publishes a signed snapshot right away, typically within minutes. The urgency lasts 48 hours; the flags stay until a maintainer removes them.</li>
 		</ul>
-		<p class="p" id="clusters"><strong>Hack clusters.</strong> Attribution lists name the first addresses of a heist; the THORChain swaps are made from the next layer. For named incidents Ozone follows plain ETH transfers out of the attributed addresses inside the laundering window, above a value threshold, and stops at services and contract calls:</p>
+		<p class="p" id="clusters"><strong>Hack clusters.</strong> Attribution lists name the first addresses of a heist; the THORChain swaps are made from the next layer. For every incident Ozone follows native-coin transfers out of its attacker addresses on their own chain (Ethereum and the EVM chains, Bitcoin, Litecoin), inside the laundering window (by default the theft date plus {data.windowDays} days), above a value threshold and up to a hop limit. It stops at services (addresses with many transactions: exchanges, THORChain vaults), contract calls (router and bridge deposits, DEX swaps), contracts (bridges, routers, mixers, smart wallets — checked on chain), CoinJoins and THORChain deposits. Members are listed with the incident's name (depth ≤ 2 high risk, 3 medium) and traced through THORChain from the start of their incident. Each run has a request budget; a run cut short records where it stopped and the next run resumes there, so no cap is silent. Pasted maintainer incidents are expanded right away; the rest weekly while their window is open.</p>
 		<ul class="list">
+			{#each data.chainDefaults as c}
+				<li><strong>{c.chain}</strong>: transfers ≥ {c.minValue} (native units), depth ≤ {c.maxDepth}, ≤ {c.maxRequests.toLocaleString('en-US')} explorer requests per cluster and run</li>
+			{/each}
 			{#each data.clusters as k}
-				<li><a href={k.ref} target="_blank" rel="noopener" style="color: var(--app-accent);">{k.name}</a> — window {k.window.from.slice(0, 10)} → {k.window.to.slice(0, 10)}, transfers ≥ {k.minValueEth} ETH, depth ≤ {k.maxDepth} (depth ≤ 2 high risk, 3 medium).</li>
+				<li><a href={k.ref} target="_blank" rel="noopener" style="color: var(--app-accent);">{k.name}</a> ({k.chain}) — window {k.window.from.slice(0, 10)} → {k.window.to.slice(0, 10)}, transfers ≥ {k.minValue}, depth ≤ {k.maxDepth}, seeded from the FBI list and exploiter labels.</li>
 			{/each}
 		</ul>
+		<p class="p" id="watch"><strong>New hack money arriving at THORChain.</strong> Launderers rarely deposit straight from an attributed address. For every new THORChain inbound of ${data.watch.minUsd.toLocaleString('en-US')} or more from an L1 address that no list or trace covers, Ozone looks back {data.watch.hops === 2 ? 'one and two hops' : 'one hop'} at who funded the sender on its own chain (the last {data.watch.lookbackDays} days; for Bitcoin and Litecoin the inputs of the deposit and of the transactions that funded them). If a funder is listed or traced, the depositor is traced with the reason "funded by … one hop before THORChain" (code <code>TRACE_L1_FUNDING</code>, two hops: <code>TRACE_L1_FUNDING2</code>, one risk level lower) and its THORChain outputs are traced from its deposit on. Look-backs run in a queue beside the real-time follower (never inside it), at most {data.watch.maxFunders} funders per hop, cached per address; exchanges, contracts and CoinJoins are skipped.</p>
 	</section>
 
 	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="verdicts" data-win-title="Verdicts">
@@ -178,8 +207,8 @@
 	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="limits" data-win-title="Limitations">
 		<h2 class="h2">Limitations — what Ozone cannot see</h2>
 		<ul class="list">
-			<li>Transfers outside THORChain are not traced (except the Ethereum hack clusters above). A launderer who moves funds L1-to-L1 before touching THORChain is only caught if an intermediate address is listed.</li>
-			<li>Hack clusters follow plain ETH transfers only (no token transfers, contract-internal transfers or other chains), inside the incident window and within a request budget; layers funded otherwise are missed.</li>
+			<li>Transfers outside THORChain are traced only by the hack clusters (from attributed addresses forward) and the inbound watcher (from large THORChain deposits one or two hops back). A launderer who inserts more L1 hops, or deposits less than the watcher's threshold, is only caught if an intermediate address is listed.</li>
+			<li>Hack clusters follow native-coin transfers only (no token transfers or contract-internal transfers), inside the incident window and within a request budget. Keyless explorers limit which chains are covered: Ethereum and Avalanche through routescan, Bitcoin and Litecoin through public Esplora servers; other EVM chains only at a trickle (a keyless Blockscout instance allows about 10 requests an hour) unless an Etherscan or Blockscout key is configured.</li>
 			<li>Lists lag reality: community lists publish with delays, sanctions add addresses weeks after the fact, Tether and Circle only freeze what they are asked to. Freshly announced hacks reach Ozone only when a maintainer lists them (see <a href="#incidents" style="color: var(--app-accent);">freshly announced hacks</a>).</li>
 			<li>Traces are evidence of a flow, not of intent: a hop-1 recipient may be an exchange deposit address or a victim of deliberate "dusting" (hence the amount thresholds and decay: dusting an address costs at least ${data.trace.dustUsd} in total). Read the reason before acting on it.</li>
 			<li>Current pool prices approximate the value of non-swap flows.</li>
