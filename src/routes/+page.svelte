@@ -291,54 +291,54 @@
 		</div>
 	</div>
 
-	<!-- Line 1: Stats boxes (one meaning per number — see /methodology) -->
+	<!-- Line 1: Stats boxes (one meaning per number — see /methodology#numbers) -->
 	<div class="relative z-20 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-		<div class="dash-box stat-hover rounded-xl p-4 relative group">
+		<a href="/flagged" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
 			<div class="flex items-baseline gap-2">
-				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: var(--stat-indigo);">{data.stats.monitoredThorAccounts.toLocaleString('en-US')}</div>
+				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedAddresses === null ? '—' : data.stats.flaggedAddresses.toLocaleString('en-US')}</div>
 			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">THORChain Accounts</div>
-			{#if data.stats.newAccountsDay > 0}
-				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newAccountsDay)}</span>
-					<span class="today-label" style="color: var(--text-faint);">1d</span>
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Flagged Addresses · all chains</div>
+			{#if data.stats.flaggedByKind}
+				<div class="text-[10px] mt-0.5 font-mono" style="color: var(--text-faint);">
+					<span style="color: #f59e0b;">{compact(data.stats.flaggedByKind.listed + data.stats.flaggedByKind.twin)}</span> listed ·
+					<span style="color: #10b981;">{compact(data.stats.flaggedByKind.traced + data.stats.flaggedByKind.linked)}</span> traced
 				</div>
 			{/if}
-			<div class="stat-tip">thor1 accounts Ozone monitors (Rujira League, Midgard LPs, live transactions). Each is screened directly and through its {data.stats.linkedL1.toLocaleString('en-US')} linked L1 addresses. Any other address can be screened on demand.</div>
-		</div>
-		<div class="dash-box stat-hover rounded-xl p-4 relative group">
+			<div class="stat-tip">Every address in the signed snapshot at risk "high" or above, on any chain: listed (sanctions, law enforcement, hacks, freezes, …, incl. the same key on sibling chains) traced through THORChain from a listed address, or a monitored thor1 account linked to one (counted with "traced" here). Each address counts once. Click for the list.</div>
+		</a>
+		<a href="/flagged?list=thor" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
+			<div class="flex items-baseline gap-2">
+				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedThorAddresses === null ? '—' : data.stats.flaggedThorAddresses.toLocaleString('en-US')}</div>
+			</div>
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Flagged THORChain (thor1) Addresses</div>
+			<div class="stat-tip">The thor1 addresses among the flagged addresses: listed, traced through THORChain, or monitored accounts linked by their own signed actions to a listed L1 address. Click for the list.</div>
+		</a>
+		<a href="/banned" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
 			<div class="flex items-baseline gap-2">
 				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #f59e0b;">{data.stats.listedAddresses.toLocaleString('en-US')}</div>
 			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Listed Addresses</div>
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Listed Addresses · all risks</div>
 			{#if data.stats.newListedDay > 0}
 				<div class="stat-inset">
 					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newListedDay)}</span>
 					<span class="today-label" style="color: var(--text-faint);">1d</span>
 				</div>
 			{/if}
-			<div class="stat-tip">Distinct addresses currently on at least one of {data.stats.sources} lists: OFAC, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack clusters, exploiter and phishing lists. Delisted addresses are kept as history and no longer flag.</div>
-		</div>
-		<div class="dash-box stat-hover rounded-xl p-4 relative group">
+			<div class="stat-tip">Distinct addresses currently on at least one of {data.stats.sources} lists: OFAC, UK and EU sanctions, FBI attributions, hack incidents, Tether and Circle freezes, hack clusters, exploiter and phishing lists, at any risk (medium-risk phishing entries are listed but not flagged). Delisted addresses are kept as history and no longer flag.</div>
+		</a>
+		<a href="/screening" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
 			<div class="flex items-baseline gap-2">
-				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">{data.stats.tracedAddresses.toLocaleString('en-US')}</div>
+				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: var(--stat-indigo);">{data.stats.monitoredThorAccounts.toLocaleString('en-US')}</div>
 			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Traced via THORChain</div>
-			{#if data.stats.newTracedDay > 0}
+			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Monitored thor1 Accounts · <span style="color: #ef4444;">{data.stats.monitoredAccountsFlagged.toLocaleString('en-US')} flagged</span></div>
+			{#if data.stats.newAccountsDay > 0}
 				<div class="stat-inset">
-					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newTracedDay)}</span>
+					<span class="font-mono font-bold" style="color: #10b981;">+{compact(data.stats.newAccountsDay)}</span>
 					<span class="today-label" style="color: var(--text-faint);">1d</span>
 				</div>
 			{/if}
-			<div class="stat-tip">Addresses that received value from a listed address through THORChain — swaps (incl. L1→L1 and streaming), sends, LP withdrawals, THORNames — up to 3 hops, with amount thresholds. Each carries the THORChain transaction as evidence.</div>
-		</div>
-		<div class="dash-box stat-hover rounded-xl p-4 relative group">
-			<div class="flex items-baseline gap-2">
-				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedThorUsers.toLocaleString('en-US')}</div>
-			</div>
-			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Flagged THORChain Users</div>
-			<div class="stat-tip">Monitored thor1 accounts at risk "high" or above: listed or traced themselves, or linked to a listed L1 address. Fee collectors and module accounts are never flagged through links.</div>
-		</div>
+			<div class="stat-tip">thor1 accounts Ozone monitors (Rujira League, Midgard LPs, live transactions), screened directly and through their {data.stats.linkedL1.toLocaleString('en-US')} linked L1 addresses. "Flagged" counts those flagged themselves or linked to a listed L1 address (formerly "Flagged THORChain Users"; the old screener's 2 were fee collectors, both false positives).</div>
+		</a>
 	</div>
 
 	<!-- Line 2: Live TX + Globe -->
@@ -438,7 +438,7 @@
 				<span class="text-[10px]" style="color: var(--text-ghost);">·</span>
 				<span class="text-[10px] font-mono" style="color: #10b981;">{compact(data.stats.tracedAddresses)} traced</span>
 				<span class="text-[10px]" style="color: var(--text-ghost);">·</span>
-				<span class="text-[10px] font-mono" style="color: #ef4444;">{data.stats.flaggedThorUsers.toLocaleString('en-US')} flagged users</span>
+				<span class="text-[10px] font-mono" style="color: #ef4444;">{data.stats.flaggedAddresses === null ? '—' : compact(data.stats.flaggedAddresses)} flagged</span>
 			</div>
 		</div>
 	</div>
@@ -553,7 +553,7 @@
 				</p>
 				<div class="flex flex-wrap gap-2">
 					<a href="/api-docs" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all" style="background: var(--app-accent);">Documentation</a>
-					<a href="/api/flagged" target="_blank" class="rounded-lg px-4 py-2 text-xs font-medium transition-all hero-cta-secondary">Download Flagged List</a>
+					<a href="/flagged" class="rounded-lg px-4 py-2 text-xs font-medium transition-all hero-cta-secondary">Flagged Lists</a>
 				</div>
 			</div>
 			<div class="p-4 sm:p-5 flex items-center">

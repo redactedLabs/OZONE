@@ -50,15 +50,15 @@
 </script>
 
 <svelte:head>
-	<title>Flagged THORChain Users — Ozone</title>
+	<title>Monitored thor1 Accounts — Screening | Ozone</title>
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
 	<div class="mb-6 flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-bold text-[var(--text)]">Screening Results</h1>
+			<h1 class="text-2xl font-bold text-[var(--text)]">Monitored thor1 Accounts</h1>
 			<p class="mt-1 text-sm text-[var(--text-muted)]">
-				{data.flaggedCount} flagged THORChain users (risk ≥ high) of {data.totalUsers.toLocaleString()} monitored thor1 accounts · <a href="/methodology#users" style="color: var(--app-accent);">how accounts are flagged</a>
+				{data.flaggedCount} of {data.totalUsers.toLocaleString()} monitored thor1 accounts are flagged (risk ≥ high, themselves or through a linked L1 address) · <a href="/methodology#users" style="color: var(--app-accent);">how accounts are flagged</a> · every flagged address, monitored or not: <a href="/flagged" style="color: var(--app-accent);">all chains</a>, <a href="/flagged?list=thor" style="color: var(--app-accent);">thor1</a>
 			</p>
 		</div>
 		<button

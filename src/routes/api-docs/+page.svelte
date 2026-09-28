@@ -140,7 +140,8 @@ const v = oz.screen(address, 'BTC');      // → status, risk, reasons,
 						['GET /api/v1/keys', 'Public keys that sign snapshots and answers — pin them.'],
 						['GET /api/health', 'Database, snapshot age, per-source sync state, real-time trace cursor.'],
 						['POST /api/v1/submissions', 'Report an address or appeal a flag ({kind, address, chain?, message, evidence?, contact?}).'],
-						['GET /api/flagged', 'Flagged THORChain accounts (JSON / CSV).'],
+						['GET /api/flagged', 'The flagged counters: all flagged addresses, flagged thor1 addresses, monitored thor1 accounts flagged (+ breakdown).'],
+						['GET /api/flagged?list=all|thor|users', 'Each list (JSON, paged with offset/limit ≤ 1000; filter q, source, chain; format=csv for all rows).'],
 					] as [ep, what]}
 						<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 							<td class="px-4 py-2.5 font-mono text-xs whitespace-nowrap" style="color: var(--stat-indigo);">{ep}</td>
@@ -253,10 +254,12 @@ const v = oz.screen(address, 'BTC');      // → status, risk, reasons,
 			<span class="rounded-md px-2.5 py-1 text-xs font-bold" style="background: rgba(16,185,129,0.15); color: #10b981;">GET</span>
 			<code class="text-sm font-mono flex-1" style="color: var(--text);">/api/flagged</code>
 		</div>
-		<p class="text-xs mb-4" style="color: var(--text-muted);">THORChain accounts Ozone currently flags (risk ≥ high) with their reasons, as JSON or CSV. Listed and traced addresses themselves are in the signed snapshot.</p>
+		<p class="text-xs mb-4" style="color: var(--text-muted);">Two separate numbers, each with its list: <strong>all flagged addresses</strong> (every key in the newest signed snapshot at risk ≥ high, any chain; <code>?list=all</code>) and the <strong>flagged thor1 addresses</strong> among them (<code>?list=thor</code>). Rows carry only what the snapshot publishes: address, chain, risk, reason codes, sources, incident. <code>?list=users</code> is the separate count of monitored thor1 accounts that are flagged themselves or through a linked L1 address (formerly "Flagged THORChain Users"; the legacy fields <code>totalFlagged</code>, <code>flaggedThorUsers</code> and <code>flaggedAddresses</code> of the plain call keep that meaning).</p>
 		<div class="flex flex-wrap gap-2">
-			<a href="/api/flagged" target="_blank" class="rounded-lg px-4 py-2 text-xs font-medium text-white transition-all" style="background: var(--app-accent);">View JSON</a>
-			<a href="/api/flagged?format=csv" target="_blank" class="rounded-lg px-4 py-2 text-xs font-medium transition-all" style="border: 1px solid var(--app-border); color: var(--text-muted);">Download CSV</a>
+			<a href="/api/flagged" target="_blank" class="rounded-lg px-4 py-2 text-xs font-medium text-white transition-all" style="background: var(--app-accent);">Counters (JSON)</a>
+			<a href="/api/flagged?list=all" target="_blank" class="rounded-lg px-4 py-2 text-xs font-medium transition-all" style="border: 1px solid var(--app-border); color: var(--text-muted);">All flagged (JSON)</a>
+			<a href="/api/flagged?list=thor" target="_blank" class="rounded-lg px-4 py-2 text-xs font-medium transition-all" style="border: 1px solid var(--app-border); color: var(--text-muted);">thor1 flagged (JSON)</a>
+			<a href="/api/flagged?list=all&format=csv" target="_blank" class="rounded-lg px-4 py-2 text-xs font-medium transition-all" style="border: 1px solid var(--app-border); color: var(--text-muted);">All flagged (CSV)</a>
 		</div>
 	</div>
 

@@ -3,9 +3,13 @@ import { db } from '$lib/server/db';
 import { rujiraUsers, syncLog } from '$lib/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { coverage, dailyDeltas } from '$lib/server/ozone/stats';
+import { currentSnapshot } from '$lib/server/ozone/snapshot';
+import { flaggedSummary } from '$lib/server/ozone/flagged';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const [c, d] = await Promise.all([coverage(), dailyDeltas()]);
+	const [c, d, snap] = await Promise.all([coverage(), dailyDeltas(), currentSnapshot().catch(() => undefined)]);
+	// the two flagged numbers come from the signed snapshot (what nodes screen against)
+	const flagged = snap ? flaggedSummary(snap.index) : undefined;
 
 	const lastSync = c.listed.bySource.map((s) => s.lastSuccessAt).filter(Boolean).sort().pop() ?? null;
 
@@ -25,7 +29,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 			monitoredThorAccounts: c.users.thorAccounts,
 			listedAddresses: c.listed.addresses,
 			tracedAddresses: c.traced.addresses,
-			flaggedThorUsers: c.users.flagged,
+			// (1) every flagged address, all chains; (2) the thor1 ones among them
+			flaggedAddresses: flagged?.counts.flaggedAddresses ?? null,
+			flaggedThorAddresses: flagged?.counts.flaggedThorAddresses ?? null,
+			flaggedByKind: flagged?.byKind ?? null,
+			// monitored thor1 accounts flagged themselves or through a linked L1 address (formerly "Flagged THORChain Users")
+			monitoredAccountsFlagged: c.users.flagged,
 			linkedL1: c.users.linkedL1,
 			sources: c.listed.bySource.filter((s) => s.active > 0).length,
 			newAccountsDay: Number(d.users),

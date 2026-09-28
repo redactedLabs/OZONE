@@ -29,7 +29,9 @@
 			variant: 'default' as const,
 			links: [
 				{ label: 'Addresses', href: '/addresses' },
+				{ label: 'Flagged Addresses', href: '/flagged' },
 				{ label: 'Listed Addresses', href: '/banned' },
+				{ label: 'Monitored Accounts', href: '/screening' },
 				{ label: 'Methodology', href: '/methodology' },
 				{ label: 'Report / Appeal', href: '/submit' },
 			]

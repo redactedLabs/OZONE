@@ -6,6 +6,7 @@ const pages = [
 	{ path: '/', priority: '1.0', changefreq: 'daily' },
 	{ path: '/certificate', priority: '0.9', changefreq: 'weekly' },
 	{ path: '/history', priority: '0.9', changefreq: 'weekly' },
+	{ path: '/flagged', priority: '0.8', changefreq: 'daily' },
 	{ path: '/banned', priority: '0.8', changefreq: 'daily' },
 	{ path: '/addresses', priority: '0.7', changefreq: 'daily' },
 	{ path: '/api-docs', priority: '0.8', changefreq: 'monthly' },

@@ -49,7 +49,7 @@
 			<div class="flex flex-wrap justify-center gap-2 mt-6">
 				<span class="chip"><strong>{data.coverage.listed.toLocaleString('en-US')}</strong>&nbsp;listed addresses</span>
 				<span class="chip"><strong>{data.coverage.traced.toLocaleString('en-US')}</strong>&nbsp;traced via THORChain</span>
-				<span class="chip"><strong>{data.coverage.flaggedUsers.toLocaleString('en-US')}</strong>&nbsp;flagged THORChain users</span>
+				<span class="chip"><strong>{data.coverage.flaggedUsers.toLocaleString('en-US')}</strong>&nbsp;monitored thor1 accounts flagged</span>
 				<span class="chip"><strong>{data.coverage.delisted.toLocaleString('en-US')}</strong>&nbsp;delisted (history)</span>
 				{#if data.coverage.snapshot}<span class="chip">snapshot v{data.coverage.snapshot.version}</span>{/if}
 			</div>
@@ -145,7 +145,15 @@
 			{/each}
 		</div>
 		<p class="p">A verdict is <em>flagged</em> when any active reason reaches the policy threshold (default <em>high</em>). Every reason carries its source, category, provenance link and dates; traced reasons carry the hop, the THORChain transaction, the amount and the listed origin.</p>
-		<p class="p" id="users"><strong>Flagged THORChain users</strong> are monitored thor1 accounts whose own address is flagged, or which are linked (by their Midgard history) to a listed L1 address — a link counts one level lower, because a linked address can be a counterparty. Links through affiliate outputs and hub accounts are ignored: the previous screener flagged exactly two accounts, and both were fee collectors (THORChain's affiliate-collector module and an interface's affiliate address) linked to tens of thousands of unrelated swappers.</p>
+		<p class="p" id="numbers"><strong>The numbers on the home page</strong> have one meaning each, and each links to its list:</p>
+		<ul class="list">
+			<li><strong>Flagged addresses (all chains)</strong> — every address in the newest signed snapshot whose active reasons reach risk <em>high</em> or above: listed, traced through THORChain, linked, or controlled by the same key as a listing. Each address (key) counts once, however many reasons it has; an EVM key counts once for all EVM chains. <a href="/flagged" style="color: var(--app-accent);">List</a> · <a href="/api/flagged?list=all" style="color: var(--app-accent);">JSON</a></li>
+			<li><strong>Flagged THORChain (thor1) addresses</strong> — the thor1 addresses among them. <a href="/flagged?list=thor" style="color: var(--app-accent);">List</a> · <a href="/api/flagged?list=thor" style="color: var(--app-accent);">JSON</a></li>
+			<li><strong>Listed addresses</strong> — distinct addresses on at least one list at any risk (medium-risk phishing entries are listed, not flagged). <a href="/banned" style="color: var(--app-accent);">List</a></li>
+			<li><strong>Monitored thor1 accounts · flagged</strong> — thor1 accounts Ozone watches (Rujira League, LPs, live transactions), and how many of them are flagged themselves or linked to a listed L1 address (formerly "Flagged THORChain users"; see below). <a href="/screening" style="color: var(--app-accent);">List</a></li>
+		</ul>
+		<p class="p">The two flagged lists show only what the signed snapshot publishes: address, chain, risk, reason codes, sources and the incident or entity behind it.</p>
+		<p class="p" id="users"><strong>Monitored thor1 accounts flagged</strong> (formerly "Flagged THORChain users") are monitored thor1 accounts whose own address is flagged, or which are linked (by their own signed actions in their Midgard history) to a listed L1 address — a link counts one level lower, because a linked address can be a counterparty. Links through affiliate outputs and hub accounts are ignored: the previous screener flagged exactly two accounts, and both were fee collectors (THORChain's affiliate-collector module and an interface's affiliate address) linked to tens of thousands of unrelated swappers. A flagged monitored account also appears in the thor1 list (from the next snapshot on, which publishes its links); the thor1 list is larger because it also covers addresses Ozone does not monitor.</p>
 	</section>
 
 	<section class="card api-card rounded-2xl p-6 sm:p-8 mb-6" id="snapshots" data-win-title="Snapshots">
