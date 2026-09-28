@@ -163,11 +163,13 @@ describe('quality gates on real-data fixtures', async () => {
 		let idx = await next();
 		let v = idx.screen(linkedUser, 'THOR');
 		expect(v.status).toBe('flagged');
-		expect(v.reasons.map((r) => [r.category, r.code])).toEqual([['linked', 'LINKED_OFAC_SDN']]);
-		// screening again from that snapshot does not duplicate or self-sustain the reason
+		// the linked L1 address is the OFAC-designated Ronin exploiter, which the
+		// curated incident set also names: one link reason per listing
+		expect(v.reasons.map((r) => `${r.category}:${r.code}`).sort()).toEqual(['linked:LINKED_INCIDENT_EXPLOITER', 'linked:LINKED_OFAC_SDN']);
+		// screening again from that snapshot does not duplicate or self-sustain the reasons
 		await screenUsers(sql, idx);
 		const detail = await sql.query<{ flag_detail: unknown[] }>(`SELECT flag_detail FROM rujira_users WHERE thor_address = $1`, [linkedUser]);
-		expect(detail.rows[0].flag_detail).toHaveLength(1);
+		expect(detail.rows[0].flag_detail).toHaveLength(2);
 		// the link disappears → the account is clean after the next cycle
 		await sql.query(`DELETE FROM l1_addresses WHERE thor_address = $1`, [linkedUser]);
 		await screenUsers(sql, idx);

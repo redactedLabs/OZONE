@@ -22,7 +22,19 @@ export {
 	LOG_APIS,
 	TOPICS
 } from './sources/events.js';
-export { CURATED, type ClusterSpec, type CuratedIncident } from './sources/curated-data.js';
+export {
+	CURATED,
+	type ClusterSpec,
+	type CuratedIncident,
+	type CuratedData,
+	type IncidentAddress,
+	type SearchedIncident,
+	type ExpansionParams,
+	type Confidence,
+	type IncidentRole,
+	type RefType
+} from './sources/curated-data.js';
+export { validateIncidents, incidentStats, incidentCode, CONFIDENCE_RISK } from './sources/incidents.js';
 export { SOURCES, DERIVED_SOURCES, CORE_SOURCES, sourceById, activeSources, parseCurated, type SourceDef, type SourceContext } from './sources/registry.js';
 export { parseChainabuseReports, syncChainabuse, CHAINABUSE_API, type ChainabuseReport } from './sources/chainabuse.js';
 export { migrate, batchInsert, withTransaction } from './store/db.js';
@@ -58,7 +70,16 @@ export {
 	type SmallTransferTotal
 } from './trace/tracer.js';
 export { runTraceBackfill, runRealtimeTick, scheduleRecheck, checkAddress, SERVICE_ACTIONS, CHECK_PAGES, CHECK_PAGES_NEVER_SERVICE, type BackfillResult, type RealtimeResult } from './trace/jobs.js';
-export { expandCluster, clusterEntries } from './evm/expand.js';
+export { expandEvm, type ExpandOptions } from './evm/expand.js';
+export { expandUtxo } from './utxo/expand.js';
+export { curatedClusterSpecs, manualClusterSpecs, planRun, specHash, CHAIN_DEFAULTS, DEFAULT_WINDOW_DAYS, isExpandableChain, type RunPlan, type ClusterRunRow } from './cluster/specs.js';
+export { clusterRisk } from './cluster/run.js';
+export type { ClusterMember, ExpandResult, FrontierNode, ResumeState, StopReason } from './cluster/types.js';
+export { evmProviders, evmCall, evmCapacity, evmTxList, evmContracts, isEvmChain, EVM_CHAINS, EVM_CHAIN_IDS, NoExplorer, type ExplorerEnv, type EvmChain, type EvmProvider } from './explorers/evm.js';
+export { Esplora, isDepositMemo, opReturnText, isCoinJoin, isUtxoChain, type UtxoChain, type EsploraTx } from './explorers/esplora.js';
+export { hostBudget, hostRequests, resetHostBudgets, configureHost, QuotaExceeded, HostBudget, type HostPolicy } from './explorers/budget.js';
+export { thorchainInbound, resetThorchainInboundCache, DEFAULT_THORNODE_URL } from './explorers/thornode.js';
+export { l1TxUrl, thorchainTxUrl } from './explorers/links.js';
 export {
 	collectSnapshot,
 	buildAndStoreSnapshot,

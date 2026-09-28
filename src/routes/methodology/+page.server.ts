@@ -24,7 +24,7 @@ export const load: PageServerLoad = async () => {
 	return {
 		sources,
 		trace: DEFAULT_TRACE_CONFIG,
-		clusters: CURATED.clusters.map((k) => ({ id: k.id, name: k.name, window: k.window, minValueEth: k.minValueEth, maxDepth: k.maxDepth, ref: k.ref })),
+		clusters: CURATED.clusters.map((k) => ({ id: k.id, name: k.name, window: k.window, minValueEth: k.minValue, maxDepth: k.maxDepth, ref: k.ref })),
 		curatedPolicy: CURATED.policy,
 		coverage: c
 			? {

@@ -8,7 +8,7 @@ import { emptyResult, type Logger, type ParseResult, type Sql } from '../types.j
 import { manualEntries } from '../store/entries.js';
 import { httpJson, httpText, type HttpOptions } from '../util/http.js';
 import { ETH_LABELS_URL, parseEthLabels, parseScamSniffer, SCAMSNIFFER_URL } from './community.js';
-import { CURATED } from './curated-data.js';
+import { parseCurated } from './incidents.js';
 import { EU_FSF_MIRROR_URL, EU_FSF_URL, parseEuFsfXml } from './eu.js';
 import { syncChainabuse } from './chainabuse.js';
 import { syncChainalysisOracle, syncCircle, syncCircleOtherChains, syncOracleOtherChains, syncTether, syncUsdt0 } from './events.js';
@@ -63,32 +63,7 @@ async function firstOk<T>(urls: string[], fn: (url: string) => Promise<T>, logge
 	throw last instanceof Error ? last : new Error(String(last));
 }
 
-export function parseCurated(): ParseResult {
-	const res = emptyResult();
-	res.version = CURATED.version;
-	for (const inc of CURATED.incidents) {
-		for (const a of inc.addresses) {
-			const p = parseForChain(a.address, a.chain);
-			if (!p) throw new Error(`curated incident ${inc.id}: invalid ${a.chain} address ${a.address}`);
-			res.entries.push({
-				source: 'curated',
-				key: p.key,
-				chain: p.chain,
-				address: p.address,
-				category: inc.category,
-				risk: inc.risk,
-				code: inc.code,
-				entity: inc.entity,
-				text: inc.text,
-				refUrl: inc.ref,
-				refId: inc.id,
-				listedAt: inc.date,
-				meta: { incident: inc.name, verification: inc.verification }
-			});
-		}
-	}
-	return res;
-}
+export { parseCurated } from './incidents.js';
 
 export const SOURCES: SourceDef[] = [
 	{
@@ -176,11 +151,15 @@ export const SOURCES: SourceDef[] = [
 	},
 	{
 		id: 'curated',
-		name: 'Curated attributions',
+		name: 'Hack incidents and curated attributions',
 		kind: 'curated',
 		url: 'https://github.com/redactedLabs/OZONE/blob/main/packages/ozone-engine/src/sources/curated-data.ts',
-		description: 'Individually verified attributions with a named primary source (e.g. FBI 2023-08-22 DPRK bitcoin addresses).',
+		description:
+			'Hack and exploit incidents with the addresses public sources name as the attacker\'s, each with its own source: law enforcement, sanctions or the victim (risk severe) or an established investigator (risk high). Also FBI lists published only as web pages. Every reason names its incident.',
+		cadence: 'maintained in the repository; re-read daily',
 		intervalMs: 24 * H,
+		// code-reviewed data, not a download: a deliberate delisting of a large incident must not be refused
+		maxDropRatio: 0.5,
 		fetchParse: async () => parseCurated()
 	},
 	{
@@ -323,10 +302,11 @@ export const DERIVED_SOURCES = [
 	},
 	{
 		id: 'cluster',
-		name: 'Hack cluster expansion (Ethereum)',
+		name: 'Hack cluster expansion',
 		kind: 'derived' as const,
 		url: 'https://ozone.redacted.gg/methodology#clusters',
-		description: 'Addresses funded by a hack cluster within its laundering window (value threshold, hop limit, services excluded).'
+		description:
+			'Addresses funded by an incident\'s attributed addresses on the same chain (Ethereum and EVM chains, Bitcoin, Litecoin) within its laundering window: value threshold, hop limit; services, bridges, THORChain vaults and routers, mixers and contracts excluded.'
 	},
 	{
 		id: 'thorchain_links',

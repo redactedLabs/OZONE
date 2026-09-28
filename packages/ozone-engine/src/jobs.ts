@@ -3,9 +3,9 @@
  * triggers, local runs). Each job is idempotent and safe to re-run.
  */
 import { decodePayload, type PrivateKeyInfo, type SnapshotIndex } from '../../ozone-client/src/index.js';
-import { clusterEntries, expandCluster } from './evm/expand.js';
+import { runClusterExpansion, type ClusterRunResult } from './cluster/run.js';
+import type { ExplorerEnv } from './explorers/evm.js';
 import { buildAndStoreSnapshot, latestSnapshot, snapshotPayload, type PublishResult, type StoreOptions } from './snapshot/builder.js';
-import { CURATED, type ClusterSpec } from './sources/curated-data.js';
 import { activeSources, SOURCES, type SourceContext, type SourceDef } from './sources/registry.js';
 import { applySourceResult, recordSourceError, type ApplyStats } from './store/entries.js';
 import { screenUsers, type UserScreenResult } from './screen/users.js';
@@ -57,52 +57,8 @@ async function logSync(sql: Sql, type: string, status: string, records: number, 
 	);
 }
 
-export const CLUSTER_SOURCE = {
-	id: 'cluster',
-	name: 'Hack cluster expansion (Ethereum)',
-	kind: 'derived',
-	url: 'https://ozone.redacted.gg/methodology#clusters',
-	maxDropRatio: 0.5
-};
-
-async function clusterSeeds(sql: Sql, spec: ClusterSpec): Promise<string[]> {
-	const r = await sql.query<{ address: string; source: string; entity: string | null }>(
-		`SELECT address, source, entity FROM oz_entries WHERE removed_at IS NULL AND key LIKE 'evm:%' AND source = ANY($1::text[])`,
-		[spec.seedSources]
-	);
-	return r.rows
-		.filter((row) => row.source !== 'ethlabels' || !spec.seedLabelFilter || (row.entity ?? '').includes(spec.seedLabelFilter))
-		.map((row) => row.address);
-}
-
-export async function runClusterExpansion(
-	sql: Sql,
-	ctx: SourceContext & { maxRequests?: number } = {},
-	specs: ClusterSpec[] = CURATED.clusters
-): Promise<SyncOutcome> {
-	const t0 = Date.now();
-	try {
-		const merged = { entries: [] as ReturnType<typeof clusterEntries>['entries'], rejected: [], notes: [] as string[], version: '' };
-		const versions: string[] = [];
-		for (const spec of specs) {
-			const seeds = await clusterSeeds(sql, spec);
-			if (!seeds.length) throw new Error(`cluster ${spec.id}: no seeds (sync ${spec.seedSources.join(', ')} first)`);
-			const result = await expandCluster(spec, seeds, { http: ctx.http, logger: ctx.logger, maxRequests: ctx.maxRequests });
-			const res = clusterEntries(spec, result);
-			merged.entries.push(...res.entries);
-			merged.notes.push(...res.notes);
-			versions.push(res.version ?? spec.id);
-		}
-		merged.version = versions.join(',');
-		const stats = await applySourceResult(sql, CLUSTER_SOURCE, merged);
-		await logSync(sql, 'cluster', 'success', stats.active, 0, Date.now() - t0);
-		return { source: 'cluster', ok: true, stats, durationMs: Date.now() - t0 };
-	} catch (e) {
-		const error = (e as Error).message;
-		await recordSourceError(sql, CLUSTER_SOURCE, error).catch(() => undefined);
-		return { source: 'cluster', ok: false, error, durationMs: Date.now() - t0 };
-	}
-}
+/** Hack-cluster expansion (one cluster per incident and chain): see cluster/run.ts. */
+export { runClusterExpansion, CLUSTER_SOURCE, CLUSTER_PERIOD_MS, clusterSourceResult, type ClusterRunResult, type ClusterRunSummary, type ClusterRunOptions } from './cluster/run.js';
 
 export async function publishSnapshot(sql: Sql, key: PrivateKeyInfo, opts: StoreOptions = {}): Promise<PublishResult> {
 	return buildAndStoreSnapshot(sql, key, opts);
@@ -130,6 +86,8 @@ export async function screenUsersFromLatest(sql: Sql, opts: { flagAt?: 'high' | 
 export interface IncidentResult {
 	/** The maintainer-flag sync (lists the pasted addresses). */
 	sync: SyncOutcome;
+	/** On-chain expansion of the pasted incidents (urgent maintainer incidents with a name). */
+	expansion?: ClusterRunResult;
 	/** Keys on the incident path (urgent flags and what was traced from them). */
 	urgentKeys: number;
 	/** Tracing of those keys (Midgard history, hop by hop within the budget). */
@@ -148,15 +106,39 @@ export interface IncidentResult {
 export async function runIncidentPath(
 	sql: Sql,
 	midgard: MidgardLike,
-	opts: { prices?: PriceOracle; logger?: Logger; timeBudgetMs?: number; http?: SourceContext['http'] } = {}
+	opts: {
+		prices?: PriceOracle;
+		logger?: Logger;
+		timeBudgetMs?: number;
+		http?: SourceContext['http'];
+		/**
+		 * Expand the pasted incidents on their own chains before tracing (their
+		 * members are then traced first too); false = skip. Small by default:
+		 * the weekly expansion continues where this stops.
+		 */
+		expansion?: false | { maxRequests?: number; timeBudgetMs?: number; env?: ExplorerEnv };
+	} = {}
 ): Promise<IncidentResult> {
 	const manual = SOURCES.find((d) => d.id === 'manual');
 	if (!manual) throw new Error('manual source missing');
 	const sync = await syncSource(sql, manual, { sql, logger: opts.logger, http: opts.http });
 	if (!sync.ok) return { sync, urgentKeys: 0 };
+	let expansion: ClusterRunResult | undefined;
+	if (opts.expansion !== false) {
+		expansion = await runClusterExpansion(sql, {
+			logger: opts.logger,
+			http: opts.http,
+			env: opts.expansion?.env,
+			maxRequests: opts.expansion?.maxRequests ?? 300,
+			timeBudgetMs: opts.expansion?.timeBudgetMs ?? 3 * 60_000,
+			only: (s) => s.incident.startsWith('manual:') && !!s.urgent
+		});
+		const ran = expansion.runs.filter((r) => r.status !== 'skipped');
+		if (ran.length) opts.logger?.info(`incident path: expanded ${ran.map((r) => `${r.cluster} (${r.members} members, ${r.status})`).join(', ')}`);
+	}
 	const index = await loadTraceIndex(sql);
 	const urgentKeys = [...index.values()].filter((e) => e.urgent).length;
-	if (!urgentKeys) return { sync, urgentKeys };
+	if (!urgentKeys) return { sync, urgentKeys, ...(expansion ? { expansion } : {}) };
 	const trace = await runTraceBackfill(sql, midgard, {
 		prices: opts.prices,
 		logger: opts.logger,
@@ -165,5 +147,5 @@ export async function runIncidentPath(
 		filter: (_key, e) => !!e.urgent
 	});
 	opts.logger?.info(`incident path: ${urgentKeys} urgent key(s); ${trace.checked} checked, ${trace.traced} traced, ${trace.remaining} left`);
-	return { sync, urgentKeys, trace };
+	return { sync, urgentKeys, trace, ...(expansion ? { expansion } : {}) };
 }

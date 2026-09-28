@@ -464,17 +464,27 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 		source: string;
 		entity: string | null;
 		cluster: string | null;
+		since: string | null;
 		urgent: boolean | null;
 	}>(
-		`SELECT key, chain, address, risk, category, source, entity, meta->>'cluster' AS cluster, (meta->>'urgent') = 'true' AS urgent
+		`SELECT key, chain, address, risk, category, source, entity, meta->>'cluster' AS cluster, meta->>'since' AS since, (meta->>'urgent') = 'true' AS urgent
 		 FROM oz_entries WHERE removed_at IS NULL`
 	);
 	const urgentKeys = new Set<string>();
-	// Hack-cluster members count from the start of their incident: earlier
-	// activity cannot be the proceeds. (Not from the recorded transfer: the
-	// expansion sees plain ETH transfers only, so a member is often funded
-	// earlier through contracts or internal transactions.)
+	// Hack-cluster members and incident addresses count from the start of
+	// their incident (meta.since): earlier activity cannot be the proceeds.
+	// (Not from the recorded transfer: the expansion sees native transfers
+	// only, so a member is often funded earlier through contracts or internal
+	// transactions.) Cluster rows written before meta.since existed fall back
+	// to their cluster's window.
 	const incidentStart = new Map(CURATED.clusters.map((c) => [c.id, Math.floor(Date.parse(c.window.from) / 1000)]));
+	const startOf = (r: { source: string; cluster: string | null; since: string | null }): number | undefined => {
+		if (r.since) {
+			const t = Math.floor(Date.parse(r.since) / 1000);
+			if (Number.isFinite(t)) return t;
+		}
+		return r.source === 'cluster' && r.cluster ? incidentStart.get(r.cluster) : undefined;
+	};
 	const put = (e: IndexEntry) => {
 		const cur = index.get(e.key);
 		const better =
@@ -490,7 +500,7 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 		if (!isTraceOrigin(r.category)) continue;
 		if (suppressed.has(r.key) && r.category !== 'sanctions' && r.category !== 'law_enforcement') continue;
 		if (r.urgent === true) urgentKeys.add(r.key);
-		const sinceTime = r.source === 'cluster' && r.cluster ? incidentStart.get(r.cluster) : undefined;
+		const sinceTime = startOf(r);
 		put({
 			key: r.key,
 			hop: 0,

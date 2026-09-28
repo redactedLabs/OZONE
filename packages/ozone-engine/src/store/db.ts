@@ -30,7 +30,14 @@ export async function batchInsert(
 	return n;
 }
 
-export const MIGRATIONS = ['0000_baseline.sql', '0001_ozone_next.sql', '0002_trace_dust_totals.sql', '0003_trace_dust_flows.sql', '0004_manual_incidents.sql'];
+export const MIGRATIONS = [
+	'0000_baseline.sql',
+	'0001_ozone_next.sql',
+	'0002_trace_dust_totals.sql',
+	'0003_trace_dust_flows.sql',
+	'0004_manual_incidents.sql',
+	'0005_incidents_watch.sql'
+];
 
 export function migrationText(name: string): string {
 	return readFileSync(new URL(`../../migrations/${name}`, import.meta.url), 'utf8');
