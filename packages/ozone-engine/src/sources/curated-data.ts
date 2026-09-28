@@ -602,7 +602,7 @@ export const CURATED: CuratedData = {
 			date: '2024-05-31',
 			category: 'hack',
 			attribution: 'TraderTraitor (DPRK) per FBI, DC3 and Japan\'s National Police Agency',
-			ref: 'https://beosin.com/resources/more-than-300-million-in-losses-analysis-of-45029-btc-stolen-from-dmm-bitcoin',
+			ref: 'https://beosin.com/resources/more-than-300-million-in-losses-analysis-of-45029-btc-abnormal-outflow-on-dmm-bitcoin-exchange',
 			verification: 'Checked 2026-09-28: every address is valid for its chain (checksums) and appears verbatim on its cited page (beosin.com).',
 			lossUsd: 308_000_000,
 			thorchain: { used: 'yes', ref: 'https://cryptopotato.com/over-35m-laundered-from-dmm-bitcoin-hack-through-huione-guarantee-data/', note: 'bridged through THORChain among other routes, per ZachXBT' },
@@ -656,7 +656,7 @@ export const CURATED: CuratedData = {
 			date: '2024-01-01',
 			category: 'hack',
 			attribution: 'unknown (7 of 10 bridge signers compromised)',
-			ref: 'https://beosin.com/resources/the-orbit-chain-incident-unraveling-the-story-behind-the-81m-hack',
+			ref: 'https://beosin.com/resources/the-orbit-chain-incident-unraveling-the-story-behind-the-80-million-heist--first-case-of-2024',
 			verification: 'Checked 2026-09-28: every address is valid for its chain (checksums) and appears verbatim on its cited page (beosin.com).',
 			lossUsd: 81_500_000,
 			thorchain: { used: 'unknown' },
@@ -886,7 +886,7 @@ export const CURATED: CuratedData = {
 			date: '2022-10-06',
 			category: 'exploit',
 			attribution: 'unknown',
-			ref: 'https://www.elliptic.co/blog/analysis/attack-mints-569-million-worth-of-bnb-tokens',
+			ref: 'https://www.elliptic.co/blog/analysis/attack-mints-569-million-worth-of-bnb-tokens-in-bsc-bridge-exploit',
 			verification: 'Checked 2026-09-28: every address is valid for its chain (checksums) and appears verbatim on its cited page (elliptic.co).',
 			lossUsd: 570_000_000,
 			thorchain: { used: 'unknown' },
@@ -944,12 +944,12 @@ export const CURATED: CuratedData = {
 			date: '2022-03-23',
 			category: 'hack',
 			attribution: 'DPRK / Lazarus Group per OFAC and FBI',
-			ref: 'https://home.treasury.gov/news/press-releases/jy0768',
-			verification: 'Checked 2026-09-28: every address is valid for its chain (checksums) and appears verbatim on its cited page (merklescience.com). OFAC designated the address on 2022-04-14 (it is also in the ofac_sdn source).',
+			ref: 'https://ofac.treasury.gov/recent-actions/20220414',
+			verification: 'Checked 2026-09-28: the address is valid (EIP-55) and appears verbatim in OFAC\'s North Korea designation update of 2022-04-14 (the Lazarus Group entry); also at merklescience.com. OFAC designated the address on 2022-04-14 (it is also in the ofac_sdn source).',
 			lossUsd: 620_000_000,
 			thorchain: { used: 'unknown' },
 			addresses: [
-				{ chain: 'ETH', address: '0x098B716B8Aaf21512996dC57EB0615e2383E2f96', role: 'exploiter', ref: 'https://www.merklescience.com/blog/hack-track-analysis-of-ronin-network-exploit', refType: 'sanctions', confidence: 'high', note: 'OFAC added this ETH address to the Lazarus Group SDN entry on 2022-04-14; it received 173,600 ETH and 25.5M USDC directly from the Ronin…' }
+				{ chain: 'ETH', address: '0x098B716B8Aaf21512996dC57EB0615e2383E2f96', role: 'exploiter', ref: 'https://ofac.treasury.gov/recent-actions/20220414', refType: 'sanctions', confidence: 'high', note: 'OFAC added this ETH address to the Lazarus Group SDN entry on 2022-04-14; it received 173,600 ETH and 25.5M USDC directly from the Ronin…' }
 			]
 		},
 		{
@@ -988,7 +988,7 @@ export const CURATED: CuratedData = {
 			date: '2021-12-13',
 			category: 'hack',
 			attribution: 'unknown',
-			ref: 'https://fairyproof.substack.com/p/fairyproofs-analysis-of-the-attack-on-vulcan-forged',
+			ref: 'https://fairyproof.substack.com/p/fairyproofs-analysis-of-the-attack-on-vulcan-forged-615cff0153df',
 			verification: 'Checked 2026-09-28: every address is valid for its chain (checksums) and appears verbatim on its cited page (fairyproof.substack.com).',
 			lossUsd: 140_000_000,
 			thorchain: { used: 'unknown' },
