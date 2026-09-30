@@ -1,5 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import { migrate } from '../src/store/db.js';
+import { TX_PAGE_SIZE, WASM_EXECUTE, type ChainEvent, type ChainLike, type ChainRead, type ChainTx, type WasmTxQuery } from '../src/trace/chain.js';
 import type { MidgardAction, MidgardLike } from '../src/trace/midgard.js';
 import type { Sql } from '../src/types.js';
 
@@ -135,4 +136,88 @@ export function midgardFetch(all: MidgardAction[], log: string[] = []): typeof f
 			: { nextPageToken: '', prevPageToken: '' };
 		return new Response(JSON.stringify({ actions: desc, meta }), { status: 200, headers: { 'content-type': 'application/json' } });
 	}) as typeof fetch;
+}
+
+// ---------------------------------------------------------------------------
+// Chain transactions (trace/chain.ts)
+// ---------------------------------------------------------------------------
+
+export interface ChainMsgSpec {
+	/** The message's signer (MsgExecuteContract sender). */
+	signer: string;
+	/** Bank transfers the message caused: [sender, recipient, "123rune,45btc-btc"]. */
+	transfers?: Array<[string, string, string]>;
+	/** Contract events: `wasm-<type>` with their attributes. */
+	wasm?: Array<{ type: string; attrs: Record<string, string> }>;
+}
+
+let txSeq = 0;
+/** A chain transaction with the events the LCD reports for the given messages (msg_index on every event). */
+export function chainTx(p: { height: number; hash?: string; date?: string; code?: number; msgs: ChainMsgSpec[] }): ChainTx {
+	txSeq++;
+	const events: ChainEvent[] = [{ type: 'tx', attributes: [{ key: 'fee', value: '0rune' }, { key: 'fee_payer', value: p.msgs[0]?.signer ?? '' }] }];
+	p.msgs.forEach((m, i) => {
+		const idx = String(i);
+		events.push({ type: 'message', attributes: [{ key: 'action', value: WASM_EXECUTE }, { key: 'sender', value: m.signer }, { key: 'module', value: 'wasm' }, { key: 'msg_index', value: idx }] });
+		for (const [sender, recipient, amount] of m.transfers ?? []) {
+			events.push({ type: 'transfer', attributes: [{ key: 'recipient', value: recipient }, { key: 'sender', value: sender }, { key: 'amount', value: amount }, { key: 'msg_index', value: idx }] });
+		}
+		for (const w of m.wasm ?? []) {
+			events.push({ type: `wasm-${w.type}`, attributes: [...Object.entries(w.attrs).map(([key, value]) => ({ key, value })), { key: 'msg_index', value: idx }] });
+		}
+	});
+	return {
+		hash: p.hash ?? `CHAINTX${String(txSeq).padStart(6, '0')}`,
+		height: p.height,
+		date: p.date ?? new Date(1_740_000_000_000 + p.height * 6000).toISOString(),
+		code: p.code ?? 0,
+		events
+	};
+}
+
+/** The signers of a transaction's messages. */
+const signersOf = (tx: ChainTx) => tx.events.filter((e) => e.type === 'message').map((e) => e.attributes.find((a) => a.key === 'sender')?.value);
+
+/** In-memory THORNode: the LCD's search (oldest first, paged like the real one) over a list of contract transactions. */
+export class FakeChain implements ChainLike {
+	requests = 0;
+	/** Heights the pages were read at, in order (to check that a read resumed instead of starting over). */
+	readonly reads: Array<{ signer?: string; from: number; to?: number }> = [];
+	constructor(
+		readonly txs: ChainTx[],
+		public head = Math.max(0, ...txs.map((t) => t.height))
+	) {}
+
+	async latestHeight(): Promise<number> {
+		this.requests++;
+		return this.head;
+	}
+
+	async *wasmTxs(q: WasmTxQuery): AsyncGenerator<ChainTx> {
+		this.reads.push({ signer: q.signer, from: q.fromHeight, to: q.toHeight });
+		const all = this.txs
+			.filter((t) => t.height >= q.fromHeight && (q.toHeight === undefined || t.height <= q.toHeight) && (!q.signer || signersOf(t).includes(q.signer)))
+			.sort((a, b) => a.height - b.height);
+		const maxPages = Math.max(1, q.maxPages ?? 40);
+		const progress: ChainRead | undefined = q.progress;
+		for (let page = 0; ; page++) {
+			this.requests++;
+			const rows = all.slice(page * TX_PAGE_SIZE, (page + 1) * TX_PAGE_SIZE);
+			for (const t of rows) yield t;
+			if (rows.length < TX_PAGE_SIZE || (page + 1) * TX_PAGE_SIZE >= all.length) {
+				if (progress) {
+					progress.complete = true;
+					delete progress.resumeHeight;
+				}
+				return;
+			}
+			if (page + 1 >= maxPages || (q.deadline !== undefined && Date.now() > q.deadline)) {
+				if (progress) {
+					progress.complete = false;
+					progress.resumeHeight = rows[rows.length - 1].height;
+				}
+				return;
+			}
+		}
+	}
 }

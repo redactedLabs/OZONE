@@ -1,9 +1,15 @@
 /**
  * Turns a Midgard action into value flows between addresses.
  *
- * - swap (incl. streaming, L1→L1, L1→RUNE, trade/secured assets): every
- *   inbound sender → every non-affiliate outbound recipient (what the
- *   recipient actually received);
+ * - swap (incl. streaming, L1→L1, L1→RUNE, trade/secured assets) and
+ *   limit_swap: every inbound sender → every non-affiliate outbound recipient
+ *   (what the recipient actually received);
+ * - secure (secured-asset deposit `SECURE+`: L1 sender → thor1 recipient;
+ *   withdrawal `SECURE-`: thor1 signer → L1 recipient) and trade (trade-account
+ *   deposit `TRADE+` / withdrawal `TRADE-`, same shapes): Midgard lists each as
+ *   one action with the payer in `in` and the payee in `out`, so they follow
+ *   the same sender → recipient rule as a swap (measured against the live
+ *   gateway, 2026-09-30; see test/fixtures/midgard-secure-trade-actions.json);
  * - send (native MsgSend): sender → recipient;
  * - withdraw: requester → the member's payout addresses;
  * - addLiquidity: the asset-side and RUNE-side addresses of one deposit own
@@ -12,13 +18,23 @@
  * - refunds go back to the sender and produce no flow.
  *
  * Affiliate fee outputs, THORChain module accounts and CosmWasm contracts
- * (32-byte thor addresses) are never flow targets.
+ * (32-byte thor addresses) are never flow targets. What Midgard does not show
+ * — value a contract pays on to a third party in a flagged account's own
+ * transaction (Rujira FIN swaps with a recipient, payouts from contract
+ * positions) — comes from the chain's transaction events (trace/chain.ts).
  */
 import { detectAddress, parseForChain, type ParsedAddress } from '../../../ozone-client/src/index.js';
 import type { MidgardAction, MidgardTx } from './midgard.js';
 import type { PriceOracle } from './prices.js';
 
 export type Relation = 'value' | 'lp_pair' | 'thorname';
+
+/**
+ * `action` of a flow read from the chain's transaction events (trace/chain.ts)
+ * instead of a Midgard action: value a CosmWasm contract call moved from its
+ * signer to another account.
+ */
+export const CONTRACT_ACTION = 'contract';
 
 export interface Flow {
 	txid: string;
@@ -91,7 +107,7 @@ export function isExcludedTarget(p: ParsedAddress): boolean {
 	return false;
 }
 
-function formatAmount(amount: string, asset: string): string {
+export function formatAmount(amount: string, asset: string): string {
 	const n = Number(amount) / 1e8;
 	const s = n >= 1 ? n.toFixed(4) : n.toPrecision(4);
 	return `${Number(s)} ${asset}`;

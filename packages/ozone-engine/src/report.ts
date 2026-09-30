@@ -32,6 +32,8 @@ export interface CoverageReport {
 		accounts: number;
 		thorAccounts: number;
 		linkedL1: number;
+		/** Accounts linked to a listed address (any risk: what the snapshot publishes as `thorchain_links`). */
+		linkedAccounts: number;
 		/** Flagged thor1 accounts (risk ≥ high). */
 		flagged: number;
 		/** Flagged non-thor rows (L1 addresses seen in THORChain actions). */
@@ -43,6 +45,8 @@ export interface CoverageReport {
 	clusters: { clusters: number; members: number; partial: number; lastRunAt: string | null } | null;
 	/** THORChain inbound watcher (null before migration 0005). */
 	watch: { pending: number; lookedBack: number; hits: number; skipped: number; lastRunAt: string | null } | null;
+	/** Contract flows from the chain's transaction events (null before migration 0006). */
+	chain: { cursor: number | null; cursorUpdatedAt: string | null; checkedAccounts: number; pendingAccounts: number } | null;
 }
 
 const num = (v: unknown) => Number(v ?? 0);
@@ -98,6 +102,7 @@ export async function coverageReport(sql: Sql): Promise<CoverageReport> {
 		        count(*) FILTER (WHERE flagged AND thor_address NOT LIKE 'thor1%')::int AS flagged_other FROM rujira_users`
 	);
 	const [linked] = await q<{ n: number }>(`SELECT count(DISTINCT l1_address)::int AS n FROM l1_addresses WHERE affiliate IS NOT TRUE`);
+	const [linkedAccounts] = await q<{ n: number }>(`SELECT count(*)::int AS n FROM rujira_users WHERE flag_detail::text LIKE '%"code": "LINKED\\_%' OR flag_detail::text LIKE '%"code":"LINKED\\_%'`);
 	const flaggedByRisk = await q<{ risk: string; n: number }>(
 		`SELECT coalesce(risk, 'unknown') AS risk, count(*)::int AS n FROM rujira_users WHERE flagged AND thor_address LIKE 'thor1%' GROUP BY 1 ORDER BY n DESC`
 	);
@@ -117,6 +122,12 @@ export async function coverageReport(sql: Sql): Promise<CoverageReport> {
 		        count(*) FILTER (WHERE status = 'hit')::int AS hits, count(*) FILTER (WHERE status = 'skipped')::int AS skipped, max(checked_at)::text AS last
 		 FROM oz_watch_queue`
 	).catch(() => null);
+
+	// pass-F table: absent until the worker has applied migration 0006
+	const chain = await q<{ checked: number; pending: number }>(
+		`SELECT count(*) FILTER (WHERE status IN ('done','service'))::int AS checked, count(*) FILTER (WHERE status NOT IN ('done','service'))::int AS pending FROM oz_trace_chain_checked`
+	).catch(() => null);
+	const chainState = chain ? await q<{ value: { height?: number }; updated_at: string }>(`SELECT value, updated_at FROM oz_state WHERE id = 'trace:chain'`) : [];
 
 	return {
 		generatedAt: new Date().toISOString(),
@@ -149,6 +160,7 @@ export async function coverageReport(sql: Sql): Promise<CoverageReport> {
 			accounts: num(users?.accounts),
 			thorAccounts: num(users?.thor),
 			linkedL1: num(linked?.n),
+			linkedAccounts: num(linkedAccounts?.n),
 			flagged: num(users?.flagged),
 			flaggedOther: num(users?.flagged_other),
 			flaggedByRisk: flaggedByRisk.map((r) => ({ risk: r.risk, accounts: num(r.n) }))
@@ -171,6 +183,14 @@ export async function coverageReport(sql: Sql): Promise<CoverageReport> {
 					hits: num(watch[0].hits),
 					skipped: num(watch[0].skipped),
 					lastRunAt: watch[0].last ? new Date(watch[0].last).toISOString() : null
+				}
+			: null,
+		chain: chain?.[0]
+			? {
+					cursor: chainState[0]?.value?.height ?? null,
+					cursorUpdatedAt: chainState[0] ? new Date(chainState[0].updated_at).toISOString() : null,
+					checkedAccounts: num(chain[0].checked),
+					pendingAccounts: num(chain[0].pending)
 				}
 			: null
 	};

@@ -36,7 +36,8 @@ export const MIGRATIONS = [
 	'0002_trace_dust_totals.sql',
 	'0003_trace_dust_flows.sql',
 	'0004_manual_incidents.sql',
-	'0005_incidents_watch.sql'
+	'0005_incidents_watch.sql',
+	'0006_trace_chain.sql'
 ];
 
 export function migrationText(name: string): string {

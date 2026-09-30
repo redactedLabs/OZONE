@@ -27,7 +27,7 @@ describe('schema migrations', async () => {
 	afterAll(() => db.close());
 
 	it('re-apply cleanly and keep data (the worker applies them on every start)', async () => {
-		expect(MIGRATIONS.at(-1)).toBe('0005_incidents_watch.sql');
+		expect(MIGRATIONS.at(-1)).toBe('0006_trace_chain.sql');
 		await sql.query(
 			`INSERT INTO oz_trace_dust_flows (txid, from_key, from_address, from_chain, to_key, to_chain, to_address, action, usd, hop, origin_key, origin_source, origin_risk, origin_category)
 			 VALUES ('MIGTX', 'evm:0xa', '0xa', 'ETH', 'btc:b', 'BTC', 'b', 'send', 30, 1, 'evm:0xa', 'ethlabels', 'high', 'hack')`

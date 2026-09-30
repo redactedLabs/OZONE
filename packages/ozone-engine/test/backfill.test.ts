@@ -7,12 +7,12 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { applySourceResult } from '../src/store/entries.js';
 import { getState, loadTraceIndex, pendingChecks, seedClass, setState } from '../src/store/trace.js';
-import { runRealtimeTick, runTraceBackfill } from '../src/trace/jobs.js';
+import { runRealtimeTick, runTraceBackfill, type PendingAction } from '../src/trace/jobs.js';
 import { Midgard, type ForwardRead, type MidgardAction } from '../src/trace/midgard.js';
 import { StaticPrices } from '../src/trace/prices.js';
 import { DEFAULT_TRACE_CONFIG, type IndexEntry } from '../src/trace/tracer.js';
 import { emptyResult, type ListEntry } from '../src/types.js';
-import { action, memoryDb, midgardFetch } from './helpers.js';
+import { action, FakeMidgard, memoryDb, midgardFetch } from './helpers.js';
 
 const prices = new StaticPrices(
 	new Map([
@@ -270,5 +270,29 @@ describe('backfill order', async () => {
 		expect(index.get(`btc:${BTC_A}`)?.urgent).toBe(true);
 		const tasks = await pendingChecks(sql, index, DEFAULT_TRACE_CONFIG.maxHops);
 		expect(tasks.slice(0, 2).map((t) => t.urgent)).toEqual([true, true]);
+	});
+});
+
+describe('the follower saves its cursor before it re-reads pending actions', async () => {
+	const { db, sql } = await memoryDb();
+	afterAll(() => db.close());
+
+	it('a Midgard lookup that never answers cannot keep the cursor where it was (/api/health showed it frozen for 16 h on 2026-09-30)', async () => {
+		const origin = `evm:${evm(0xf00d)}`;
+		const index = new Map<string, IndexEntry>([
+			[origin, { key: origin, hop: 0, originRisk: 'high', originKey: origin, originSource: 'ethlabels', originCategory: 'hack' }]
+		]);
+		await setState(sql, 'trace:realtime', { height: 99 });
+		const pendingSwap = action({ height: 100, status: 'pending', in: [{ address: evm(0xf00d), asset: 'ETH.ETH', amount: 5, txID: 'ABCDHANG' }], out: [] });
+		const m = new FakeMidgard([pendingSwap]);
+		(m as unknown as { actions: (p: Record<string, unknown>) => Promise<{ actions: MidgardAction[] }> }).actions = (p) =>
+			p.txid ? new Promise(() => undefined) : Promise.resolve({ actions: [] });
+		const t0 = Date.now();
+		const tick = await runRealtimeTick(sql, m, { prices, index, pendingBudgetMs: 50 });
+		expect(Date.now() - t0).toBeLessThan(2_000);
+		expect(tick).toMatchObject({ processed: 1, from: 99, to: 100, complete: true });
+		expect(await getState(sql, 'trace:realtime')).toEqual({ height: 100 });
+		// the action stays remembered for the next tick
+		expect((await getState<PendingAction[]>(sql, 'trace:pending'))?.map((p) => p.txid)).toEqual(['ABCDHANG']);
 	});
 });

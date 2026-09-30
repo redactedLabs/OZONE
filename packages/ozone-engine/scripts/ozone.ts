@@ -13,6 +13,10 @@
  *   trace [--minutes M] [--max N] [--only ns|source] [--concurrency C]
  *                             THORChain history backfill (Midgard)
  *   tick                      one real-time follower step
+ *   chain [--minutes M] [--max N]
+ *                             contract flows: the history of every flagged thor1 account not read
+ *                             yet, then one step of the chain follower (THORNODE_URL)
+ *   backfill-plan [--reset]   what re-reading the tracer's history would touch; --reset applies it
  *   snapshot                  build + sign a snapshot (local dev key)
  *   users                     flag THORChain users from the latest snapshot
  *   screen <address> [chain]  verdict from the latest snapshot
@@ -23,7 +27,7 @@
  *
  * Environment: OZONE_LOCAL_DB (default .ozone-local/pgdata),
  * OZONE_SNAPSHOT_SIGNING_KEY (default: a dev key in .ozone-local/dev-key.hex),
- * MIDGARD_URL.
+ * MIDGARD_URL, THORNODE_URL.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -38,9 +42,15 @@ import {
 	processWatchQueue,
 	validateIncidents,
 	loadLatestIndex,
+	Chain,
+	loadPoolPrices,
 	Midgard,
 	migrate,
+	planTraceBackfill,
 	publishSnapshot,
+	resetTraceChecks,
+	runChainBackfill,
+	runChainTick,
 	runClusterExpansion,
 	runRealtimeTick,
 	runTraceBackfill,
@@ -154,6 +164,24 @@ async function main() {
 		}
 		case 'tick': {
 			console.log(await runRealtimeTick(sql, midgard));
+			break;
+		}
+		case 'chain': {
+			const chain = new Chain({ minIntervalMs: Number(flag('interval') ?? 350) });
+			const prices = await loadPoolPrices(midgard);
+			const history = await runChainBackfill(sql, chain, {
+				prices,
+				logger: consoleLogger,
+				timeBudgetMs: Number(flag('minutes') ?? 10) * 60_000,
+				maxAddresses: Number(flag('max') ?? Infinity)
+			});
+			console.log('history', history, `thornode requests: ${chain.requests}`);
+			console.log('follower', await runChainTick(sql, chain, { prices, logger: consoleLogger }));
+			break;
+		}
+		case 'backfill-plan': {
+			console.log(await planTraceBackfill(sql));
+			if (args.includes('--reset')) console.log({ reset: await resetTraceChecks(sql) });
 			break;
 		}
 		case 'snapshot': {

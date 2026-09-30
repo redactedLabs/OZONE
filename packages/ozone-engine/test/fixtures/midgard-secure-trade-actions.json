@@ -1,0 +1,231 @@
+{
+  "_about": "Real Midgard v2/actions items (gateway.liquify.com, 2026-09-30): SECURE+/SECURE- (type secure) and TRADE+/TRADE- (type trade). The payer is in `in`, the payee in `out`; amounts are in 1e8 units.",
+  "secure_plus_eth_token": {
+    "date": "1790788505789913801",
+    "height": "28046034",
+    "in": [
+      {
+        "address": "0x1a7034e8ee6b52f0246343cc48e529c0b5907f67",
+        "coins": [
+          {
+            "amount": "278916088558",
+            "asset": "ETH.THOR.0XA5F2211B9B8170F694421F2046281775E8468044"
+          }
+        ],
+        "txID": "BC4EE89495D748CF279BEA7FEDD1275BD03A0C499662ADE5A74FC7DCFC6EDB9E"
+      }
+    ],
+    "metadata": {},
+    "out": [
+      {
+        "address": "thor1ggtyq7zjm52acvpe75cxksan42efpxhtde2mxc",
+        "coins": [
+          {
+            "amount": "278916088558",
+            "asset": "ETH-THOR-0XA5F2211B9B8170F694421F2046281775E8468044"
+          }
+        ],
+        "txID": "BC4EE89495D748CF279BEA7FEDD1275BD03A0C499662ADE5A74FC7DCFC6EDB9E"
+      }
+    ],
+    "pools": [],
+    "status": "success",
+    "type": "secure"
+  },
+  "secure_minus_btc": {
+    "date": "1790787852238904434",
+    "height": "28045929",
+    "in": [
+      {
+        "address": "thor1afvpgqf3k52z96haa0xw30jsfzjpeamyqjcupw",
+        "coins": [
+          {
+            "amount": "1678563",
+            "asset": "BTC-BTC"
+          }
+        ],
+        "txID": "B6B6F679A0F5E1EDC54605653651911A1399C6AF16602CDCEA5579026DABA389"
+      }
+    ],
+    "metadata": {},
+    "out": [
+      {
+        "address": "bc1pzwvglmutk7zrs5r5cvgn6mj4gvrr6vfvfykdqdm6v7cl6dr5wl6s0fn50l",
+        "coins": [
+          {
+            "amount": "1677477",
+            "asset": "BTC.BTC"
+          }
+        ],
+        "height": "28045940",
+        "txID": "F8836568187E88A489A8B2DA2AFD07DC60D59A7BFD2459605C0DF61A8695D575"
+      }
+    ],
+    "pools": [],
+    "status": "success",
+    "type": "secure"
+  },
+  "secure_minus_usdt": {
+    "date": "1790789944902101346",
+    "height": "28046263",
+    "in": [
+      {
+        "address": "thor1z4ypwv8hp829qka2nyur68k3d4jfgp3fp2eqkk",
+        "coins": [
+          {
+            "amount": "150000000000",
+            "asset": "ETH-USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7"
+          }
+        ],
+        "txID": "BFE02EF8A344ABD4DE52842AAA5656F12DCB319E4669F0C52EDD99A5B0D114FE"
+      }
+    ],
+    "metadata": {},
+    "out": [
+      {
+        "address": "0x4ccf4b40edb9c469513cf7215fd77a1b109a6019",
+        "coins": [
+          {
+            "amount": "149974984100",
+            "asset": "ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7"
+          }
+        ],
+        "height": "28046268",
+        "txID": "05B64A41CF76ECA9DE374D051E0AD2ED0F946A1EE266AC444EFF7221B6C017CD"
+      }
+    ],
+    "pools": [],
+    "status": "success",
+    "type": "secure"
+  },
+  "secure_plus_atom": {
+    "date": "1790771125444703723",
+    "height": "28043255",
+    "in": [
+      {
+        "address": "cosmos102a2dausz7ektzryrd68u4lfyqnvk5t29helh5",
+        "coins": [
+          {
+            "amount": "10000000",
+            "asset": "GAIA.ATOM"
+          }
+        ],
+        "txID": "33915C2FFD72DBE94522856D9A176F9EF4C321BBF612DC6D2CEA0C9ED0CC8A5E"
+      }
+    ],
+    "metadata": {},
+    "out": [
+      {
+        "address": "thor1uu48rykx2dpatdhk335fc6ms7xyxmq7ph0hlgr",
+        "coins": [
+          {
+            "amount": "10000000",
+            "asset": "GAIA-ATOM"
+          }
+        ],
+        "txID": "33915C2FFD72DBE94522856D9A176F9EF4C321BBF612DC6D2CEA0C9ED0CC8A5E"
+      }
+    ],
+    "pools": [],
+    "status": "success",
+    "type": "secure"
+  },
+  "trade_plus_usdt": {
+    "date": "1790798956842380673",
+    "height": "28047704",
+    "in": [
+      {
+        "address": "0x8e5686ffbab85fe7d181967b1e2ab4ef3491d8b8",
+        "coins": [
+          {
+            "amount": "10756326500000",
+            "asset": "ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7"
+          }
+        ],
+        "txID": "19EE2B256BF2E576435814C137BD68C6A9A7D6F7FF63AF95A781185FD6B56DD2"
+      }
+    ],
+    "metadata": {},
+    "out": [
+      {
+        "address": "thor14mh37ua4vkyur0l5ra297a4la6tmf95mt96a55",
+        "coins": [
+          {
+            "amount": "10756326500000",
+            "asset": "ETH~USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7"
+          }
+        ],
+        "txID": "19EE2B256BF2E576435814C137BD68C6A9A7D6F7FF63AF95A781185FD6B56DD2"
+      }
+    ],
+    "pools": [],
+    "status": "success",
+    "type": "trade"
+  },
+  "trade_minus_btc": {
+    "date": "1790798768357167827",
+    "height": "28047674",
+    "in": [
+      {
+        "address": "thor14mh37ua4vkyur0l5ra297a4la6tmf95mt96a55",
+        "coins": [
+          {
+            "amount": "25996600",
+            "asset": "BTC~BTC"
+          }
+        ],
+        "txID": "0000051DE99A36821089D25F095FF6E8ED6EC586EFDD8E1D04DA075B14E39978"
+      }
+    ],
+    "metadata": {},
+    "out": [
+      {
+        "address": "13i9ZaXBYJ74qPuK7JrJ6Znws5uTa37vQt",
+        "coins": [
+          {
+            "amount": "25993891",
+            "asset": "BTC.BTC"
+          }
+        ],
+        "height": "28047680",
+        "txID": "A6BC0F3BC4B1EDC8129875424303E38CCB077250D6189BA376696975D38BBD45"
+      }
+    ],
+    "pools": [],
+    "status": "success",
+    "type": "trade"
+  },
+  "trade_minus_atom": {
+    "date": "1790797938986838311",
+    "height": "28047542",
+    "in": [
+      {
+        "address": "thor14mh37ua4vkyur0l5ra297a4la6tmf95mt96a55",
+        "coins": [
+          {
+            "amount": "99072997200",
+            "asset": "GAIA~ATOM"
+          }
+        ],
+        "txID": "0000006A1FA677E07EE01FFE57E44FE0E2822CE5C173B8EBB0D035DB072C6280"
+      }
+    ],
+    "metadata": {},
+    "out": [
+      {
+        "address": "cosmos14mh37ua4vkyur0l5ra297a4la6tmf95mdzrxpt",
+        "coins": [
+          {
+            "amount": "99058482200",
+            "asset": "GAIA.ATOM"
+          }
+        ],
+        "height": "28047548",
+        "txID": "9891ADD04596D4495670834AF2F3AA812A1E028A61791B763717A12EEDE9B330"
+      }
+    ],
+    "pools": [],
+    "status": "success",
+    "type": "trade"
+  }
+}

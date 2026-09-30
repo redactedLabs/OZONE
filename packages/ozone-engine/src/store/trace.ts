@@ -12,6 +12,7 @@ import {
 	traceRisk,
 	type DustFlow,
 	type IndexEntry,
+	type PayerLink,
 	type SmallTransferTotal,
 	type TraceConfig,
 	type TraceHit
@@ -52,7 +53,9 @@ export async function recordHits(sql: Sql, hits: TraceHit[]): Promise<{ edges: n
 			h.originCategory,
 			describeHit(h)
 		]),
-		`ON CONFLICT (txid, from_key, to_key) DO NOTHING`
+		// a replay keeps the stored edge; only its wording follows the code (same hop), so a re-read after a wording change refreshes the reasons
+		`ON CONFLICT (txid, from_key, to_key) DO UPDATE SET reason = EXCLUDED.reason
+		 WHERE oz_trace_edges.hop = EXCLUDED.hop AND oz_trace_edges.reason IS DISTINCT FROM EXCLUDED.reason`
 	);
 	const best = bestPerTarget(hits);
 	await upsertTraced(sql, best);
@@ -690,4 +693,177 @@ export async function setState(sql: Sql, id: string, value: unknown): Promise<vo
 		`INSERT INTO oz_state (id, value, updated_at) VALUES ($1,$2,now()) ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
 		[id, JSON.stringify(value)]
 	);
+}
+
+// ---------------------------------------------------------------------------
+// Payer links: THORChain accounts that paid a listed address
+// ---------------------------------------------------------------------------
+
+/**
+ * Records THORChain accounts that signed a payment to a listed address
+ * (tracer.ts PayerLink) as links of the user screening: the account becomes a
+ * monitored user (`rujira_users`) and the listed address one of its L1 links
+ * (`l1_addresses`), so screenUsers flags it one risk level below the listing
+ * and the snapshot publishes it as a linked account — whoever the account is,
+ * not only the ones the discovery already monitored. A link the discovery
+ * tagged as an affiliate fee is a real link once the account is seen paying
+ * the address itself. Replays are harmless.
+ */
+export async function recordPayerLinks(sql: Sql, links: PayerLink[]): Promise<number> {
+	const unique = new Map<string, PayerLink>();
+	for (const l of links) unique.set(`${l.thorAddress}\u0000${l.address}\u0000${l.chain}`, l);
+	if (!unique.size) return 0;
+	const rows = [...unique.values()];
+	const users = [...new Set(rows.map((l) => l.thorAddress))];
+	await batchInsert(sql, `INSERT INTO rujira_users (thor_address)`, 1, users.map((u) => [u]), `ON CONFLICT (thor_address) DO NOTHING`);
+	await batchInsert(
+		sql,
+		`INSERT INTO l1_addresses (thor_address, l1_address, chain, pool)`,
+		4,
+		rows.map((l) => [l.thorAddress, l.address.startsWith('0x') ? l.address.toLowerCase() : l.address, l.chain, `${l.action}:${l.txid}`.slice(0, 120)]),
+		`ON CONFLICT (thor_address, l1_address, chain) DO UPDATE SET affiliate = false`
+	);
+	return rows.length;
+}
+
+// ---------------------------------------------------------------------------
+// Chain transaction history (contract flows), per flagged thor1 account
+// ---------------------------------------------------------------------------
+
+/**
+ * Flagged thor1 accounts whose contract transactions still have to be read
+ * (trace/chain.ts): like pendingChecks, for the chain source. Contracts do not
+ * sign, so only accounts count; the same order (incident path, risk, seed class).
+ */
+export async function pendingChainChecks(
+	sql: Sql,
+	index: Map<string, IndexEntry>,
+	maxHops: number,
+	limit = 1000,
+	filter?: (key: string, e: IndexEntry) => boolean,
+	now = Date.now()
+): Promise<CheckTask[]> {
+	const checked = new Map(
+		(
+			await sql.query<{ key: string; status: string; checked_height: string | number; checked_at: string | Date | null }>(
+				`SELECT key, status, checked_height, checked_at FROM oz_trace_chain_checked`
+			)
+		).rows.map((r) => [r.key, { status: r.status, height: Number(r.checked_height) || 0, at: r.checked_at ? new Date(r.checked_at).getTime() : 0 }])
+	);
+	const tasks: CheckTask[] = [];
+	for (const e of index.values()) {
+		if (e.service || e.hop >= maxHops) continue;
+		if (!e.key.startsWith('thor:') || e.key.length - 5 > 50) continue;
+		if (filter && !filter(e.key, e)) continue;
+		const c = checked.get(e.key);
+		if (c?.status === 'done' || c?.status === 'service') continue;
+		if (c?.status === 'error' && now - c.at < ERROR_RETRY_MS && !e.urgent) continue;
+		tasks.push({
+			key: e.key,
+			fromHeight: Math.max(e.since ?? 0, c?.height ?? 0),
+			hop: e.hop,
+			priority: riskRank(e.originRisk) * 10 - e.hop,
+			urgent: !!e.urgent,
+			seedClass: seedClass(e)
+		});
+	}
+	tasks.sort((a, b) => Number(b.urgent) - Number(a.urgent) || b.priority - a.priority || a.seedClass - b.seedClass || a.key.localeCompare(b.key));
+	return tasks.slice(0, limit);
+}
+
+export async function markChainChecked(
+	sql: Sql,
+	key: string,
+	status: 'done' | 'service' | 'error' | 'pending',
+	info: { height?: number; txs?: number; error?: string } = {}
+): Promise<void> {
+	await sql.query(
+		`INSERT INTO oz_trace_chain_checked (key, checked_height, checked_at, txs, status, error) VALUES ($1,$2,now(),$3,$4,$5)
+		 ON CONFLICT (key) DO UPDATE SET checked_height = GREATEST(oz_trace_chain_checked.checked_height, EXCLUDED.checked_height),
+		   checked_at = now(), txs = EXCLUDED.txs, status = EXCLUDED.status, error = EXCLUDED.error`,
+		[key, info.height ?? 0, info.txs ?? 0, status, info.error?.slice(0, 500) ?? null]
+	);
+	if (status === 'service') await sql.query(`UPDATE oz_traced SET service = true WHERE key = $1`, [key]);
+}
+
+// ---------------------------------------------------------------------------
+// History backfill after a change in what the tracer reads
+// ---------------------------------------------------------------------------
+
+export interface BackfillPlan {
+	/** Listed and traced keys with Midgard history whose check would be reset (read again from their taint height, or from the start for a listing). */
+	midgardKeys: number;
+	/** … of which listed. */
+	listedKeys: number;
+	/** Keys never checked, or checked without any history: nothing to reset (the follower covers what comes). */
+	untouched: number;
+	/** Flagged thor1 accounts whose contract transactions have not been read yet (no reset needed: the table is new). */
+	chainKeys: number;
+	/** One request per page of 50 actions is the floor; most listed keys have short histories. */
+	requestsAtLeast: number;
+}
+
+/**
+ * What re-reading the tracer's history would touch (read-only). Checks that
+ * found no action are left alone: the real-time follower sees everything new,
+ * so only a key with history can hold flows the old rules missed.
+ */
+export async function planTraceBackfill(sql: Sql): Promise<BackfillPlan> {
+	const r = await sql.query<{ midgard: number; listed: number; untouched: number; requests: number }>(
+		`SELECT count(*) FILTER (WHERE c.status <> 'service' AND c.checked_height > 0)::int AS midgard,
+		        count(*) FILTER (WHERE c.status <> 'service' AND c.checked_height > 0 AND EXISTS (SELECT 1 FROM oz_entries e WHERE e.key = c.key AND e.removed_at IS NULL))::int AS listed,
+		        count(*) FILTER (WHERE c.status = 'service' OR c.checked_height <= 0)::int AS untouched,
+		        COALESCE(sum(GREATEST(1, ceil(c.actions / 50.0))) FILTER (WHERE c.status <> 'service' AND c.checked_height > 0), 0)::int AS requests
+		 FROM oz_trace_checked c`
+	);
+	const chain = await sql.query<{ n: number }>(
+		`SELECT count(*)::int AS n FROM oz_traced t
+		 WHERE t.key LIKE 'thor:%' AND NOT t.suppressed AND NOT t.service
+		   AND NOT EXISTS (SELECT 1 FROM oz_trace_chain_checked c WHERE c.key = t.key AND c.status IN ('done','service'))`
+	);
+	const listedThor = await sql.query<{ n: number }>(
+		`SELECT count(DISTINCT e.key)::int AS n FROM oz_entries e
+		 WHERE e.removed_at IS NULL AND e.key LIKE 'thor:%'
+		   AND NOT EXISTS (SELECT 1 FROM oz_trace_chain_checked c WHERE c.key = e.key AND c.status IN ('done','service'))`
+	);
+	const row = r.rows[0];
+	return {
+		midgardKeys: Number(row?.midgard ?? 0),
+		listedKeys: Number(row?.listed ?? 0),
+		untouched: Number(row?.untouched ?? 0),
+		chainKeys: Number(chain.rows[0]?.n ?? 0) + Number(listedThor.rows[0]?.n ?? 0),
+		requestsAtLeast: Number(row?.requests ?? 0)
+	};
+}
+
+/**
+ * Sets every Midgard check that has history back to pending with its height at
+ * zero, so the backfill reads those keys again (traced keys from their taint
+ * height) under the current rules. Replays are harmless: edges, dust flows and
+ * links are keyed, a stored edge only has its wording refreshed. Services stay
+ * services. Returns how many checks were reset.
+ */
+export async function resetTraceChecks(sql: Sql): Promise<number> {
+	const r = await sql.query<{ n: number }>(
+		`WITH u AS (UPDATE oz_trace_checked SET status = 'pending', checked_height = 0, error = NULL
+		   WHERE status <> 'service' AND checked_height > 0 RETURNING 1)
+		 SELECT count(*)::int AS n FROM u`
+	);
+	return Number(r.rows[0]?.n ?? 0);
+}
+
+/**
+ * The owner's switch for the history backfill: when `label` is not the one
+ * already recorded in `oz_state` (`backfill:reset`), resets the checks once and
+ * records it. The worker calls this at start with OZONE_BACKFILL_RESET, so the
+ * reset happens once per label, however often the worker restarts.
+ */
+export async function maybeResetBackfill(sql: Sql, label: string | undefined, logger: Logger = silentLogger): Promise<{ applied: boolean; reset: number }> {
+	if (!label) return { applied: false, reset: 0 };
+	const done = await getState<{ label?: string }>(sql, 'backfill:reset');
+	if (done?.label === label) return { applied: false, reset: 0 };
+	const reset = await resetTraceChecks(sql);
+	await setState(sql, 'backfill:reset', { label, at: new Date().toISOString(), reset });
+	logger.info(`backfill "${label}": ${reset} trace check(s) reset; the backfill job reads their history again`);
+	return { applied: true, reset };
 }

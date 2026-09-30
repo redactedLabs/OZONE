@@ -51,13 +51,36 @@ export {
 	queryForms,
 	getState,
 	setState,
+	recordPayerLinks,
+	pendingChainChecks,
+	markChainChecked,
+	planTraceBackfill,
+	resetTraceChecks,
+	maybeResetBackfill,
+	type BackfillPlan,
 	type DustRecordResult
 } from './store/trace.js';
 export { Midgard, DEFAULT_MIDGARD_URL, PAGE_SIZE, readForward, type MidgardAction, type MidgardLike, type ForwardRead } from './trace/midgard.js';
-export { extractFlows, THORCHAIN_MODULES, type Flow } from './trace/flows.js';
+export { extractFlows, CONTRACT_ACTION, THORCHAIN_MODULES, type Flow } from './trace/flows.js';
+export {
+	Chain,
+	extractChainFlows,
+	parseCoins,
+	denomAsset,
+	memoDestination,
+	TX_PAGE_SIZE,
+	WASM_EXECUTE,
+	type ChainCoin,
+	type ChainEvent,
+	type ChainLike,
+	type ChainOptions,
+	type ChainRead,
+	type ChainTx
+} from './trace/chain.js';
 export { loadPoolPrices, StaticPrices, type PriceOracle } from './trace/prices.js';
 export {
 	traceAction,
+	traceFlows,
 	traceRisk,
 	describeHit,
 	describeSmallTransfers,
@@ -68,9 +91,27 @@ export {
 	type TraceHit,
 	type IndexEntry,
 	type DustFlow,
+	type PayerLink,
 	type SmallTransferTotal
 } from './trace/tracer.js';
-export { runTraceBackfill, runRealtimeTick, scheduleRecheck, checkAddress, SERVICE_ACTIONS, CHECK_PAGES, CHECK_PAGES_NEVER_SERVICE, type BackfillResult, type RealtimeResult } from './trace/jobs.js';
+export {
+	runTraceBackfill,
+	runRealtimeTick,
+	runChainTick,
+	runChainBackfill,
+	checkChainHistory,
+	scheduleRecheck,
+	checkAddress,
+	SERVICE_ACTIONS,
+	CHECK_PAGES,
+	CHECK_PAGES_NEVER_SERVICE,
+	CHAIN_TICK_BLOCKS,
+	CHAIN_TICK_PAGES,
+	type BackfillResult,
+	type RealtimeResult,
+	type ChainTickResult,
+	type ChainBackfillResult
+} from './trace/jobs.js';
 export { expandEvm, EXPANSION_RESERVE, type ExpandOptions } from './evm/expand.js';
 export { expandUtxo } from './utxo/expand.js';
 export { curatedClusterSpecs, manualClusterSpecs, planRun, specHash, CHAIN_DEFAULTS, DEFAULT_WINDOW_DAYS, isExpandableChain, type RunPlan, type ClusterRunRow } from './cluster/specs.js';

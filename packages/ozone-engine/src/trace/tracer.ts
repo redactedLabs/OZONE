@@ -24,7 +24,7 @@
  * - services (addresses with very large activity) never propagate.
  */
 import { riskFromRank, riskRank, type Category, type Risk } from '../../../ozone-client/src/index.js';
-import { extractFlows, type Flow, type Relation } from './flows.js';
+import { CONTRACT_ACTION, THORCHAIN_MODULES, extractFlows, type Flow, type Relation } from './flows.js';
 import type { MidgardAction } from './midgard.js';
 import type { PriceOracle } from './prices.js';
 
@@ -168,6 +168,23 @@ export function traceRisk(
 }
 
 /**
+ * A THORChain account that signed a payment to a listed address (a swap
+ * whose destination is that address, a secured-asset withdrawal to it, …): the
+ * account is linked to the listed address (screen/users.ts flags it one risk
+ * level lower). Found from the listed side, so it does not depend on the
+ * account being monitored.
+ */
+export interface PayerLink {
+	thorAddress: string;
+	listedKey: string;
+	address: string;
+	chain: string;
+	txid: string;
+	height: number;
+	action: string;
+}
+
+/**
  * Flows of one action that leave a flagged address. `onDust`, when given,
  * is called for value flows under the dust limit that flag nothing on their
  * own, so a caller can accumulate them (see store/trace.ts recordDustFlows)
@@ -175,21 +192,47 @@ export function traceRisk(
  * They pass every rule a flagging flow passes (signed by a flagged sender,
  * after its taint, not a service, not to a listed address) and are only
  * reported where a large enough total could flag anything at that hop.
+ * `onLink`, when given, is called for a THORChain account's payment to a
+ * listed address (see PayerLink).
  */
 export function traceAction(
 	action: MidgardAction,
 	lookup: (key: string) => IndexEntry | undefined,
 	prices?: PriceOracle,
 	cfg: TraceConfig = DEFAULT_TRACE_CONFIG,
-	onDust?: (dust: DustFlow) => void
+	onDust?: (dust: DustFlow) => void,
+	onLink?: (link: PayerLink) => void
+): TraceHit[] {
+	return traceFlows(extractFlows(action, prices), lookup, cfg, onDust, onLink);
+}
+
+/** The per-flow rules of traceAction, for flows from any source (Midgard actions, chain transaction events). */
+export function traceFlows(
+	flows: Flow[],
+	lookup: (key: string) => IndexEntry | undefined,
+	cfg: TraceConfig = DEFAULT_TRACE_CONFIG,
+	onDust?: (dust: DustFlow) => void,
+	onLink?: (link: PayerLink) => void
 ): TraceHit[] {
 	const hits: TraceHit[] = [];
-	for (const flow of extractFlows(action, prices)) {
+	for (const flow of flows) {
+		const target = lookup(flow.toKey);
+		if (
+			onLink &&
+			flow.relation === 'value' &&
+			target &&
+			target.hop === 0 &&
+			target.key === target.originKey && // the listing itself, not a same-key twin
+			flow.fromKey.startsWith('thor:') &&
+			flow.fromAddress.length <= 50 && // an account, not a 32-byte contract
+			!THORCHAIN_MODULES.has(flow.fromAddress)
+		) {
+			onLink({ thorAddress: flow.fromAddress, listedKey: target.key, address: flow.toAddress, chain: flow.toChain, txid: flow.txid, height: flow.height, action: flow.action });
+		}
 		const src = lookup(flow.fromKey);
 		if (!src || src.service) continue;
 		if (src.since !== undefined && flow.height <= src.since) continue;
 		if (src.sinceTime !== undefined && Date.parse(flow.date) / 1000 < src.sinceTime) continue;
-		const target = lookup(flow.toKey);
 		if (target && target.hop === 0) continue; // already listed in its own right
 		const hop = flow.relation === 'value' ? src.hop + 1 : Math.max(1, src.hop);
 		const risk = traceRisk(src.originRisk, hop, flow.usd, flow.relation, cfg);
@@ -244,6 +287,25 @@ const RELATION_TEXT: Record<Relation, string> = {
  */
 export const L1_FUNDING_ACTIONS: ReadonlySet<string> = new Set(['l1_funding', 'l1_funding2']);
 
+/** What moved the value, in a reason's words. */
+function viaText(h: { action: string; fromChain: string }): string {
+	const fromThor = h.fromChain === 'THOR';
+	switch (h.action) {
+		case 'swap':
+			return 'THORChain swap';
+		case 'secure':
+			return fromThor ? 'THORChain secured-asset withdrawal (SECURE-)' : 'THORChain secured-asset deposit (SECURE+)';
+		case 'trade':
+			return fromThor ? 'THORChain trade-account withdrawal (TRADE-)' : 'THORChain trade-account deposit (TRADE+)';
+		case 'limit_swap':
+			return 'THORChain limit swap';
+		case CONTRACT_ACTION:
+			return 'a CosmWasm contract call on THORChain (transaction events)';
+		default:
+			return `THORChain ${h.action}`;
+	}
+}
+
 /** Human-readable reason for a hit. */
 export function describeHit(h: TraceHit): string {
 	const origin = h.originEntity ? `${h.originEntity} (${h.originSource})` : h.originSource;
@@ -255,7 +317,7 @@ export function describeHit(h: TraceHit): string {
 	if (h.action === 'l1_funding2') {
 		return `Funded two hops before THORChain from ${origin}: ${h.fromAddress}, itself funded by it, sent ${h.amount ?? 'value'} on ${date} (${h.fromChain} transaction ${h.txid}), then ~$${Math.round(h.usd ?? 0).toLocaleString('en-US')} was deposited into THORChain`;
 	}
-	const via = h.action === 'swap' ? 'THORChain swap' : `THORChain ${h.action}`;
+	const via = viaText(h);
 	if (h.relation !== 'value') {
 		return `${RELATION_TEXT[h.relation]} ${h.fromAddress}, flagged via ${origin}; ${via} ${h.txid} on ${date}`;
 	}
