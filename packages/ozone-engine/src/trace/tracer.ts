@@ -223,6 +223,7 @@ export function traceFlows(
 			target &&
 			target.hop === 0 &&
 			target.key === target.originKey && // the listing itself, not a same-key twin
+			!flow.toKey.startsWith('thor:') && // links are L1 addresses (a payment to a listed thor1 account is not one)
 			flow.fromKey.startsWith('thor:') &&
 			flow.fromAddress.length <= 50 && // an account, not a 32-byte contract
 			!THORCHAIN_MODULES.has(flow.fromAddress)

@@ -457,6 +457,9 @@ describe('THORChain accounts that paid a listed address are linked to it', async
 		traceAction(payment(PAYER, 'TRON-TRX', 'TAqg8TXo8tmpaz7TwHS669Tgt8MPSWgoxB', 'TRON.TRX'), lookup, prices, DEFAULT_TRACE_CONFIG, undefined, (l) => links.push(l));
 		// a contract (32-byte) paying it: no account
 		traceAction(payment(FIN, 'THOR.RUNE', OFAC_ETH, 'ETH.ETH', 'swap'), lookup, prices, DEFAULT_TRACE_CONFIG, undefined, (l) => links.push(l));
+		// a payment to a listed thor1 account: links are L1 addresses
+		const listedThor = 'thor16ucjv3v695mq283me7esh0wdhajjalengcn84q';
+		traceAction(action({ type: 'send', height: 100, in: [{ address: PAYER, asset: 'THOR.RUNE', amount: 1_000 }], out: [{ address: listedThor, asset: 'THOR.RUNE', amount: 1_000 }] }), lookupFor([listed(`thor:${listedThor}`)]), prices, DEFAULT_TRACE_CONFIG, undefined, (l) => links.push(l));
 		expect(links).toEqual([]);
 	});
 

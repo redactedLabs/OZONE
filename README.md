@@ -94,7 +94,8 @@ reads forward from its cursor and catches up after an outage instead of
 skipping ahead (it no longer sends every address back to the backfill). It
 saves its cursor before it re-reads pending (streaming) actions, and that
 re-read has a wall-clock budget: a Midgard lookup that never answers used to
-keep the cursor in place for as long as it failed.
+keep the cursor in place for as long as it failed. (On 2026-09-30 `/api/health`
+showed the cursor unchanged for 16 hours; the cause was not established.)
 
 What is followed, and from which data:
 

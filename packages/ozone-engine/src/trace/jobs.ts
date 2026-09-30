@@ -367,9 +367,10 @@ export async function runRealtimeTick(
 	}
 	// The cursor moves before the pending actions are re-read: that re-read is
 	// up to 25 sequential Midgard requests, each of which can time out and
-	// retry for minutes, and a cursor saved only after it stayed where it was
-	// for as long as they failed (/api/health showed the follower frozen for
-	// 16 h on 2026-09-30). What it reads is recorded on its own.
+	// retry for minutes, and a cursor saved only after it would stay where it is
+	// for as long as they fail. (On 2026-09-30 /api/health showed the cursor
+	// unchanged for 16 h; the cause was not established — this closes one way
+	// for that to happen.) What the re-read finds is recorded on its own.
 	await setState(sql, 'trace:realtime', { height: to, ...(complete ? {} : { behind: true }) });
 
 	const again: TraceHit[] = [];

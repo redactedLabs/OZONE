@@ -277,7 +277,7 @@ describe('the follower saves its cursor before it re-reads pending actions', asy
 	const { db, sql } = await memoryDb();
 	afterAll(() => db.close());
 
-	it('a Midgard lookup that never answers cannot keep the cursor where it was (/api/health showed it frozen for 16 h on 2026-09-30)', async () => {
+	it('a Midgard lookup that never answers cannot keep the cursor where it was', async () => {
 		const origin = `evm:${evm(0xf00d)}`;
 		const index = new Map<string, IndexEntry>([
 			[origin, { key: origin, hop: 0, originRisk: 'high', originKey: origin, originSource: 'ethlabels', originCategory: 'hack' }]
