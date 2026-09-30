@@ -99,7 +99,7 @@
 
 		<!-- How they are flagged -->
 		<p class="mb-3 text-xs" style="color: var(--text-muted);">
-			{data.byKind.listed.toLocaleString('en-US')} listed · {data.byKind.traced.toLocaleString('en-US')} traced through THORChain · {data.byKind.linked.toLocaleString('en-US')} linked accounts · {data.byKind.twin.toLocaleString('en-US')} same key as a listing
+			{data.byKind.listed.toLocaleString('en-US')} listed · {data.byKind.traced.toLocaleString('en-US')} traced through THORChain · {data.byKind.linked.toLocaleString('en-US')} linked accounts <span title="A link counts one risk level below the listing it points to, so only a link to an official listing reaches the flag level. The snapshot carries every linked account, flagged or not.">({data.linkedAccounts.toLocaleString('en-US')} linked in all)</span> · {data.byKind.twin.toLocaleString('en-US')} same key as a listing
 		</p>
 
 		<!-- Source filter -->

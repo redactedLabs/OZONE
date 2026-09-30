@@ -21,6 +21,9 @@ export const GET: RequestHandler = async () => {
 		const trace = await sql.query<{ value: { height?: number }; updated_at: string }>(
 			`SELECT value, updated_at FROM oz_state WHERE id = 'trace:realtime'`
 		);
+		const chain = await sql
+			.query<{ value: { height?: number }; updated_at: string }>(`SELECT value, updated_at FROM oz_state WHERE id = 'trace:chain'`)
+			.catch(() => ({ rows: [] as Array<{ value: { height?: number }; updated_at: string }> }));
 		const s = snap.rows[0];
 		const bySourceId = new Map(sources.rows.map((r) => [r.id, r]));
 		// A snapshot existing is not enough: while any core source has never
@@ -37,6 +40,8 @@ export const GET: RequestHandler = async () => {
 			realtime: trace.rows[0]
 				? { height: trace.rows[0].value?.height ?? null, updatedAt: new Date(trace.rows[0].updated_at).toISOString() }
 				: null,
+			// the follower of contract flows (THORNode transaction events); null until the worker has run it
+			chain: chain.rows[0] ? { height: chain.rows[0].value?.height ?? null, updatedAt: new Date(chain.rows[0].updated_at).toISOString() } : null,
 			sources: sources.rows.map((r) => ({
 				id: r.id,
 				ok: !r.last_error,

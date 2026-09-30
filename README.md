@@ -91,7 +91,32 @@ forward with `prevPageToken`), continuing long histories over several slices.
 Order: incident keys, then by risk; within a risk level traced addresses, then
 attributions, then bulk lists, then same-key twins. The real-time follower
 reads forward from its cursor and catches up after an outage instead of
-skipping ahead (it no longer sends every address back to the backfill).
+skipping ahead (it no longer sends every address back to the backfill). It
+saves its cursor before it re-reads pending (streaming) actions, and that
+re-read has a wall-clock budget: a Midgard lookup that never answers used to
+keep the cursor in place for as long as it failed.
+
+What is followed, and from which data:
+
+| Moves | Read from | Reason code |
+|---|---|---|
+| swaps (streaming, limit, L1→L1), native sends, LP withdrawals, LP pairing, THORNames, refunds | Midgard actions | `TRACE_SWAP`, `TRACE_SEND`, `TRACE_WITHDRAW`, `TRACE_REFUND`, `TRACE_LP_PAIR`, `TRACE_THORNAME` |
+| secured-asset deposit `SECURE+` (L1 sender → thor1) and withdrawal `SECURE-` (thor1 → L1 recipient) | Midgard `secure` actions (payer in `in`, payee in `out`) | `TRACE_SECURE` |
+| trade-account deposit `TRADE+` and withdrawal `TRADE-` | Midgard `trade` actions, same shape | `TRACE_TRADE` |
+| value a flagged account's own contract call pays on to another account (FIN swap with a recipient, payout to a third party, position funded for another owner, contract-started swap toward another address) | THORNode transaction events (`transfer` per `msg_index`, `wasm-…` events), `trace/chain.ts` | `TRACE_CONTRACT` |
+| a thor1 account that paid a listed address | the same Midgard read, from the listed side (`PayerLink`) | published as a linked account (`thorchain_links`) |
+
+Contract flows have their own follower (`oz_state` `trace:chain`, the newest
+blocks' contract executions via THORNode's transaction search, in chain order)
+and their own per-account history (`oz_trace_chain_checked`, migration
+`0006_trace_chain.sql`), so reading one source again never repeats the other.
+A flow is only read with a price (the signer's input or the recipient's
+output): an unpriced token cannot be a way to flag an account. The maker of a
+FIN limit order that a flagged account's swap fills is credited inside the
+contract and no event names it: not traced.
+
+Midgard's and THORNode's endpoints are read-only public gateways
+(`MIDGARD_URL`, `THORNODE_URL`); nothing in either is a credential.
 
 ## Stack
 
@@ -151,7 +176,7 @@ npx tsx packages/ozone-engine/scripts/serve-db.ts          # serve it on 127.0.0
 
 ## Database Schema
 
-Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migrations `packages/ozone-engine/migrations/0001_ozone_next.sql` … `0005_incidents_watch.sql` (apply in order with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
+Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migrations `packages/ozone-engine/migrations/0001_ozone_next.sql` … `0006_trace_chain.sql` (apply in order with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
 
 ### Core tables
 

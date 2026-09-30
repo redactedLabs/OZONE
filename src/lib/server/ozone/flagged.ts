@@ -40,6 +40,13 @@ export interface FlaggedSummary {
 	};
 	byKind: Record<FlaggedKind, number>;
 	thorByKind: Record<FlaggedKind, number>;
+	/**
+	 * THORChain accounts linked to a listed address at any risk. A link counts
+	 * one risk level below the listing ("a link can be a counterparty"), so only
+	 * a link to an official listing reaches the flag level: `byKind.linked`
+	 * counts those alone, this counts every linked account the snapshot carries.
+	 */
+	linkedAccounts: number;
 	/** Flagged keys per source (a key flagged by two sources counts once in each). */
 	bySource: Array<{ source: string; keys: number }>;
 	/** The same for the thor1 keys. */
@@ -86,8 +93,10 @@ export function summarizeFlagged(index: SnapshotIndex, flagAt: Risk = DEFAULT_FL
 	const thorBySource = new Map<string, number>();
 	const byChain = new Map<string, number>();
 	let thor = 0;
+	let linkedAccounts = 0;
 	for (const key of index.keys()) {
 		const reasons = index.reasonsForKey(key);
+		if (reasons.some((r) => r.source === 'thorchain_links' && isActive(r))) linkedAccounts++;
 		const verdict = evaluate(reasons, { flagAt });
 		if (verdict.status !== 'flagged') continue;
 		// the reasons that flag it: active, at or above the threshold (strongest first)
@@ -127,6 +136,7 @@ export function summarizeFlagged(index: SnapshotIndex, flagAt: Risk = DEFAULT_FL
 		counts: { flaggedAddresses: rows.length, flaggedThorAddresses: thor },
 		byKind,
 		thorByKind,
+		linkedAccounts,
 		bySource: desc(bySource).map(([source, keys]) => ({ source, keys })),
 		thorBySource: desc(thorBySource).map(([source, keys]) => ({ source, keys })),
 		byChain: desc(byChain).map(([chain, keys]) => ({ chain, keys })),
@@ -211,6 +221,7 @@ export function summaryMeta(summary: FlaggedSummary) {
 		breakdown: {
 			byKind: summary.byKind,
 			thorByKind: summary.thorByKind,
+			linkedAccounts: summary.linkedAccounts,
 			bySource: summary.bySource,
 			thorBySource: summary.thorBySource,
 			byChain: summary.byChain

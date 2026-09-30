@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ url }) => {
 	const [snap, c] = await Promise.all([currentSnapshot().catch(() => undefined), coverage().catch(() => null)]);
 	const base = { list, q, source, chain, page, perPage: PER_PAGE, definitions: DEFINITIONS, monitoredFlagged: c?.users.flagged ?? null };
 	if (!snap) {
-		return { ...base, ready: false as const, total: 0, rows: [], counts: null, byKind: null, bySource: [], byChain: [], snapshot: null };
+		return { ...base, ready: false as const, total: 0, rows: [], counts: null, byKind: null, linkedAccounts: 0, bySource: [], byChain: [], snapshot: null };
 	}
 	const s = flaggedSummary(snap.index);
 	const res = flaggedPage(s, { list, q, source, chain: list === 'thor' ? undefined : chain, offset: (page - 1) * PER_PAGE, limit: PER_PAGE });
@@ -29,6 +29,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		rows: res.rows,
 		counts: s.counts,
 		byKind: list === 'thor' ? s.thorByKind : s.byKind,
+		linkedAccounts: s.linkedAccounts,
 		bySource: list === 'thor' ? s.thorBySource : s.bySource,
 		byChain: list === 'thor' ? [] : s.byChain,
 		snapshot: { ...s.snapshot, signed: snap.signed }

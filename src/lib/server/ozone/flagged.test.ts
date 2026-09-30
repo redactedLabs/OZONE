@@ -66,6 +66,8 @@ describe('flagged counters (pure, from a snapshot)', () => {
 		// flagged: sanctioned EVM key, hack EVM key, TRON twin, BTC hop-1 trace, thor1 trace, thor1 link
 		expect(s.counts).toEqual({ flaggedAddresses: 6, flaggedThorAddresses: 2 });
 		expect(s.byKind).toEqual({ listed: 2, traced: 2, linked: 1, twin: 1 });
+		// the weak link (risk medium: one level below a high listing) is carried by the snapshot but does not reach the flag level
+		expect(s.linkedAccounts).toBe(2);
 		expect(s.thorByKind).toEqual({ listed: 0, traced: 1, linked: 1, twin: 0 });
 		// never flagged: medium phishing, delisted (history), medium hop-2 trace, medium link
 		const flaggedAddrs = s.rows.map((x) => `${x.chain}:${x.address}`);
@@ -184,13 +186,14 @@ describe('/api/flagged and the home page numbers (embedded Postgres, published s
 			return (GET as (e: unknown) => Promise<Response>)({ url, request: new Request(url), params: {}, locals: { user: null } });
 		};
 		const summary = (await (await call('/api/flagged')).json()) as {
-			meta: { counts: Record<string, number>; lists: Record<string, string>; totalFlagged: number; flaggedThorUsers: number; breakdown: { byKind: Record<string, number> } };
+			meta: { counts: Record<string, number>; lists: Record<string, string>; totalFlagged: number; flaggedThorUsers: number; breakdown: { byKind: Record<string, number>; linkedAccounts: number } };
 			monitoredThorAccountsFlagged: unknown[];
 			flaggedAddresses: unknown[];
 		};
 		// OFAC key + its TRON twin + the two traced keys; the medium phishing entry is listed, not flagged
 		expect(summary.meta.counts).toEqual({ flaggedAddresses: 4, flaggedThorAddresses: 1, monitoredThorAccountsFlagged: 1 });
 		expect(summary.meta.breakdown.byKind).toEqual({ listed: 1, traced: 2, linked: 0, twin: 1 });
+		expect(summary.meta.breakdown.linkedAccounts).toBe(0);
 		expect(summary.meta.lists).toMatchObject({ flaggedAddresses: '/api/flagged?list=all', flaggedThorAddresses: '/api/flagged?list=thor' });
 		// legacy fields keep their old meaning (monitored accounts)
 		expect(summary.meta.totalFlagged).toBe(1);
