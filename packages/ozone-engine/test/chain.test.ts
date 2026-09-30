@@ -351,6 +351,22 @@ describe('the chain follower and the history of flagged accounts (embedded Postg
 		expect((await runChainBackfill(sql, chain, { prices, filter: (k) => k === `thor:${A}` })).checked).toBe(0);
 	});
 
+	it('the dust rule applies to contract flows: small payments add up to a flag like any other small transfers', async () => {
+		const A2 = 'thor1ha472rhfrtk57mhys3kzy6z8v5qc278w453jp2';
+		const C2 = 'thor1kr08pw3rtng29tj63jgwx22vp4e447mhrcvxyd'; // a fresh account
+		await list(entry(`thor:${A2}`, A2));
+		const cents = (h: number) => swapTo(h, A2, C2, 20); // each pays C2 ~$30: under the $50 dust limit on its own
+		const one = new FakeChain([cents(9_000)], 9_100);
+		await runChainBackfill(sql, one, { prices, filter: (k) => k === `thor:${A2}` });
+		expect(await tracedRow(C2)).toBeUndefined();
+		await sql.query(`DELETE FROM oz_trace_chain_checked WHERE key = $1`, [`thor:${A2}`]);
+		const two = new FakeChain([cents(9_000), cents(9_001)], 9_100);
+		await runChainBackfill(sql, two, { prices, filter: (k) => k === `thor:${A2}` });
+		expect(await tracedRow(C2)).toMatchObject({ hop: 1 }); // $59 in all: traced like one flow of that total
+		const snap = await sql.query<{ action: string }>(`SELECT action FROM oz_trace_dust_flows WHERE to_key = $1`, [`thor:${C2}`]);
+		expect(snap.rows.map((r) => r.action)).toEqual([CONTRACT_ACTION, CONTRACT_ACTION]);
+	});
+
 	it('a long history continues in the next slice; an account whose read fails is marked and retried later', async () => {
 		const L = 'thor1lj3q7dfg4zwrmtkmqg4u44vy4l44uc68gx892g';
 		await list(entry(`thor:${L}`, L));
