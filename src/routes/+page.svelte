@@ -298,13 +298,7 @@
 				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedAddresses === null ? '—' : data.stats.flaggedAddresses.toLocaleString('en-US')}</div>
 			</div>
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Flagged Addresses · all chains</div>
-			{#if data.stats.flaggedByKind}
-				<div class="text-[10px] mt-0.5 font-mono" style="color: var(--text-faint);">
-					<span style="color: #f59e0b;">{compact(data.stats.flaggedByKind.listed + data.stats.flaggedByKind.twin)}</span> listed ·
-					<span style="color: #10b981;">{compact(data.stats.flaggedByKind.traced + data.stats.flaggedByKind.linked)}</span> traced
-				</div>
-			{/if}
-			<div class="stat-tip">Every address in the signed snapshot at risk "high" or above, on any chain: listed (sanctions, law enforcement, hacks, freezes, …, incl. the same key on sibling chains) traced through THORChain from a listed address, or a monitored thor1 account linked to one (counted with "traced" here). Each address counts once. Click for the list.</div>
+			<div class="stat-tip">Every address in the signed snapshot at risk "high" or above, on any chain: listed (sanctions, law enforcement, hacks, freezes, …, incl. the same key on sibling chains), traced through THORChain from a listed address, or a monitored thor1 account linked to one. Each address counts once. The list shows how each one is flagged. Click for the list.</div>
 		</a>
 		<a href="/flagged?list=thor" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
 			<div class="flex items-baseline gap-2">
@@ -431,15 +425,15 @@
 				</div>
 			{/if}
 
-			<!-- Bottom pill -->
-			<div class="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5 whitespace-nowrap" style="background: var(--globe-pill-bg); backdrop-filter: blur(12px); border: 1px solid var(--border);">
-				<span class="inline-block h-2 w-2 rounded-full animate-pulse" style="background: #10b981;"></span>
-				<span class="text-[10px] font-mono" style="color: #f59e0b;">{compact(data.stats.listedAddresses)} listed</span>
-				<span class="text-[10px]" style="color: var(--text-ghost);">·</span>
-				<span class="text-[10px] font-mono" style="color: #10b981;">{compact(data.stats.tracedAddresses)} traced</span>
-				<span class="text-[10px]" style="color: var(--text-ghost);">·</span>
-				<span class="text-[10px] font-mono" style="color: #ef4444;">{data.stats.flaggedAddresses === null ? '—' : compact(data.stats.flaggedAddresses)} flagged</span>
-			</div>
+			<!-- Bottom pill: the real-time follower (the counts are in the boxes above, once each) -->
+			{#if data.stats.follower}
+				<a href="/api/health" class="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5 whitespace-nowrap" style="background: var(--globe-pill-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); text-decoration: none;" title="The newest THORChain block Ozone's real-time follower has traced; amber when it is more than 15 minutes behind">
+					<span class="inline-block h-2 w-2 rounded-full {data.stats.follower.live ? 'animate-pulse' : ''}" style="background: {data.stats.follower.live ? '#10b981' : '#f59e0b'};"></span>
+					<span class="text-[10px]" style="color: var(--text-muted);">{data.stats.follower.live ? 'Tracing live' : 'Tracing stalled'}</span>
+					<span class="text-[10px]" style="color: var(--text-ghost);">·</span>
+					<span class="text-[10px] font-mono" style="color: var(--text-secondary);">THORChain block {data.stats.follower.height.toLocaleString('en-US')}</span>
+				</a>
+			{/if}
 		</div>
 	</div>
 

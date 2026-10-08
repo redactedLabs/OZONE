@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { generateSigningKey, loadPrivateKey, OzoneClient, verifyAttached, verifyScreenResponse, DOMAIN_CERTIFICATE } from '$ozone/index.js';
-import { applySourceResult, emptyResult, migrate, parseCurated, parseFbiPublication, parseOfacSdnXml, publishSnapshot, recordDustFlows, FBI_PUBLICATIONS, type Sql } from '$engine/index.js';
+import { applySourceResult, emptyResult, migrate, parseCurated, parseFbiPublication, parseOfacSdnXml, publishSnapshot, recordDustFlows, setState, FBI_PUBLICATIONS, type Sql } from '$engine/index.js';
 
 const holder: { sql?: Sql } = {};
 vi.mock('$lib/server/ozone/sql', () => ({
@@ -207,14 +207,51 @@ describe('API routes', () => {
 	});
 
 	it('health reports snapshot age and sources', async () => {
+		// the worker's real-time follower and Midgard budget (written every tick / minute)
+		await setState(holder.sql!, 'trace:realtime', { height: 28_146_437 });
+		await setState(holder.sql!, 'midgard:usage', { day: new Date().toISOString().slice(0, 10), requestsToday: 1234, dailyLimit: 40_000, lastSuccessAt: new Date().toISOString() });
 		const { GET } = await import('../../../routes/api/health/+server');
 		const res = await call(GET as Handler, { url: '/api/health' });
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.ok).toBe(true);
+		expect(body.reasons).toBeUndefined();
 		expect(body.snapshot.version).toBeGreaterThan(0);
 		expect(body.sources.map((s: { id: string }) => s.id)).toContain('ofac_sdn');
 		expect(body.signing.responses).toBe(true);
+		expect(body.midgard).toMatchObject({ requestsToday: 1234, dailyLimit: 40_000, last429At: null });
+	});
+
+	it('health answers 503 with its reasons when Ozone stalls; a failing non-core source is only a warning', async () => {
+		const db = holder.sql!;
+		const { GET } = await import('../../../routes/api/health/+server');
+		const ago = (ms: number) => new Date(Date.now() - ms);
+		await db.query(`UPDATE oz_state SET updated_at = $1 WHERE id = 'trace:realtime'`, [ago(16 * 60_000)]);
+		await db.query(`UPDATE oz_sources SET last_success_at = $1, last_error = 'HTTP 403' WHERE id = 'circle'`, [ago(39 * 3600_000)]);
+		await db.query(
+			`INSERT INTO oz_sources (id, name, kind, last_success_at, last_error) VALUES ('tether_usdt0', 'USDT0', 'stablecoin', $1, 'HTTP 403')
+			 ON CONFLICT (id) DO UPDATE SET last_error = 'HTTP 403'`,
+			[ago(39 * 3600_000)]
+		);
+		const failing = new Date(Date.now() - 70 * 60_000).toISOString();
+		await setState(db, 'midgard:usage', { day: new Date().toISOString().slice(0, 10), requestsToday: 50_123, dailyLimit: 40_000, lastSuccessAt: failing, failingSince: failing, last429At: new Date().toISOString() });
+		const res = await call(GET as Handler, { url: '/api/health' });
+		expect(res.status).toBe(503);
+		const body = await res.json();
+		expect(body.ok).toBe(false);
+		expect(body.reasons).toEqual([
+			expect.stringMatching(/real-time follower has not moved for 16 min/),
+			expect.stringMatching(/core source circle has not synced for 39\.0 h \(limit 24 h\): HTTP 403/),
+			expect.stringMatching(/every Midgard request has failed for 70 min/)
+		]);
+		expect(body.warnings).toEqual([expect.stringMatching(/tether_usdt0 is failing/)]);
+		expect(body.sources.find((s: { id: string }) => s.id === 'circle')).toMatchObject({ ok: false, error: 'HTTP 403' });
+		expect(body.midgard.last429At).not.toBeNull();
+		// back to normal
+		await setState(db, 'trace:realtime', { height: 28_146_500 });
+		await db.query(`UPDATE oz_sources SET last_success_at = now(), last_error = NULL WHERE id = 'circle'`);
+		await setState(db, 'midgard:usage', { day: new Date().toISOString().slice(0, 10), requestsToday: 1, dailyLimit: 40_000, lastSuccessAt: new Date().toISOString() });
+		expect((await call(GET as Handler, { url: '/api/health' })).status).toBe(200);
 	});
 
 	it('stores reports without request metadata and exposes their status', async () => {

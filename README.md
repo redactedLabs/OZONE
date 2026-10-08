@@ -105,6 +105,7 @@ What is followed, and from which data:
 | secured-asset deposit `SECURE+` (L1 sender → thor1) and withdrawal `SECURE-` (thor1 → L1 recipient) | Midgard `secure` actions (payer in `in`, payee in `out`) | `TRACE_SECURE` |
 | trade-account deposit `TRADE+` and withdrawal `TRADE-` | Midgard `trade` actions, same shape | `TRACE_TRADE` |
 | value a flagged account's own contract call pays on to another account (FIN swap with a recipient, payout to a third party, position funded for another owner, contract-started swap toward another address) | THORNode transaction events (`transfer` per `msg_index`, `wasm-…` events), `trace/chain.ts` | `TRACE_CONTRACT` |
+| a bond provider's own `BOND:<node>` (≥ 1 RUNE) to a flagged node: the node passes its flag to the provider, never the other way round | Midgard `bond` actions (the provider in `in`, the node in `metadata.bond.nodeAddress`) | `TRACE_BOND` |
 | a thor1 account that paid a listed address | the same Midgard read, from the listed side (`PayerLink`) | published as a linked account (`thorchain_links`) |
 
 Contract flows have their own follower (`oz_state` `trace:chain`, the newest
@@ -177,7 +178,7 @@ npx tsx packages/ozone-engine/scripts/serve-db.ts          # serve it on 127.0.0
 
 ## Database Schema
 
-Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migrations `packages/ozone-engine/migrations/0001_ozone_next.sql` … `0006_trace_chain.sql` (apply in order with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
+Both OZONE and [OZONE-WORKER](https://github.com/redactedLabs/OZONE-WORKER) share a single PostgreSQL database. Schema is managed via Drizzle ORM (`src/lib/server/db/schema.ts`); the Ozone tables (`oz_*`) are defined by the idempotent, additive migrations `packages/ozone-engine/migrations/0001_ozone_next.sql` … `0007_affiliates.sql` (apply in order with `psql -f`, or `OZONE_AUTO_MIGRATE=1` in the worker). `compliance_entries` is legacy (written by the pre-2.0 worker only).
 
 ### Core tables
 
