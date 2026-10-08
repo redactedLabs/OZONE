@@ -127,7 +127,7 @@ export const SOURCES: SourceDef[] = [
 		intervalMs: 1 * H,
 		minEntries: 50,
 		maxDropRatio: 0.25,
-		fetchParse: (ctx) => syncChainalysisOracle({ ...ctx.http, logger: ctx.logger })
+		fetchParse: (ctx) => syncChainalysisOracle({ ...ctx.http, logger: ctx.logger, sql: ctx.sql })
 	},
 	{
 		id: 'fbi',
@@ -135,7 +135,8 @@ export const SOURCES: SourceDef[] = [
 		kind: 'law_enforcement',
 		url: 'https://www.ic3.gov/PSA',
 		description: 'Addresses the FBI attributes to DPRK (TraderTraitor / Lazarus) laundering, e.g. the Bybit PSA I-022625-PSA.',
-		intervalMs: 24 * H,
+		// twice a day: a core source counts as stale after 24 h without a successful sync (/api/health)
+		intervalMs: 12 * H,
 		minEntries: 10,
 		async fetchParse(ctx) {
 			const res = emptyResult();
@@ -156,8 +157,8 @@ export const SOURCES: SourceDef[] = [
 		url: 'https://github.com/redactedLabs/OZONE/blob/main/packages/ozone-engine/src/sources/curated-data.ts',
 		description:
 			'Hack and exploit incidents with the addresses public sources name as the attacker\'s, each with its own source: law enforcement, sanctions or the victim (risk severe) or an established investigator (risk high). Also FBI lists published only as web pages. Every reason names its incident.',
-		cadence: 'maintained in the repository; re-read daily',
-		intervalMs: 24 * H,
+		cadence: 'maintained in the repository; re-read twice a day',
+		intervalMs: 12 * H,
 		// code-reviewed data, not a download: a deliberate delisting of a large incident must not be refused
 		maxDropRatio: 0.5,
 		fetchParse: async () => parseCurated()
@@ -171,7 +172,7 @@ export const SOURCES: SourceDef[] = [
 		intervalMs: 1 * H,
 		minEntries: 1000,
 		maxDropRatio: 0.1,
-		fetchParse: (ctx) => syncTether({ ...ctx.http, logger: ctx.logger })
+		fetchParse: (ctx) => syncTether({ ...ctx.http, logger: ctx.logger, sql: ctx.sql })
 	},
 	{
 		id: 'circle',
@@ -182,7 +183,7 @@ export const SOURCES: SourceDef[] = [
 		intervalMs: 3 * H,
 		minEntries: 100,
 		maxDropRatio: 0.1,
-		fetchParse: (ctx) => syncCircle({ ...ctx.http, logger: ctx.logger })
+		fetchParse: (ctx) => syncCircle({ ...ctx.http, logger: ctx.logger, sql: ctx.sql })
 	},
 	{
 		id: 'manual',
@@ -206,13 +207,12 @@ export const SOURCES: SourceDef[] = [
 		kind: 'sanctions',
 		url: 'https://go.chainalysis.com/chainalysis-oracle-docs.html',
 		description:
-			'The same public on-chain sanctions oracle on its other chains (no API key): additions and removals per chain. BNB Chain, Fantom, Celo and Blast deployments have no key-free log API and are not read.',
+			'The same public on-chain sanctions oracle on its other chains (no API key): additions and removals per chain, from public RPC endpoints with failover (explorers as the fallback). BNB Chain, Fantom, Celo and Blast deployments have no key-free log API and are not read.',
 		cadence: 'on-chain, as Chainalysis updates each deployment; read every 6 h',
-		// keyless Blockscout instances allow about 10 requests per IP and window: 2 per chain and sync
 		intervalMs: 6 * H,
 		minEntries: 30,
 		maxDropRatio: 0.25,
-		fetchParse: (ctx) => syncOracleOtherChains({ ...ctx.http, logger: ctx.logger })
+		fetchParse: (ctx) => syncOracleOtherChains({ ...ctx.http, logger: ctx.logger, sql: ctx.sql })
 	},
 	{
 		id: 'tether_usdt0',
@@ -224,7 +224,7 @@ export const SOURCES: SourceDef[] = [
 		intervalMs: 6 * H,
 		minEntries: 10,
 		maxDropRatio: 0.25,
-		fetchParse: (ctx) => syncUsdt0({ ...ctx.http, logger: ctx.logger })
+		fetchParse: (ctx) => syncUsdt0({ ...ctx.http, logger: ctx.logger, sql: ctx.sql })
 	},
 	{
 		id: 'circle_other_chains',
@@ -236,7 +236,7 @@ export const SOURCES: SourceDef[] = [
 		intervalMs: 6 * H,
 		minEntries: 100,
 		maxDropRatio: 0.1,
-		fetchParse: (ctx) => syncCircleOtherChains({ ...ctx.http, logger: ctx.logger })
+		fetchParse: (ctx) => syncCircleOtherChains({ ...ctx.http, logger: ctx.logger, sql: ctx.sql })
 	},
 	{
 		id: 'chainabuse',

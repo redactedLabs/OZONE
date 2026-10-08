@@ -14,8 +14,27 @@
  * - withdraw: requester → the member's payout addresses;
  * - addLiquidity: the asset-side and RUNE-side addresses of one deposit own
  *   the position together (`lp_pair` ownership link, both directions);
- * - thorname: owner ↔ registered alias address (`thorname` ownership link);
- * - refunds go back to the sender and produce no flow.
+ * - thorname: owner ↔ registered alias address (`thorname` ownership link),
+ *   except for an affiliate THORName or collector (interface infrastructure
+ *   shared by everyone who swaps through that interface, not one owner);
+ * - bond: a bond provider's own `BOND:<node>` (at least 1 RUNE from the
+ *   provider) links the node to the provider (`bond`): the node's operator
+ *   had to whitelist the provider, and the provider chose to put its RUNE
+ *   behind that node. Only the provider's own bond counts — an operator's
+ *   whitelisting (`BOND:<node>:<provider>`) names a third party and proves
+ *   nothing by itself; an unbond only returns a provider's own bond. A flagged
+ *   node passes its flag to its bond providers, never the other way round (a
+ *   listed provider says nothing about the operator it bonded to). Measured on
+ *   the node of the THORChain vault exploit (2026-05-15): its two providers'
+ *   bonds add up to the "~635,000 RUNE across two different bond addresses"
+ *   of THORChain's post-mortem;
+ * - refund: only a payment to the refund address the swapper named in the
+ *   memo (`DEST/REFUND`), in the asset that was sent. Midgard lists a
+ *   streaming swap's partial refund as a `refund` action that repeats the
+ *   swap's outputs (destination, affiliate fee) — without the `affiliate`
+ *   flag it sets on the same output in the `swap` action; reading those as
+ *   flows flagged an interface's fee collector (naswap, 2026-04 KelpDAO swaps).
+ *   The swap action of the same transaction carries the real outputs.
  *
  * Affiliate fee outputs, THORChain module accounts and CosmWasm contracts
  * (32-byte thor addresses) are never flow targets. What Midgard does not show
@@ -27,7 +46,10 @@ import { detectAddress, parseForChain, type ParsedAddress } from '../../../ozone
 import type { MidgardAction, MidgardTx } from './midgard.js';
 import type { PriceOracle } from './prices.js';
 
-export type Relation = 'value' | 'lp_pair' | 'thorname';
+export type Relation = 'value' | 'lp_pair' | 'thorname' | 'bond';
+
+/** Smallest bond (RUNE) that links a provider to its node (an operator's whitelisting moves 1e-8 RUNE). */
+export const MIN_BOND_RUNE = 1;
 
 /**
  * `action` of a flow read from the chain's transaction events (trace/chain.ts)
@@ -113,7 +135,41 @@ export function formatAmount(amount: string, asset: string): string {
 	return `${Number(s)} ${asset}`;
 }
 
-export function extractFlows(a: MidgardAction, prices?: PriceOracle): Flow[] {
+/**
+ * Affiliate fee collectors and affiliate THORNames known so far
+ * (store/affiliates.ts): interface infrastructure, never an owner.
+ */
+export interface AffiliateSet {
+	isCollector(address: string): boolean;
+	isName(name: string): boolean;
+}
+
+/** What one action says about affiliates: outputs Midgard marks as a fee, and the names swappers gave. */
+export function affiliateObservations(a: MidgardAction): { collectors: string[]; names: string[] } {
+	const collectors = new Set<string>();
+	const names = new Set<string>();
+	if (a.type !== 'swap' || a.status === 'failed') return { collectors: [], names: [] };
+	for (const o of a.out) if (o.affiliate && /^thor1[02-9ac-hj-np-z]{38}$/.test(o.address ?? '')) collectors.add(o.address);
+	const named = String(a.metadata?.swap?.affiliateAddress ?? '');
+	for (const n of named.split('/')) {
+		const name = n.trim().toLowerCase();
+		// a THORName (1–30 of [a-z0-9+_-]), not an address
+		if (name && name.length <= 30 && /^[a-z0-9+_.-]+$/.test(name) && !/^(thor1|0x|bc1)/.test(name)) names.add(name);
+	}
+	return { collectors: [...collectors], names: [...names] };
+}
+
+/** `=:ASSET:DEST/REFUND:…` → the refund address the swapper named, if any. */
+export function memoRefundAddress(memo: string): string | undefined {
+	const parts = memo.trim().split(':');
+	if (!['=', '=<', 's', 'swap'].includes((parts[0] ?? '').toLowerCase())) return undefined;
+	const dest = parts[2] ?? '';
+	const slash = dest.indexOf('/');
+	const refund = slash >= 0 ? dest.slice(slash + 1).trim() : '';
+	return refund || undefined;
+}
+
+export function extractFlows(a: MidgardAction, prices?: PriceOracle, affiliates?: AffiliateSet): Flow[] {
 	if (a.status === 'failed') return [];
 	const base = { txid: actionTxid(a), height: Number(a.height), date: actionDate(a), action: a.type };
 	const flows: Flow[] = [];
@@ -141,7 +197,14 @@ export function extractFlows(a: MidgardAction, prices?: PriceOracle): Flow[] {
 		// owner that did not sign this action is an unverified assertion about
 		// a third party, not proof of common ownership.
 		const ownerSigned = po ? ins.some((x) => x.p.key === po.key) : false;
-		if (po && pa && po.key !== pa.key && ownerSigned) {
+		// An affiliate THORName, or one that points at an affiliate fee collector, is an
+		// interface's: everyone who swaps through it pays it, it says nothing about an owner.
+		const infrastructure =
+			!!affiliates &&
+			(affiliates.isName(String(tn.thorname ?? '').toLowerCase()) ||
+				(po !== null && affiliates.isCollector(po.address)) ||
+				(pa !== null && affiliates.isCollector(pa.address)));
+		if (po && pa && po.key !== pa.key && ownerSigned && !infrastructure) {
 			const name = String(tn.thorname ?? '');
 			for (const [f, t] of [
 				[po, pa],
@@ -186,6 +249,34 @@ export function extractFlows(a: MidgardAction, prices?: PriceOracle): Flow[] {
 		return flows;
 	}
 
+	if (a.type === 'bond') {
+		const b = meta.bond ?? {};
+		const pn = b.nodeAddress ? parseForChain(String(b.nodeAddress), 'THOR') : null;
+		// the operator's whitelisting names a provider (`provider`): not evidence by itself
+		if (!pn || b.provider || !/^bond:/i.test(String(b.memo ?? '').trim())) return flows;
+		for (const x of ins) {
+			if (x.p.namespace !== 'thor' || x.p.key === pn.key || isExcludedTarget(x.p)) continue;
+			const coin = x.t.coins?.[0];
+			if (!coin || chainOfAsset(coin.asset) !== 'THOR' || Number(coin.amount) / 1e8 < MIN_BOND_RUNE) continue;
+			const price = priceOf(coin.asset, 'in');
+			flows.push({
+				...base,
+				relation: 'bond',
+				fromKey: pn.key,
+				fromAddress: pn.address,
+				fromChain: pn.chain,
+				toKey: x.p.key,
+				toAddress: x.p.address,
+				toChain: x.p.chain,
+				amount: formatAmount(coin.amount, coin.asset),
+				usd: price ? (Number(coin.amount) / 1e8) * price : undefined
+			});
+		}
+		return flows;
+	}
+	// an unbond returns a provider's own bond (and its rewards): nothing flows from the node
+	if (a.type === 'unbond' || a.type === 'leave') return flows;
+
 	// A swapper's memo names the affiliate; it is trusted for the fee's size
 	// (`affiliateFee`, in bps of the swap's input value) but not for which
 	// output is the fee, since the swapper also controls the output address.
@@ -197,8 +288,18 @@ export function extractFlows(a: MidgardAction, prices?: PriceOracle): Flow[] {
 	}, 0);
 	const affiliateFeeCeiling = affiliateFeeBps > 0 && inputUsd > 0 ? (affiliateFeeBps / 10_000) * inputUsd * 1.1 : 0;
 
+	// A refund action pays back what was sent: only to the refund address the
+	// memo names, in the asset that was sent (see the module notes).
+	let refundOnly: { address: string; assets: Set<string> } | undefined;
+	if (a.type === 'refund') {
+		const to = memoRefundAddress(String(meta.refund?.memo ?? ''));
+		if (!to) return flows;
+		refundOnly = { address: to.toLowerCase(), assets: new Set(ins.flatMap((x) => (x.t.coins ?? []).map((c) => c.asset.toUpperCase()))) };
+	}
+
 	for (const o of a.out) {
 		if (o.affiliate) continue;
+		if (refundOnly && (o.address.toLowerCase() !== refundOnly.address || !refundOnly.assets.has(String(o.coins?.[0]?.asset ?? '').toUpperCase()))) continue;
 		const po = parseTxAddress(o);
 		if (!po || isExcludedTarget(po)) continue;
 		const coin = o.coins?.[0];

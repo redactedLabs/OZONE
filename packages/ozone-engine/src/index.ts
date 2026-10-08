@@ -1,5 +1,8 @@
 export * from './types.js';
 export * from './util/http.js';
+export { DailyQuota, QuotaDenied, QUOTA_PRIORITIES, QUOTA_RESERVE, midgardDailyLimitFromEnv, type QuotaPriority, type QuotaUsage, type QuotaOptions } from './util/quota.js';
+export { FailoverJson, type EndpointStatus, type FailoverOptions } from './util/failover.js';
+export { healthVerdict, HEALTH_LIMITS, type HealthInputs, type HealthVerdict } from './health.js';
 export { toChecksumAddress } from './util/evm.js';
 export { extractAddresses } from './sources/extract.js';
 export { parseOfacSdnXml, OFAC_SDN_URL } from './sources/ofac.js';
@@ -19,9 +22,23 @@ export {
 	syncOracleOtherChains,
 	syncCircleOtherChains,
 	syncUsdt0,
+	chainLogConfig,
+	EVM_LOG_RPCS,
 	LOG_APIS,
 	TOPICS
 } from './sources/events.js';
+export { readContractLogs, blockAtTime, parseRangeLimit, HistoryInProgress, type ChainLogConfig, type LogProvider, type ContractLogsResult } from './sources/evmlogs.js';
+export {
+	affiliateSet,
+	classifyAffiliates,
+	loadAffiliates,
+	pruneTraceGraph,
+	recordAffiliateObservations,
+	COLLECTOR_RECEIPTS,
+	NO_AFFILIATES,
+	type Affiliates,
+	type PruneResult
+} from './store/affiliates.js';
 export {
 	CURATED,
 	type ClusterSpec,
@@ -61,7 +78,7 @@ export {
 	type DustRecordResult
 } from './store/trace.js';
 export { Midgard, DEFAULT_MIDGARD_URL, PAGE_SIZE, readForward, type MidgardAction, type MidgardLike, type ForwardRead } from './trace/midgard.js';
-export { extractFlows, CONTRACT_ACTION, THORCHAIN_MODULES, type Flow } from './trace/flows.js';
+export { extractFlows, affiliateObservations, memoRefundAddress, CONTRACT_ACTION, THORCHAIN_MODULES, type AffiliateSet, type Flow } from './trace/flows.js';
 export {
 	Chain,
 	extractChainFlows,
@@ -107,6 +124,8 @@ export {
 	CHECK_PAGES_NEVER_SERVICE,
 	CHAIN_TICK_BLOCKS,
 	CHAIN_TICK_PAGES,
+	PENDING_READS_PER_TICK,
+	PENDING_RETRY_MS,
 	type BackfillResult,
 	type RealtimeResult,
 	type ChainTickResult,
@@ -120,7 +139,20 @@ export type { ClusterMember, ExpandResult, FrontierNode, ResumeState, StopReason
 export { evmProviders, evmCall, evmCapacity, evmTxList, evmContracts, isEvmChain, EVM_CHAINS, EVM_CHAIN_IDS, NoExplorer, type ExplorerEnv, type EvmChain, type EvmProvider } from './explorers/evm.js';
 export { Esplora, isDepositMemo, opReturnText, isCoinJoin, isUtxoChain, type UtxoChain, type EsploraTx } from './explorers/esplora.js';
 export { hostBudget, hostRequests, resetHostBudgets, configureHost, QuotaExceeded, HostBudget, type HostPolicy } from './explorers/budget.js';
-export { thorchainInbound, resetThorchainInboundCache, DEFAULT_THORNODE_URL } from './explorers/thornode.js';
+export {
+	thorchainInbound,
+	resetThorchainInboundCache,
+	thornodeApiUrls,
+	thornodeClient,
+	DEFAULT_THORNODE_URL,
+	REDACTED_THORNODE_API,
+	REDACTED_THORNODE_RPC,
+	LIQUIFY_THORNODE_API,
+	LIQUIFY_THORNODE_RPC,
+	LIQUIFY_THORNODE_WS,
+	PUBLIC_THORNODE_APIS,
+	PUBLIC_THORNODE_RPCS
+} from './explorers/thornode.js';
 export { l1TxUrl, thorchainTxUrl } from './explorers/links.js';
 export {
 	watchCandidates,

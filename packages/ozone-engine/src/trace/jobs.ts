@@ -26,6 +26,9 @@ import { loadPoolPrices, type PriceOracle } from './prices.js';
 import { DEFAULT_TRACE_CONFIG, traceAction, traceFlows, traceRisk, type DustFlow, type IndexEntry, type PayerLink, type TraceConfig, type TraceHit } from './tracer.js';
 import { actionTxid, parseTxAddress } from './flows.js';
 import { enqueueWatch, watchCandidates, type WatchConfig } from './watcher.js';
+import { loadAffiliates, recordAffiliateObservations, COLLECTOR_RECEIPTS, COLLECTOR_SHARE } from '../store/affiliates.js';
+import { QuotaDenied } from '../util/quota.js';
+import type { MidgardAction } from './midgard.js';
 
 /** An address with more THORChain actions than this is treated as a service and not propagated. */
 export const SERVICE_ACTIONS = 2000;
@@ -35,6 +38,10 @@ export interface PendingAction {
 	txid: string;
 	height: number;
 	since: number;
+	/** When it was last re-read (ms). */
+	tried?: number;
+	/** Re-reads so far: after PENDING_QUICK_TRIES, at most one every PENDING_RETRY_MS. */
+	tries?: number;
 }
 
 export interface BackfillOptions {
@@ -111,6 +118,8 @@ export async function checkAddress(
 	pending: PendingAction[];
 	/** The history continues past this check's page budget: check again from `maxHeight`. */
 	more: boolean;
+	/** Actions in which the key (a thor1 account) received an affiliate fee. */
+	affiliateFees: number;
 }> {
 	const hits: TraceHit[] = [];
 	const dust: DustFlow[] = [];
@@ -133,6 +142,8 @@ export async function checkAddress(
 		!!entry && (entry.hop === 0 || riskRank(traceRisk(entry.originRisk, entry.hop, undefined, 'value', cfg) ?? 'none') >= riskRank('high'));
 	const seenActions = new Set<string>();
 	let more = false;
+	const thorAddress = key.startsWith('thor:') ? key.slice(5) : undefined;
+	let affiliateFees = 0;
 	for (const form of queryForms(key, toChecksumAddress)) {
 		let n = 0;
 		// Oldest first from `fromHeight` (inclusive), so a read cut short by the
@@ -148,6 +159,7 @@ export async function checkAddress(
 			if (seenActions.has(id)) continue;
 			seenActions.add(id);
 			actions++;
+			if (thorAddress && a.out.some((o) => o.affiliate && o.address === thorAddress)) affiliateFees++;
 			const h = Number(a.height);
 			if (a.status === 'pending') {
 				lowestPendingHeight = lowestPendingHeight === undefined ? h : Math.min(lowestPendingHeight, h);
@@ -167,11 +179,23 @@ export async function checkAddress(
 	// A read that cannot move forward (one height with more actions than the
 	// whole budget) must not spin: it is then reported as finished.
 	if (more && maxHeight <= fromHeight) more = false;
-	return { hits: dedupe(hits), dust, links, actions, maxHeight, service, pending, more };
+	// An affiliate fee collector (interface infrastructure) never passes taint on —
+	// unless the key is flagged high in its own right: like an action count, fees
+	// are trivially inflatable (anyone can name any address as affiliate), and
+	// must not exempt a flagged account from being followed.
+	if (!neverService && thorAddress && affiliateFees >= COLLECTOR_RECEIPTS && affiliateFees >= COLLECTOR_SHARE * Math.max(1, actions)) {
+		service = true;
+		more = false;
+	}
+	// A service never passes taint on, also not from the check that found it to be one.
+	if (service) return { hits: [], dust: [], links: [], actions, maxHeight, service, pending, more, affiliateFees };
+	return { hits: dedupe(hits), dust, links, actions, maxHeight, service, pending, more, affiliateFees };
 }
 
 export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: BackfillOptions = {}): Promise<BackfillResult> {
-	const cfg = opts.cfg ?? DEFAULT_TRACE_CONFIG;
+	const cfg0 = opts.cfg ?? DEFAULT_TRACE_CONFIG;
+	const cfg: TraceConfig = { ...cfg0, affiliates: cfg0.affiliates ?? (await loadAffiliates(sql)) };
+	let quotaStop = false;
 	const log = opts.logger ?? silentLogger;
 	const prices = opts.prices ?? (await loadPoolPrices(midgard).catch(() => undefined));
 	const deadline = Date.now() + (opts.timeBudgetMs ?? Infinity);
@@ -215,16 +239,25 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 			(key, e) => !attempted.has(key) && (!opts.filter || opts.filter(key, e))
 		);
 		res.remaining = tasks.length;
-		if (!tasks.length || Date.now() > deadline || res.checked >= maxAddresses) break;
+		if (!tasks.length || Date.now() > deadline || res.checked >= maxAddresses || quotaStop) break;
 		const round = tasks.slice(0, Math.min(tasks.length, maxAddresses - res.checked, 500));
 		for (const t of round) attempted.add(t.key);
 		const lookup = (k: string) => index.get(k);
 		let cursor = 0;
 		const worker = async () => {
-			while (cursor < round.length && Date.now() <= deadline) {
+			while (cursor < round.length && Date.now() <= deadline && !quotaStop) {
 				const task = round[cursor++];
 				try {
 					const r = await checkAddress(midgard, task.key, task.fromHeight, lookup, prices, cfg, opts.pages);
+					if (r.affiliateFees && task.key.startsWith('thor:')) {
+						await sql
+							.query(
+								`INSERT INTO oz_affiliates (address, actions_read, affiliate_actions, checked_at) VALUES ($1,$2,$3,now())
+								 ON CONFLICT (address) DO UPDATE SET actions_read = EXCLUDED.actions_read, affiliate_actions = EXCLUDED.affiliate_actions, checked_at = now(), updated_at = now()`,
+								[task.key.slice(5), r.actions, r.affiliateFees]
+							)
+							.catch(() => undefined);
+					}
 					if (r.hits.length) {
 						const rec = await recordHits(sql, r.hits);
 						res.hits += rec.edges;
@@ -247,6 +280,13 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 					if (r.more) log.info(`trace ${task.key}: long history, continuing from height ${r.maxHeight} in the next slice`);
 					await markChecked(sql, task.key, r.service ? 'service' : r.more ? 'pending' : 'done', { height: r.maxHeight, actions: r.actions });
 				} catch (e) {
+					if (e instanceof QuotaDenied) {
+						// the daily Midgard budget is spent for this priority: not the key's fault, nothing is marked
+						quotaStop = true;
+						attempted.delete(task.key);
+						log.info(`trace backfill paused: ${e.message}`);
+						break;
+					}
 					res.errors++;
 					await markChecked(sql, task.key, 'error', { error: (e as Error).message });
 					log.warn(`trace ${task.key} failed: ${(e as Error).message}`);
@@ -254,7 +294,7 @@ export async function runTraceBackfill(sql: Sql, midgard: Midgard, opts: Backfil
 			}
 		};
 		await Promise.all(Array.from({ length: Math.max(1, opts.concurrency ?? 2) }, worker));
-		if (Date.now() > deadline) break;
+		if (Date.now() > deadline || quotaStop) break;
 	}
 	return res;
 }
@@ -300,9 +340,17 @@ export async function runRealtimeTick(
 		watch?: WatchConfig;
 		/** Wall-clock budget of the re-read of pending actions (default PENDING_BUDGET_MS). */
 		pendingBudgetMs?: number;
+		/**
+		 * Every action the tick read, after they were traced (account discovery
+		 * in the worker: the follower already reads every action, so nothing
+		 * else has to poll Midgard for new accounts). Its errors are logged and
+		 * never stop the follower.
+		 */
+		onActions?: (actions: MidgardAction[]) => Promise<unknown> | unknown;
 	} = {}
 ): Promise<RealtimeResult> {
-	const cfg = opts.cfg ?? DEFAULT_TRACE_CONFIG;
+	const cfg0 = opts.cfg ?? DEFAULT_TRACE_CONFIG;
+	const cfg: TraceConfig = { ...cfg0, affiliates: cfg0.affiliates ?? (await loadAffiliates(sql)) };
 	const log = opts.logger ?? silentLogger;
 	const state = await getState<{ height: number }>(sql, 'trace:realtime');
 	let from = state?.height ?? 0;
@@ -344,6 +392,15 @@ export async function runRealtimeTick(
 	const linked = await recordPayerLinks(sql, links);
 	const small = await recordDustFlows(sql, dust, cfg, log);
 	if (small.traced) log.info(`trace: ${small.traced} recipient(s) traced by a total of small transfers`);
+	// what the actions say about affiliate fee collectors (each action is read here once)
+	await recordAffiliateObservations(sql, actions).catch((e) => log.warn(`affiliates: not recorded: ${(e as Error).message}`));
+	if (opts.onActions && actions.length) {
+		try {
+			await opts.onActions(actions);
+		} catch (e) {
+			log.warn(`trace: onActions failed (the follower continues): ${(e as Error).message}`);
+		}
+	}
 	let to = complete ? head : (resumeAfter ?? from);
 	if (!complete && to <= from) {
 		// One height with more actions than a whole tick's budget cannot be
@@ -378,18 +435,27 @@ export async function runRealtimeTick(
 	const againLinks: PayerLink[] = [];
 	const deadline = Date.now() + (opts.pendingBudgetMs ?? PENDING_BUDGET_MS);
 	const still: PendingAction[] = [];
-	for (const p of pending.slice(0, 25)) {
-		if (now - p.since > 48 * 3600_000) continue; // give up after two days (the daily re-read covers it)
+	// At most PENDING_READS_PER_TICK re-reads per tick, the least recently read
+	// first; after PENDING_QUICK_TRIES an action is re-read at most every
+	// PENDING_RETRY_MS: a streaming swap stays pending for many ticks, and every
+	// re-read is a Midgard request out of the daily budget.
+	const live = pending.filter((p) => now - p.since <= 48 * 3600_000); // give up after two days (the daily re-read covers it)
+	const due = live
+		.filter((p) => (p.tries ?? 0) < PENDING_QUICK_TRIES || p.tried === undefined || now - p.tried >= PENDING_RETRY_MS)
+		.sort((a, b) => (a.tried ?? 0) - (b.tried ?? 0))
+		.slice(0, PENDING_READS_PER_TICK);
+	const dueSet = new Set(due);
+	for (const p of live) if (!dueSet.has(p)) still.push(p);
+	for (const p of due) {
 		const left = deadline - Date.now();
 		const res = left > 0 ? await withTimeout(midgard.actions({ txid: p.txid, limit: 10 }), left).catch(() => undefined) : undefined;
 		const settled = res?.actions.filter((a) => a.status !== 'pending') ?? [];
 		if (!res || settled.length === 0) {
-			still.push(p);
+			still.push({ ...p, tried: now, tries: (p.tries ?? 0) + 1 });
 			continue;
 		}
 		for (const a of settled) again.push(...traceAction(a, lookup, opts.prices, cfg, (d) => againDust.push(d), (l) => againLinks.push(l)));
 	}
-	still.push(...pending.slice(25));
 	let edges = rec.edges;
 	let tracedNow = rec.traced;
 	if (again.length) {
@@ -415,6 +481,12 @@ export async function runRealtimeTick(
 
 /** Wall-clock budget of the pending re-read in one real-time tick. */
 export const PENDING_BUDGET_MS = 60_000;
+/** Pending actions re-read per real-time tick at most. */
+export const PENDING_READS_PER_TICK = 5;
+/** Re-reads of a pending action on consecutive ticks before it is re-read only every PENDING_RETRY_MS. */
+export const PENDING_QUICK_TRIES = 3;
+/** A pending action that did not settle quickly is re-read at most this often. */
+export const PENDING_RETRY_MS = 2 * 60_000;
 
 /** `p`, or a rejection once `ms` have passed (the request itself is not cancelled). */
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {

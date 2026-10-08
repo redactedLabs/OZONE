@@ -37,8 +37,9 @@
  * a swap fills is credited inside the contract) is not traced.
  */
 import { detectAddress, parseForChain, type ParsedAddress } from '../../../ozone-client/src/index.js';
-import { DEFAULT_THORNODE_URL } from '../explorers/thornode.js';
-import { httpJson, RateLimiter, type HttpOptions } from '../util/http.js';
+import { thornodeApiUrls } from '../explorers/thornode.js';
+import { FailoverJson } from '../util/failover.js';
+import { type HttpOptions } from '../util/http.js';
 import { CONTRACT_ACTION, chainOfAsset, formatAmount, isExcludedTarget, type Flow } from './flows.js';
 import { l1Asset, type PriceOracle } from './prices.js';
 
@@ -247,9 +248,15 @@ export interface ChainRead {
 }
 
 export interface ChainOptions {
-	/** THORNode API base (default THORNODE_URL or the Liquify gateway). */
+	/** One THORNode API base, nothing else (tests, a private node). */
 	baseUrl?: string;
-	/** Minimum interval between requests (default 350 ms). */
+	/**
+	 * THORNode API endpoints, best first (default thornodeApiUrls(): Redacted's
+	 * own node, then the Liquify gateway). Requests for heights an endpoint
+	 * does not hold (setFloor) go to the next one.
+	 */
+	baseUrls?: string[];
+	/** Minimum interval between requests per endpoint (default: ours 200 ms, others 350 ms). */
 	minIntervalMs?: number;
 	concurrency?: number;
 	http?: HttpOptions;
@@ -279,21 +286,37 @@ interface LcdTx {
 
 /** Transactions of the chain as tracing needs them: contract executions, oldest first. */
 export class Chain {
-	readonly baseUrl: string;
-	private readonly limiter: RateLimiter;
+	/** The endpoints, best first (status, floors). */
+	readonly endpoints: FailoverJson;
 	requests = 0;
 
-	constructor(private readonly opts: ChainOptions = {}) {
-		this.baseUrl = (opts.baseUrl ?? process.env.THORNODE_URL ?? DEFAULT_THORNODE_URL).replace(/\/+$/, '');
-		this.limiter = new RateLimiter(opts.minIntervalMs ?? 350, opts.concurrency ?? 1);
+	constructor(opts: ChainOptions = {}) {
+		const urls = opts.baseUrls?.length ? opts.baseUrls : opts.baseUrl ? [opts.baseUrl] : thornodeApiUrls();
+		this.endpoints = new FailoverJson({
+			urls,
+			minIntervalMs: opts.minIntervalMs ?? 350,
+			intervals: opts.minIntervalMs !== undefined ? {} : { 'https://api.redacted.money': 200 },
+			concurrency: opts.concurrency ?? 1,
+			timeoutMs: 60_000,
+			http: opts.http
+		});
 	}
 
-	private get<T>(path: string, params?: Record<string, string | number>): Promise<T> {
+	/** The first endpoint (what most requests use). */
+	get baseUrl(): string {
+		return this.endpoints.urls[0];
+	}
+
+	/** Records the oldest height `url` holds (a node restored from a snapshot): older reads go to the next endpoint. */
+	setFloor(url: string, floor: number | undefined): void {
+		this.endpoints.setFloor(url, floor);
+	}
+
+	private get<T>(path: string, params?: Record<string, string | number>, minHeight?: number): Promise<T> {
 		const q = new URLSearchParams();
 		for (const [k, v] of Object.entries(params ?? {})) q.set(k, String(v));
-		const url = `${this.baseUrl}${path}${q.size ? `?${q.toString()}` : ''}`;
 		this.requests++;
-		return this.limiter.run(() => httpJson<T>(url, { timeoutMs: 60_000, retries: 2, ...this.opts.http }));
+		return this.endpoints.get<T>(`${path}${q.size ? `?${q.toString()}` : ''}`, { minHeight });
 	}
 
 	/** The newest block height. */
@@ -317,12 +340,12 @@ export class Chain {
 		const maxPages = Math.max(1, q.maxPages ?? 40);
 		let lastHeight = 0;
 		for (let page = 1; ; page++) {
-			const body = await this.get<{ tx_responses?: LcdTx[]; total?: string | number }>('/cosmos/tx/v1beta1/txs', {
-				query: conds.join(' AND '),
-				limit: TX_PAGE_SIZE,
-				page,
-				order_by: 'ORDER_BY_ASC'
-			});
+			const body = await this.get<{ tx_responses?: LcdTx[]; total?: string | number }>(
+				'/cosmos/tx/v1beta1/txs',
+				{ query: conds.join(' AND '), limit: TX_PAGE_SIZE, page, order_by: 'ORDER_BY_ASC' },
+				// a node restored from a snapshot does not hold older transactions: those reads go to the next endpoint
+				Math.max(1, Math.floor(q.fromHeight))
+			);
 			const rows = body.tx_responses ?? [];
 			for (const r of rows) {
 				const height = Number(r.height);

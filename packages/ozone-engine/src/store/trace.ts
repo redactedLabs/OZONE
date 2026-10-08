@@ -558,6 +558,21 @@ export async function loadTraceIndex(sql: Sql, opts: { includeTwins?: boolean } 
 			service: t.service
 		});
 	}
+	// Affiliate fee collectors (store/affiliates.ts) are interface infrastructure:
+	// whatever reached them, they never pass taint on (absent before migration 0007)
+	// — unless an entry is flagged high in its own right (a hop-1 recipient of a
+	// large flow): fees are trivially inflatable (anyone can name any address as
+	// affiliate), so they must not exempt it, as an action count must not (jobs.ts).
+	const collectors = await sql
+		.query<{ address: string }>(
+			`SELECT address FROM oz_affiliates WHERE receipts >= 5 OR (affiliate_actions >= 5 AND affiliate_actions >= 0.2 * GREATEST(actions_read, 1))`
+		)
+		.then((r) => r.rows.map((x) => `thor:${x.address}`))
+		.catch(() => [] as string[]);
+	for (const k of collectors) {
+		const e = index.get(k);
+		if (e && e.hop > 0 && riskRank(traceRisk(e.originRisk, e.hop, undefined, 'value') ?? 'none') < riskRank('high')) e.service = true;
+	}
 	// Incident path: a key listed urgently — and whatever was traced from it —
 	// is checked first (pendingChecks), whichever entry describes it best.
 	if (urgentKeys.size) {
@@ -843,11 +858,12 @@ export async function planTraceBackfill(sql: Sql): Promise<BackfillPlan> {
  * links are keyed, a stored edge only has its wording refreshed. Services stay
  * services. Returns how many checks were reset.
  */
-export async function resetTraceChecks(sql: Sql): Promise<number> {
+export async function resetTraceChecks(sql: Sql, opts: { keyPrefix?: string } = {}): Promise<number> {
 	const r = await sql.query<{ n: number }>(
 		`WITH u AS (UPDATE oz_trace_checked SET status = 'pending', checked_height = 0, error = NULL
-		   WHERE status <> 'service' AND checked_height > 0 RETURNING 1)
-		 SELECT count(*)::int AS n FROM u`
+		   WHERE status <> 'service' AND checked_height > 0 AND ($1::text IS NULL OR starts_with(key, $1::text)) RETURNING 1)
+		 SELECT count(*)::int AS n FROM u`,
+		[opts.keyPrefix ?? null]
 	);
 	return Number(r.rows[0]?.n ?? 0);
 }
@@ -856,14 +872,23 @@ export async function resetTraceChecks(sql: Sql): Promise<number> {
  * The owner's switch for the history backfill: when `label` is not the one
  * already recorded in `oz_state` (`backfill:reset`), resets the checks once and
  * records it. The worker calls this at start with OZONE_BACKFILL_RESET, so the
- * reset happens once per label, however often the worker restarts.
+ * reset happens once per label, however often the worker restarts. With
+ * `keyPrefix` only those keys are reset (recorded under `stateId`): a new rule
+ * for one kind of key (e.g. `thor:`) is applied to their histories without
+ * reading every other history again.
  */
-export async function maybeResetBackfill(sql: Sql, label: string | undefined, logger: Logger = silentLogger): Promise<{ applied: boolean; reset: number }> {
+export async function maybeResetBackfill(
+	sql: Sql,
+	label: string | undefined,
+	logger: Logger = silentLogger,
+	opts: { keyPrefix?: string; stateId?: string } = {}
+): Promise<{ applied: boolean; reset: number }> {
 	if (!label) return { applied: false, reset: 0 };
-	const done = await getState<{ label?: string }>(sql, 'backfill:reset');
+	const id = opts.stateId ?? 'backfill:reset';
+	const done = await getState<{ label?: string }>(sql, id);
 	if (done?.label === label) return { applied: false, reset: 0 };
-	const reset = await resetTraceChecks(sql);
-	await setState(sql, 'backfill:reset', { label, at: new Date().toISOString(), reset });
-	logger.info(`backfill "${label}": ${reset} trace check(s) reset; the backfill job reads their history again`);
+	const reset = await resetTraceChecks(sql, { keyPrefix: opts.keyPrefix });
+	await setState(sql, id, { label, at: new Date().toISOString(), reset, ...(opts.keyPrefix ? { keyPrefix: opts.keyPrefix } : {}) });
+	logger.info(`backfill "${label}": ${reset} trace check(s)${opts.keyPrefix ? ` of ${opts.keyPrefix} keys` : ''} reset; the backfill job reads their history again`);
 	return { applied: true, reset };
 }

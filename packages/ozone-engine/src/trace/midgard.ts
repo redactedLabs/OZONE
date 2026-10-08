@@ -17,7 +17,8 @@
  *   fromHeight=1 → its 5 oldest; nextPageToken → none; prevPageToken → the
  *   next 5 newer).
  */
-import { httpJson, RateLimiter, type HttpOptions } from '../util/http.js';
+import { httpJson, HttpError, RateLimiter, type HttpOptions } from '../util/http.js';
+import { QuotaDenied, type DailyQuota, type QuotaPriority } from '../util/quota.js';
 
 export const DEFAULT_MIDGARD_URL = 'https://gateway.liquify.com/chain/thorchain_midgard';
 
@@ -72,31 +73,83 @@ export interface MidgardOptions {
 	minIntervalMs?: number;
 	concurrency?: number;
 	http?: HttpOptions;
+	/**
+	 * The daily request budget every Midgard user of the process shares (see
+	 * util/quota.ts). Without one, requests are only rate-limited.
+	 */
+	quota?: DailyQuota;
+	/** Priority of this client's requests in the budget (default `backfill`; see withPriority). */
+	priority?: QuotaPriority;
+	/** Longest wait for budget before a request is refused (default: realtime 30 s, links 60 s, backfill 120 s). */
+	maxQuotaWaitMs?: number;
 }
+
+const QUOTA_WAIT: Record<QuotaPriority, number> = { realtime: 30_000, links: 60_000, backfill: 120_000 };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export class Midgard {
 	readonly baseUrl: string;
 	private readonly limiter: RateLimiter;
+	readonly priority: QuotaPriority;
 	requests = 0;
 
-	constructor(private readonly opts: MidgardOptions = {}) {
+	constructor(
+		private readonly opts: MidgardOptions = {},
+		shared?: { limiter: RateLimiter }
+	) {
 		this.baseUrl = (opts.baseUrl ?? DEFAULT_MIDGARD_URL)
 			.replace(/\/+$/, '')
 			.replace('https://midgard.ninerealms.com', DEFAULT_MIDGARD_URL);
-		this.limiter = new RateLimiter(opts.minIntervalMs ?? 350, opts.concurrency ?? 2);
+		this.limiter = shared?.limiter ?? new RateLimiter(opts.minIntervalMs ?? 350, opts.concurrency ?? 2);
+		this.priority = opts.priority ?? 'backfill';
+	}
+
+	/** The same client (rate limit and daily budget shared) whose requests count as `priority`. */
+	withPriority(priority: QuotaPriority): Midgard {
+		return new Midgard({ ...this.opts, priority }, { limiter: this.limiter });
+	}
+
+	/** The shared daily budget, if any. */
+	get quota(): DailyQuota | undefined {
+		return this.opts.quota;
+	}
+
+	/**
+	 * One GET with retries; every attempt takes a request from the daily budget
+	 * (a retry is a request too) and reports its outcome to it.
+	 */
+	private async get<T>(url: string, timeoutMs: number, retries: number): Promise<T> {
+		const quota = this.opts.quota;
+		let last: unknown;
+		for (let attempt = 0; attempt <= retries; attempt++) {
+			if (quota && !(await quota.take(this.priority, this.opts.maxQuotaWaitMs ?? QUOTA_WAIT[this.priority]))) {
+				throw new QuotaDenied(this.priority, 'no budget left in time');
+			}
+			this.requests++;
+			try {
+				const body = await this.limiter.run(() => httpJson<T>(url, { timeoutMs, ...this.opts.http, retries: 0 }));
+				quota?.success();
+				return body;
+			} catch (e) {
+				last = e;
+				const status = e instanceof HttpError ? e.status : 0;
+				quota?.failure(status, (e as Error).message ?? String(e));
+				if ((e as { fatal?: boolean }).fatal || attempt === retries) break;
+				const retryAfter = status === 429 ? ((e as HttpError & { retryAfterMs?: number }).retryAfterMs ?? 5_000) : 0;
+				await sleep(Math.min(60_000, Math.max(retryAfter, 1000 * 2 ** attempt)));
+			}
+		}
+		throw last instanceof Error ? last : new Error(String(last));
 	}
 
 	async actions(params: Record<string, string | number | undefined>): Promise<ActionsPage> {
 		const q = new URLSearchParams();
 		for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') q.set(k, String(v));
 		const url = `${this.baseUrl}/v2/actions?${q.toString()}`;
-		this.requests++;
-		const body = await this.limiter.run(() =>
-			httpJson<{ actions?: MidgardAction[]; meta?: { nextPageToken?: string; prevPageToken?: string } }>(url, {
-				timeoutMs: 75_000,
-				retries: 3,
-				...this.opts.http
-			})
+		const body = await this.get<{ actions?: MidgardAction[]; meta?: { nextPageToken?: string; prevPageToken?: string } }>(
+			url,
+			75_000,
+			this.opts.http?.retries ?? 3
 		);
 		return {
 			actions: body.actions ?? [],
@@ -142,20 +195,11 @@ export class Midgard {
 	}
 
 	async pools(): Promise<Array<{ asset: string; assetPriceUSD: string; status: string }>> {
-		this.requests++;
-		return this.limiter.run(() =>
-			httpJson<Array<{ asset: string; assetPriceUSD: string; status: string }>>(`${this.baseUrl}/v2/pools?status=available`, {
-				timeoutMs: 60_000,
-				...this.opts.http
-			})
-		);
+		return this.get<Array<{ asset: string; assetPriceUSD: string; status: string }>>(`${this.baseUrl}/v2/pools?status=available`, 60_000, this.opts.http?.retries ?? 3);
 	}
 
 	async runePriceUsd(): Promise<number> {
-		this.requests++;
-		const s = await this.limiter.run(() =>
-			httpJson<{ runePriceUSD?: string }>(`${this.baseUrl}/v2/stats`, { timeoutMs: 60_000, ...this.opts.http })
-		);
+		const s = await this.get<{ runePriceUSD?: string }>(`${this.baseUrl}/v2/stats`, 60_000, this.opts.http?.retries ?? 3);
 		return Number(s.runePriceUSD ?? 0);
 	}
 }

@@ -152,6 +152,20 @@ describe('quality gates on real-data fixtures', async () => {
 		expect(by.get(cleanUser)?.flagged).toBe(false);
 	});
 
+	it('an interface fee collector classified as one (pass G) is a hub too, whatever its link count', async () => {
+		// naswap's collector signs swaps of its fees; Midgard repeats its fee in refund actions without the affiliate mark
+		const naswap = 'thor148sahwr5pg44cy0n23zwc723ugy2fptw0m8sau';
+		await sql.query(`INSERT INTO rujira_users (thor_address) VALUES ($1)`, [naswap]);
+		await sql.query(`INSERT INTO l1_addresses (thor_address, l1_address, chain) VALUES ($1,$2,'ETH')`, [naswap, '0x098b716b8aaf21512996dc57eb0615e2383e2f96']);
+		expect((await screenUsers(sql, index)).flagged).toBe(2);
+		await sql.query(`INSERT INTO oz_affiliates (address, receipts) VALUES ($1, 61)`, [naswap]);
+		const r = await screenUsers(sql, index);
+		expect(r).toMatchObject({ flagged: 1, hubsSkipped: 3 });
+		await sql.query(`DELETE FROM l1_addresses WHERE thor_address = $1`, [naswap]);
+		await sql.query(`DELETE FROM rujira_users WHERE thor_address = $1`, [naswap]);
+		await sql.query(`DELETE FROM oz_affiliates WHERE address = $1`, [naswap]);
+	});
+
 	it('publishes linked accounts in the next snapshot, without a feedback loop', async () => {
 		const linkedUser = 'thor1fns25sytpf2gsdlg76g45620u5axm4mkrypqrh';
 		const next = async () => {

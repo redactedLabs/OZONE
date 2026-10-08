@@ -7,8 +7,9 @@
  *   listed — one risk level lower, because a link can be a counterparty.
  *
  * Links tagged `affiliate` are ignored, and so are hub accounts (module
- * accounts, affiliate fee collectors, accounts linked to more than
- * `hubLinks` addresses): before this rule the two only accounts the old
+ * accounts, affiliate fee collectors — by their link count, or as classified
+ * in store/affiliates.ts — and accounts linked to more than `hubLinks`
+ * addresses): before this rule the two only accounts the old
  * screener flagged were exactly such hubs — THORChain's affiliate_collector
  * module and an interface's affiliate address, linked to 32,047 and 3,610
  * unrelated swappers' addresses.
@@ -23,6 +24,7 @@ import {
 	type SnapshotIndex
 } from '../../../ozone-client/src/index.js';
 import { THORCHAIN_MODULES } from '../trace/flows.js';
+import { loadAffiliates } from '../store/affiliates.js';
 import type { Sql } from '../types.js';
 import { batchInsert, withTransaction } from '../store/db.js';
 
@@ -51,6 +53,8 @@ interface UserVerdict {
 export async function screenUsers(sql: Sql, snap: SnapshotIndex, opts: UserScreenOptions = {}): Promise<UserScreenResult> {
 	const flagAt = riskRank(opts.flagAt ?? 'high');
 	const hubLinks = opts.hubLinks ?? 500;
+	// interface fee collectors sign swaps of their fees to wherever the interface wants them: not an owner's links
+	const affiliates = await loadAffiliates(sql);
 	const users = (await sql.query<{ thor_address: string }>(`SELECT thor_address FROM rujira_users`)).rows.map((r) => r.thor_address);
 	const links = new Map<string, string[]>();
 	let linkedAddresses = 0;
@@ -86,7 +90,7 @@ export async function screenUsers(sql: Sql, snap: SnapshotIndex, opts: UserScree
 		}
 		const directMax = reasons.reduce((m, r) => Math.max(m, riskRank(r.risk)), 0);
 		const l1s = links.get(thor) ?? [];
-		const isHub = THORCHAIN_MODULES.has(thor) || l1s.length > hubLinks;
+		const isHub = THORCHAIN_MODULES.has(thor) || affiliates.isCollector(thor) || l1s.length > hubLinks;
 		if (isHub && l1s.length) hubsSkipped++;
 		if (!isHub) {
 			for (const l1 of l1s) {

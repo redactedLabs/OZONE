@@ -4,66 +4,157 @@
  * carries the block time and transaction of its freeze (listedAt / refId)
  * and of its unfreeze or delisting (removedAt).
  *
- * EVM logs come from Etherscan-compatible public explorers that need no API
- * key (Blockscout for Ethereum, Base, Arbitrum, Optimism and Polygon;
- * Routescan for Avalanche); TRON events from TronGrid. Every sync replays the
- * complete event history, so state is self-healing and never depends on an
- * earlier run.
+ * EVM logs come from keyless public JSON-RPC endpoints with failover and
+ * block-range adaptation, explorers (Etherscan-compatible: Blockscout,
+ * Routescan, the Optimism explorer) as the fallback, and a stored history
+ * for chains where no keyless endpoint can replay the whole history in a few
+ * calls (Base) — see evmlogs.ts. TRON events come from TronGrid. Every sync
+ * replays the complete event history where an endpoint allows it, so state is
+ * self-healing and never depends on an earlier run.
  *
  * Chains beyond the original ones (ETH/TRON/AVAX for Tether, ETH/BASE/AVAX
- * for Circle, ETH for the oracle) are separate sources, so an explorer
- * outage on one of them can never fail — or, worse, half-delist — a core
- * source.
+ * for Circle, ETH for the oracle) are separate sources, so an outage on one
+ * of them can never fail — or, worse, half-delist — a core source.
  */
 import { parseForChain } from '../../../ozone-client/src/index.js';
 import type { Category, Risk } from '../../../ozone-client/src/index.js';
-import { emptyResult, type ListEntry, type Logger, type ParseResult } from '../types.js';
+import { emptyResult, type ListEntry, type Logger, type ParseResult, type Sql } from '../types.js';
 import { decodeAddressArray, wordToAddress } from '../util/evm.js';
-import { httpJson, RateLimiter, type HttpOptions } from '../util/http.js';
+import { httpJson, type HttpOptions } from '../util/http.js';
+import {
+	blockAtTime,
+	explorerLogs,
+	limiterFor,
+	readContractLogs,
+	type ChainLogConfig,
+	type ContractLogsRequest,
+	type ContractLogsOptions,
+	type LogProvider,
+	type LogsResult,
+	type RawLog
+} from './evmlogs.js';
+
+export type { RawLog, LogsResult } from './evmlogs.js';
 
 export interface LogApi {
 	chain: string;
-	/** Etherscan-compatible `…/api` base URL. */
+	/** Etherscan-compatible `…/api` base URL (the chain's own explorer). */
 	api: string;
-	/** Public JSON-RPC endpoints tried first (eth_getLogs with adaptive ranges). */
+	/** Public JSON-RPC endpoints, tried before the explorer (see EVM_LOG_RPCS for their limits). */
 	rpc?: string[];
 	txUrl: (hash: string) => string;
 }
+
+/**
+ * Keyless public JSON-RPC endpoints per chain, best first, with what was
+ * measured on 2026-10-07 (eth_getLogs over a contract's whole history):
+ * Tenderly's public gateways replay whole histories on Ethereum, Arbitrum,
+ * Optimism, Polygon and Avalanche (with block timestamps, except Avalanche),
+ * but serve 1,000 blocks per call on Base; the official Optimism RPC replays
+ * whole histories, Arbitrum's 10M blocks per call, Avalanche's 5M; thirdweb
+ * serves 1,000, base.org 500; PublicNode wants a token for history on Base,
+ * Arbitrum and Optimism and serves 10,000 (Polygon) or 50,000 (Avalanche)
+ * blocks per call. dRPC's free tier refuses even 1,000-block ranges (its
+ * message says "ranges over 10000 blocks") and is not used. No keyless
+ * endpoint replays Base: its history is stored and extended (evmlogs.ts).
+ */
+export const EVM_LOG_RPCS: Record<string, LogProvider[]> = {
+	ETH: [
+		{ kind: 'rpc', url: 'https://gateway.tenderly.co/public/mainnet', minIntervalMs: 250 },
+		{ kind: 'rpc', url: 'https://rpc.mevblocker.io', minIntervalMs: 500 },
+		{ kind: 'rpc', url: 'https://1.rpc.thirdweb.com', maxRange: 1_000, minIntervalMs: 300 }
+	],
+	BASE: [
+		{ kind: 'rpc', url: 'https://gateway.tenderly.co/public/base', maxRange: 1_000, minIntervalMs: 250 },
+		{ kind: 'rpc', url: 'https://8453.rpc.thirdweb.com', maxRange: 1_000, minIntervalMs: 300 },
+		{ kind: 'rpc', url: 'https://mainnet.base.org', maxRange: 500, minIntervalMs: 500 }
+	],
+	AVAX: [
+		{ kind: 'rpc', url: 'https://gateway.tenderly.co/public/avalanche', minIntervalMs: 250 },
+		{ kind: 'rpc', url: 'https://api.avax.network/ext/bc/C/rpc', maxRange: 5_000_000, minIntervalMs: 500 },
+		{ kind: 'rpc', url: 'https://avalanche-c-chain-rpc.publicnode.com', maxRange: 50_000, minIntervalMs: 500 }
+	],
+	ARB: [
+		{ kind: 'rpc', url: 'https://gateway.tenderly.co/public/arbitrum', minIntervalMs: 250 },
+		{ kind: 'rpc', url: 'https://arb1.arbitrum.io/rpc', maxRange: 10_000_000, minIntervalMs: 500 },
+		{ kind: 'rpc', url: 'https://42161.rpc.thirdweb.com', maxRange: 1_000, minIntervalMs: 300 }
+	],
+	OP: [
+		{ kind: 'rpc', url: 'https://mainnet.optimism.io', minIntervalMs: 500 },
+		{ kind: 'rpc', url: 'https://gateway.tenderly.co/public/optimism', minIntervalMs: 250 },
+		{ kind: 'rpc', url: 'https://10.rpc.thirdweb.com', maxRange: 1_000, minIntervalMs: 300 }
+	],
+	POL: [
+		{ kind: 'rpc', url: 'https://gateway.tenderly.co/public/polygon', minIntervalMs: 250 },
+		{ kind: 'rpc', url: 'https://polygon-bor-rpc.publicnode.com', maxRange: 10_000, minIntervalMs: 500 },
+		{ kind: 'rpc', url: 'https://137.rpc.thirdweb.com', maxRange: 1_000, minIntervalMs: 300 }
+	]
+};
 
 export const LOG_APIS: Record<string, LogApi> = {
 	ETH: {
 		chain: 'ETH',
 		api: 'https://eth.blockscout.com/api',
-		rpc: ['https://gateway.tenderly.co/public/mainnet', 'https://rpc.mevblocker.io'],
+		rpc: EVM_LOG_RPCS.ETH.map((p) => p.url),
 		txUrl: (h) => `https://etherscan.io/tx/${h}`
 	},
 	BASE: {
 		chain: 'BASE',
 		api: 'https://base.blockscout.com/api',
-		rpc: ['https://gateway.tenderly.co/public/base'],
+		rpc: EVM_LOG_RPCS.BASE.map((p) => p.url),
 		txUrl: (h) => `https://basescan.org/tx/${h}`
 	},
 	AVAX: {
 		chain: 'AVAX',
 		api: 'https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api',
+		rpc: EVM_LOG_RPCS.AVAX.map((p) => p.url),
 		txUrl: (h) => `https://snowtrace.io/tx/${h}`
 	},
 	ARB: {
 		chain: 'ARB',
 		api: 'https://arbitrum.blockscout.com/api',
+		rpc: EVM_LOG_RPCS.ARB.map((p) => p.url),
 		txUrl: (h) => `https://arbitrum.blockscout.com/tx/${h}`
 	},
 	OP: {
 		chain: 'OP',
 		api: 'https://explorer.optimism.io/api',
+		rpc: EVM_LOG_RPCS.OP.map((p) => p.url),
 		txUrl: (h) => `https://explorer.optimism.io/tx/${h}`
 	},
 	POL: {
 		chain: 'POL',
 		api: 'https://polygon.blockscout.com/api',
+		rpc: EVM_LOG_RPCS.POL.map((p) => p.url),
 		txUrl: (h) => `https://polygon.blockscout.com/tx/${h}`
 	}
 };
+
+/** Blocks at the head re-read on every sync and never stored (about 10–15 minutes of each chain). */
+const FINALITY: Record<string, number> = { ETH: 64, BASE: 450, AVAX: 450, ARB: 3_600, OP: 450, POL: 512 };
+
+/** Explorers after the chain's own: Routescan answers keyless for Ethereum (and is Avalanche's own). */
+const MORE_EXPLORERS: Record<string, string[]> = { ETH: ['https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api'] };
+
+/**
+ * The endpoints for a chain's logs: its RPCs, then its explorer(s); the
+ * Blockscout PRO API before a keyless Blockscout instance when
+ * BLOCKSCOUT_API_KEY is set (an owner's key: nothing is sent without it).
+ */
+export function chainLogConfig(chain: string, env: Record<string, string | undefined> = process.env): ChainLogConfig {
+	const api = LOG_APIS[chain];
+	if (!api) throw new Error(`no log endpoints for ${chain}`);
+	const rpcs: LogProvider[] = (api.rpc ?? []).map((url) => EVM_LOG_RPCS[chain]?.find((p) => p.url === url) ?? { kind: 'rpc', url, minIntervalMs: 500 });
+	const explorers: LogProvider[] = [];
+	const chainIds: Record<string, string> = { ETH: '1', OP: '10', POL: '137', BASE: '8453', ARB: '42161', AVAX: '43114' };
+	const isBlockscout = api.api.includes('blockscout.com');
+	if (isBlockscout && env.BLOCKSCOUT_API_KEY && chainIds[chain]) {
+		explorers.push({ kind: 'explorer', url: 'https://api.blockscout.com/v2/api', minIntervalMs: 250, params: { chain_id: chainIds[chain], apikey: env.BLOCKSCOUT_API_KEY } });
+	}
+	explorers.push({ kind: 'explorer', url: api.api, minIntervalMs: 1000 });
+	for (const url of MORE_EXPLORERS[chain] ?? []) explorers.push({ kind: 'explorer', url, minIntervalMs: 600 });
+	return { chain, providers: [...rpcs, ...explorers], finality: FINALITY[chain] ?? 450, txUrl: api.txUrl };
+}
 
 export const TOPICS = {
 	AddedBlackList: '0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc',
@@ -76,38 +167,7 @@ export const TOPICS = {
 	SanctionedAddressesRemoved: '0x32aab684eee99db715515d1a9987a8fe33bb6341b0e35e60db7eab48a08f9a3a'
 } as const;
 
-export interface RawLog {
-	blockNumber: number;
-	logIndex: number;
-	timeStamp: number;
-	transactionHash: string;
-	address: string;
-	topics: string[];
-	data: string;
-}
-
-export interface LogsResult {
-	logs: RawLog[];
-	/** Logs the endpoint returned whose emitting address or topics[0] did not match what was requested. */
-	dropped: number;
-}
-
-const limiters = new Map<string, RateLimiter>();
-function limiterFor(url: string): RateLimiter {
-	const host = new URL(url).host;
-	let l = limiters.get(host);
-	if (!l) {
-		l = new RateLimiter(1000, 1);
-		limiters.set(host, l);
-	}
-	return l;
-}
-
-const hexOrDec = (v: unknown): number => {
-	if (typeof v === 'number') return v;
-	const s = String(v ?? '0');
-	return s.startsWith('0x') ? parseInt(s, 16) : parseInt(s, 10);
-};
+export type EventSyncOptions = HttpOptions & Pick<ContractLogsOptions, 'logger' | 'sql' | 'budgetMs' | 'now'> & { env?: Record<string, string | undefined> };
 
 /** Full history of one event of one contract, oldest first (explorer API). */
 export async function fetchLogsExplorer(
@@ -116,87 +176,13 @@ export async function fetchLogsExplorer(
 	topic0: string,
 	opts: HttpOptions & { fromBlock?: number; logger?: Logger; maxPages?: number } = {}
 ): Promise<LogsResult> {
-	const out: RawLog[] = [];
-	const seen = new Set<string>();
-	let dropped = 0;
-	let fromBlock = opts.fromBlock ?? 0;
-	const maxPages = opts.maxPages ?? 500;
-	const wantAddress = address.toLowerCase();
-	const wantTopic0 = topic0.toLowerCase();
-	for (let page = 0; page < maxPages; page++) {
-		const url = `${api.api}?module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=latest&address=${address}&topic0=${topic0}`;
-		const body = await limiterFor(url).run(() => httpJson<{ status?: string; message?: string; result?: unknown }>(url, { retries: 5, ...opts }));
-		const result = Array.isArray(body.result) ? (body.result as Array<Record<string, unknown>>) : [];
-		if (!Array.isArray(body.result) && body.status !== '0') {
-			throw new Error(`${api.chain} logs: unexpected answer ${String(body.message ?? '').slice(0, 80)}`);
-		}
-		let added = 0;
-		let maxBlock = fromBlock;
-		for (const r of result) {
-			const log: RawLog = {
-				blockNumber: hexOrDec(r.blockNumber),
-				logIndex: hexOrDec(r.logIndex),
-				timeStamp: hexOrDec(r.timeStamp),
-				transactionHash: String(r.transactionHash ?? ''),
-				address: String(r.address ?? ''),
-				topics: ((r.topics as Array<string | null>) ?? []).filter((t): t is string => !!t),
-				data: String(r.data ?? '0x')
-			};
-			const id = `${log.transactionHash}:${log.logIndex}`;
-			maxBlock = Math.max(maxBlock, log.blockNumber);
-			if (seen.has(id)) continue;
-			seen.add(id);
-			added++;
-			// The endpoint is untrusted: never accept a log for a different
-			// contract or event than what was requested, however it slipped in.
-			if (log.address.toLowerCase() !== wantAddress || (log.topics[0] ?? '').toLowerCase() !== wantTopic0) {
-				dropped++;
-				continue;
-			}
-			out.push(log);
-		}
-		// Explorers cap a page (Blockscout 1000, Routescan 100): continue from
-		// the last block seen (inclusive) until a page adds nothing new.
-		if (added === 0 || result.length < 100) break;
-		if (maxBlock === fromBlock && added < result.length) {
-			opts.logger?.warn(`${api.chain} logs: more events in block ${fromBlock} than one page can hold`);
-			fromBlock = maxBlock + 1;
-		} else {
-			fromBlock = maxBlock;
-		}
-	}
-	out.sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex);
-	return { logs: out, dropped };
-}
-
-
-interface RpcLog {
-	blockNumber: string;
-	logIndex: string;
-	transactionHash: string;
-	address?: string;
-	topics: string[];
-	data: string;
-	blockTimestamp?: string;
-}
-
-async function rpcCall<T>(url: string, body: unknown, opts: HttpOptions): Promise<T> {
-	return limiterFor(url).run(() =>
-		httpJson<T>(url, {
-			...opts,
-			method: 'POST',
-			body: JSON.stringify(body),
-			headers: { 'content-type': 'application/json', ...(opts.headers ?? {}) },
-			retries: 1
-		})
-	);
+	return explorerLogs({ kind: 'explorer', url: api.api, minIntervalMs: 1000 }, api.chain, address, topic0, opts);
 }
 
 /**
- * eth_getLogs over the whole history with adaptive ranges: start with 5M
- * blocks, halve a range whenever the node refuses it. Block timestamps come
- * from the log (`blockTimestamp`, when the node provides it) or from batched
- * eth_getBlockByNumber calls.
+ * eth_getLogs over the whole history of one endpoint, in ranges it accepts
+ * (learned from its refusals, halved on others). Block timestamps come from
+ * the log (`blockTimestamp`) or from eth_getBlockByNumber.
  */
 export async function fetchLogsRpc(
 	url: string,
@@ -204,87 +190,26 @@ export async function fetchLogsRpc(
 	topic0: string,
 	opts: HttpOptions & { fromBlock?: number; logger?: Logger } = {}
 ): Promise<LogsResult> {
-	const head = parseInt(
-		(await rpcCall<{ result?: string }>(url, { jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }, opts)).result ?? '0x0',
-		16
-	);
-	if (!head) throw new Error(`${url}: no block number`);
-	const out: RpcLog[] = [];
-	const stack: Array<[number, number]> = [];
-	const start = opts.fromBlock ?? 0;
-	for (let a = start; a <= head; a += 5_000_000) stack.push([a, Math.min(head, a + 5_000_000 - 1)]);
-	stack.reverse();
-	let calls = 0;
-	while (stack.length) {
-		const [a, b] = stack.pop()!;
-		if (++calls > 2000) throw new Error(`${url}: too many getLogs calls`);
-		const res = await rpcCall<{ result?: RpcLog[]; error?: { message?: string } }>(
-			url,
-			{ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address, topics: [topic0], fromBlock: '0x' + a.toString(16), toBlock: '0x' + b.toString(16) }] },
-			opts
-		).catch((e: Error) => ({ error: { message: e.message } }) as { result?: RpcLog[]; error?: { message?: string } });
-		if (Array.isArray(res.result)) {
-			out.push(...res.result);
-			continue;
-		}
-		if (b - a < 2_000) throw new Error(`${url}: eth_getLogs failed on a small range: ${res.error?.message ?? 'no result'}`);
-		const mid = Math.floor((a + b) / 2);
-		stack.push([mid + 1, b], [a, mid]);
-	}
-	// timestamps
-	const missing = [...new Set(out.filter((l) => !l.blockTimestamp).map((l) => l.blockNumber))];
-	const ts = new Map<string, number>();
-	for (let i = 0; i < missing.length; i += 50) {
-		const batch = missing.slice(i, i + 50).map((bn, j) => ({ jsonrpc: '2.0', id: j, method: 'eth_getBlockByNumber', params: [bn, false] }));
-		const res = await rpcCall<Array<{ id: number; result?: { timestamp?: string } }>>(url, batch, opts);
-		for (const r of Array.isArray(res) ? res : []) {
-			const bn = missing[i + r.id];
-			if (bn && r.result?.timestamp) ts.set(bn, parseInt(r.result.timestamp, 16));
-		}
-	}
-	const logs: RawLog[] = out.map((l) => ({
-		blockNumber: parseInt(l.blockNumber, 16),
-		logIndex: parseInt(l.logIndex, 16),
-		timeStamp: l.blockTimestamp ? parseInt(l.blockTimestamp, 16) : (ts.get(l.blockNumber) ?? 0),
-		transactionHash: l.transactionHash,
-		address: l.address ?? '',
-		topics: l.topics,
-		data: l.data
-	}));
-	// The node is untrusted: never accept a log for a different contract or
-	// event than what was requested, however it slipped in.
-	const wantAddress = address.toLowerCase();
-	const wantTopic0 = topic0.toLowerCase();
-	const matched: RawLog[] = [];
-	let dropped = 0;
-	for (const log of logs) {
-		if (log.address.toLowerCase() !== wantAddress || (log.topics[0] ?? '').toLowerCase() !== wantTopic0) {
-			dropped++;
-			continue;
-		}
-		matched.push(log);
-	}
-	if (matched.some((l) => !l.timeStamp)) throw new Error(`${url}: missing block timestamps`);
-	matched.sort((x, y) => x.blockNumber - y.blockNumber || x.logIndex - y.logIndex);
-	opts.logger?.info(`rpc ${new URL(url).host}: ${matched.length} logs in ${calls} getLogs calls`);
-	return { logs: matched, dropped };
+	const config: ChainLogConfig = { chain: 'EVM', providers: [{ kind: 'rpc', url, minIntervalMs: 1000 }], finality: 0, txUrl: (h) => h };
+	const r = await readContractLogs({ config, contract: address, topics: [topic0], fromBlock: opts.fromBlock }, { ...opts, sql: undefined });
+	return { logs: r.logs, dropped: r.dropped };
 }
 
-/** RPC endpoints first, the explorer API as fallback. */
+/** RPC endpoints first, the explorer API as fallback (whole history, no stored state). */
 export async function fetchLogs(
 	api: LogApi,
 	address: string,
 	topic0: string,
 	opts: HttpOptions & { fromBlock?: number; logger?: Logger; maxPages?: number } = {}
 ): Promise<LogsResult> {
-	for (const url of api.rpc ?? []) {
-		try {
-			return await fetchLogsRpc(url, address, topic0, opts);
-		} catch (e) {
-			opts.logger?.warn(`${api.chain} rpc ${new URL(url).host} failed: ${(e as Error).message}`);
-		}
-	}
-	return fetchLogsExplorer(api, address, topic0, opts);
+	const config: ChainLogConfig = {
+		chain: api.chain,
+		providers: [...(api.rpc ?? []).map((url): LogProvider => ({ kind: 'rpc', url, minIntervalMs: 500 })), { kind: 'explorer', url: api.api, minIntervalMs: 1000 }],
+		finality: 0,
+		txUrl: api.txUrl
+	};
+	const r = await readContractLogs({ config, contract: address, topics: [topic0], fromBlock: opts.fromBlock }, { ...opts, sql: undefined });
+	return { logs: r.logs, dropped: r.dropped };
 }
 
 interface FreezeEvent {
@@ -396,6 +321,8 @@ interface EvmFreezeContract {
 	remove: string;
 	/** Address in topics[1] (indexed) or in data (non-indexed). */
 	where: 'topic' | 'data';
+	/** Deployment block (nothing to read before it; matters where the history is read in small ranges). */
+	fromBlock?: number;
 }
 
 export const TETHER_EVM: EvmFreezeContract[] = [
@@ -405,7 +332,8 @@ export const TETHER_EVM: EvmFreezeContract[] = [
 
 export const CIRCLE_EVM: EvmFreezeContract[] = [
 	{ chain: 'ETH', contract: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', add: TOPICS.Blacklisted, remove: TOPICS.UnBlacklisted, where: 'topic' },
-	{ chain: 'BASE', contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', add: TOPICS.Blacklisted, remove: TOPICS.UnBlacklisted, where: 'topic' },
+	// deployed in block 2,797,221 (first block with code, eth_getCode 2026-10-07)
+	{ chain: 'BASE', contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', add: TOPICS.Blacklisted, remove: TOPICS.UnBlacklisted, where: 'topic', fromBlock: 2_797_221 },
 	{ chain: 'AVAX', contract: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', add: TOPICS.Blacklisted, remove: TOPICS.UnBlacklisted, where: 'topic' }
 ];
 
@@ -430,31 +358,77 @@ export const USDT0_EVM: EvmFreezeContract[] = [
 export const TETHER_TRON_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 export const TRONGRID = 'https://api.trongrid.io';
 
-async function evmFreezeEvents(c: EvmFreezeContract, opts: HttpOptions & { logger?: Logger }): Promise<{ events: FreezeEvent[]; dropped: number }> {
-	const api = LOG_APIS[c.chain];
-	const out: FreezeEvent[] = [];
-	let dropped = 0;
-	for (const [kind, topic] of [
-		['add', c.add],
-		['remove', c.remove]
-	] as const) {
-		const { logs, dropped: d } = await fetchLogs(api, c.contract, topic, opts);
-		dropped += d;
-		for (const l of logs) {
-			const address = c.where === 'topic' ? (l.topics[1] ? wordToAddress(l.topics[1]) : '') : wordToAddress(l.data);
-			if (!address || address === '0x0000000000000000000000000000000000000000') continue;
-			out.push({
-				kind,
-				address,
-				chain: c.chain,
-				time: l.timeStamp,
-				tx: l.transactionHash,
-				txUrl: api.txUrl(l.transactionHash),
-				order: l.blockNumber * 100_000 + l.logIndex
-			});
+const word = (addr: string) => '0x' + addr.toLowerCase().replace(/^0x/, '').padStart(64, '0');
+
+/**
+ * A seed for a contract's stored history (readContractLogs): the state the
+ * source last published for `chain` — every address's freeze (and release)
+ * on that chain, from its own entries — up to the block one hour before that
+ * successful sync. Where no keyless endpoint can replay a chain's history
+ * (Base since 2026-10-06), this replaces reading tens of thousands of
+ * 1,000-block ranges; folding the seed and the logs read after it gives the
+ * same entries as folding the whole history (only each address's last
+ * freeze and release count).
+ */
+function entriesSeed(
+	opts: EventSyncOptions,
+	source: string,
+	config: ChainLogConfig,
+	contract: string,
+	encode: (kind: 'add' | 'remove', address: string) => { topics: string[]; data: string }
+): ContractLogsRequest['seed'] {
+	const sql = opts.sql;
+	if (!sql) return undefined;
+	return async () => {
+		const src = (await sql.query<{ last_success_at: string | Date | null }>(`SELECT last_success_at FROM oz_sources WHERE id = $1`, [source])).rows[0];
+		if (!src?.last_success_at) return undefined;
+		const rows = (await sql.query<{ address: string; meta: unknown }>(`SELECT address, meta FROM oz_entries WHERE source = $1`, [source])).rows;
+		const logs: RawLog[] = [];
+		let i = 0;
+		const push = (kind: 'add' | 'remove', address: string, at: string | undefined, tx: string | undefined) => {
+			const t = at ? Math.floor(Date.parse(at) / 1000) : NaN;
+			if (!Number.isFinite(t) || !tx) return;
+			const e = encode(kind, address);
+			logs.push({ blockNumber: 0, logIndex: i++, timeStamp: t, transactionHash: tx, address: contract, topics: e.topics, data: e.data });
+		};
+		for (const r of rows) {
+			const meta = (typeof r.meta === 'string' ? JSON.parse(r.meta) : r.meta) as { chains?: Array<{ chain?: string; frozenAt?: string; tx?: string; releasedAt?: string; releaseTx?: string }> } | null;
+			for (const c of meta?.chains ?? []) {
+				if (c.chain !== config.chain) continue;
+				push('add', r.address, c.frozenAt, c.tx);
+				if (c.releasedAt) push('remove', r.address, c.releasedAt, c.releaseTx);
+			}
 		}
-		opts.logger?.info(`${c.chain} ${c.contract.slice(0, 10)} ${kind}: ${logs.length} events${d ? ` (${d} dropped: contract/topic mismatch)` : ''}`);
+		const to = await blockAtTime(config, Math.floor(new Date(src.last_success_at).getTime() / 1000) - 3600, opts);
+		return { logs, to };
+	};
+}
+
+async function evmFreezeEvents(c: EvmFreezeContract, opts: EventSyncOptions, source: string): Promise<{ events: FreezeEvent[]; dropped: number }> {
+	const config = chainLogConfig(c.chain, opts.env);
+	const seed = entriesSeed(opts, source, config, c.contract, (kind, address) => {
+		const topic0 = kind === 'add' ? c.add : c.remove;
+		return c.where === 'topic' ? { topics: [topic0, word(address)], data: '0x' } : { topics: [topic0], data: word(address) };
+	});
+	const { logs, dropped } = await readContractLogs({ config, contract: c.contract, topics: [c.add, c.remove], fromBlock: c.fromBlock, seed }, opts);
+	const out: FreezeEvent[] = [];
+	const counts = { add: 0, remove: 0 };
+	for (const l of logs) {
+		const kind = (l.topics[0] ?? '').toLowerCase() === c.add.toLowerCase() ? 'add' : 'remove';
+		counts[kind]++;
+		const address = c.where === 'topic' ? (l.topics[1] ? wordToAddress(l.topics[1]) : '') : wordToAddress(l.data);
+		if (!address || address === '0x0000000000000000000000000000000000000000') continue;
+		out.push({
+			kind,
+			address,
+			chain: c.chain,
+			time: l.timeStamp,
+			tx: l.transactionHash,
+			txUrl: config.txUrl(l.transactionHash),
+			order: l.blockNumber * 100_000 + l.logIndex
+		});
 	}
+	opts.logger?.info(`${c.chain} ${c.contract.slice(0, 10)}: ${counts.add} add, ${counts.remove} remove events${dropped ? ` (${dropped} dropped: contract/topic mismatch)` : ''}`);
 	return { events: out, dropped };
 }
 
@@ -559,12 +533,13 @@ export const CHAINALYSIS_ORACLE = '0x40C57923924B5c5c5455c48D93317139ADDaC8fb';
  * BNB Chain, Fantom, Celo and Blast deployments exist but have no key-free
  * full-history log API that answers, so they are not read.
  */
-export const ORACLE_OTHER_DEPLOYMENTS: Array<{ chain: keyof typeof LOG_APIS; contract: string }> = [
+export const ORACLE_OTHER_DEPLOYMENTS: Array<{ chain: keyof typeof LOG_APIS; contract: string; fromBlock?: number }> = [
 	{ chain: 'ARB', contract: CHAINALYSIS_ORACLE },
 	{ chain: 'OP', contract: CHAINALYSIS_ORACLE },
 	{ chain: 'POL', contract: CHAINALYSIS_ORACLE },
 	{ chain: 'AVAX', contract: CHAINALYSIS_ORACLE },
-	{ chain: 'BASE', contract: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B' }
+	// deployed in block 12,473,449 (first block with code, eth_getCode 2026-10-07)
+	{ chain: 'BASE', contract: '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B', fromBlock: 12_473_449 }
 ];
 
 export const USDT0_SPEC: EventSourceSpec = {
@@ -590,11 +565,11 @@ export const ORACLE_OTHER_SPEC: EventSourceSpec = {
 const dropNote = (dropped: number): string[] =>
 	dropped ? [`${dropped} upstream log(s)/event(s) dropped: emitting contract, topic0 or event name did not match what was requested`] : [];
 
-export async function syncTether(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
+export async function syncTether(opts: EventSyncOptions = {}): Promise<ParseResult> {
 	const events: FreezeEvent[] = [];
 	let dropped = 0;
 	for (const c of TETHER_EVM) {
-		const r = await evmFreezeEvents(c, opts);
+		const r = await evmFreezeEvents(c, opts, TETHER_SPEC.source);
 		events.push(...r.events);
 		dropped += r.dropped;
 	}
@@ -623,11 +598,11 @@ export async function syncTether(opts: HttpOptions & { logger?: Logger } = {}): 
 	return res;
 }
 
-export async function syncCircle(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
+export async function syncCircle(opts: EventSyncOptions = {}): Promise<ParseResult> {
 	const events: FreezeEvent[] = [];
 	let dropped = 0;
 	for (const c of CIRCLE_EVM) {
-		const r = await evmFreezeEvents(c, opts);
+		const r = await evmFreezeEvents(c, opts, CIRCLE_SPEC.source);
 		events.push(...r.events);
 		dropped += r.dropped;
 	}
@@ -641,37 +616,43 @@ export async function syncCircle(opts: HttpOptions & { logger?: Logger } = {}): 
 async function oracleEvents(
 	chain: keyof typeof LOG_APIS,
 	contract: string,
-	opts: HttpOptions & { logger?: Logger }
+	opts: EventSyncOptions,
+	source: string,
+	fromBlock?: number
 ): Promise<{ events: FreezeEvent[]; dropped: number }> {
-	const api = LOG_APIS[chain];
+	const config = chainLogConfig(chain, opts.env);
+	const seed = entriesSeed(opts, source, config, contract, (kind, address) => ({
+		topics: [kind === 'add' ? TOPICS.SanctionedAddressesAdded : TOPICS.SanctionedAddressesRemoved],
+		// an address[] of one: offset, length, the address
+		data: '0x' + (32).toString(16).padStart(64, '0') + (1).toString(16).padStart(64, '0') + word(address).slice(2)
+	}));
+	const { logs, dropped } = await readContractLogs(
+		{ config, contract, topics: [TOPICS.SanctionedAddressesAdded, TOPICS.SanctionedAddressesRemoved], fromBlock, seed },
+		opts
+	);
 	const events: FreezeEvent[] = [];
-	let dropped = 0;
-	for (const [kind, topic] of [
-		['add', TOPICS.SanctionedAddressesAdded],
-		['remove', TOPICS.SanctionedAddressesRemoved]
-	] as const) {
-		const { logs, dropped: d } = await fetchLogs(api, contract, topic, opts);
-		dropped += d;
-		for (const l of logs) {
-			decodeAddressArray(l.data).forEach((address, i) =>
-				events.push({
-					kind,
-					address,
-					chain,
-					time: l.timeStamp,
-					tx: l.transactionHash,
-					txUrl: api.txUrl(l.transactionHash),
-					order: l.blockNumber * 100_000 + l.logIndex * 1000 + i
-				})
-			);
-		}
-		opts.logger?.info(`${chain} oracle ${kind}: ${logs.length} events`);
+	const counts = { add: 0, remove: 0 };
+	for (const l of logs) {
+		const kind = (l.topics[0] ?? '').toLowerCase() === TOPICS.SanctionedAddressesAdded ? 'add' : 'remove';
+		counts[kind]++;
+		decodeAddressArray(l.data).forEach((address, i) =>
+			events.push({
+				kind,
+				address,
+				chain,
+				time: l.timeStamp,
+				tx: l.transactionHash,
+				txUrl: config.txUrl(l.transactionHash),
+				order: l.blockNumber * 100_000 + l.logIndex * 1000 + i
+			})
+		);
 	}
+	opts.logger?.info(`${chain} oracle: ${counts.add} add, ${counts.remove} remove events`);
 	return { events, dropped };
 }
 
-export async function syncChainalysisOracle(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
-	const { events, dropped } = await oracleEvents('ETH', CHAINALYSIS_ORACLE, opts);
+export async function syncChainalysisOracle(opts: EventSyncOptions = {}): Promise<ParseResult> {
+	const { events, dropped } = await oracleEvents('ETH', CHAINALYSIS_ORACLE, opts, ORACLE_SPEC.source);
 	const res = emptyResult();
 	res.entries = foldEvents(events, ORACLE_SPEC);
 	res.version = `events:${events.length}`;
@@ -680,11 +661,11 @@ export async function syncChainalysisOracle(opts: HttpOptions & { logger?: Logge
 }
 
 /** The oracle's other deployments (every one must answer: a partial read would delist). */
-export async function syncOracleOtherChains(opts: HttpOptions & { logger?: Logger } = {}): Promise<ParseResult> {
+export async function syncOracleOtherChains(opts: EventSyncOptions = {}): Promise<ParseResult> {
 	const events: FreezeEvent[] = [];
 	let dropped = 0;
 	for (const d of ORACLE_OTHER_DEPLOYMENTS) {
-		const r = await oracleEvents(d.chain, d.contract, opts);
+		const r = await oracleEvents(d.chain, d.contract, opts, ORACLE_OTHER_SPEC.source, d.fromBlock);
 		events.push(...r.events);
 		dropped += r.dropped;
 	}
@@ -695,11 +676,11 @@ export async function syncOracleOtherChains(opts: HttpOptions & { logger?: Logge
 	return res;
 }
 
-async function syncEvmFreezes(contracts: EvmFreezeContract[], spec: EventSourceSpec, opts: HttpOptions & { logger?: Logger }): Promise<ParseResult> {
+async function syncEvmFreezes(contracts: EvmFreezeContract[], spec: EventSourceSpec, opts: EventSyncOptions): Promise<ParseResult> {
 	const events: FreezeEvent[] = [];
 	let dropped = 0;
 	for (const c of contracts) {
-		const r = await evmFreezeEvents(c, opts);
+		const r = await evmFreezeEvents(c, opts, spec.source);
 		events.push(...r.events);
 		dropped += r.dropped;
 	}
@@ -710,5 +691,5 @@ async function syncEvmFreezes(contracts: EvmFreezeContract[], spec: EventSourceS
 	return res;
 }
 
-export const syncCircleOtherChains = (opts: HttpOptions & { logger?: Logger } = {}) => syncEvmFreezes(CIRCLE_OTHER_EVM, CIRCLE_OTHER_SPEC, opts);
-export const syncUsdt0 = (opts: HttpOptions & { logger?: Logger } = {}) => syncEvmFreezes(USDT0_EVM, USDT0_SPEC, opts);
+export const syncCircleOtherChains = (opts: EventSyncOptions = {}) => syncEvmFreezes(CIRCLE_OTHER_EVM, CIRCLE_OTHER_SPEC, opts);
+export const syncUsdt0 = (opts: EventSyncOptions = {}) => syncEvmFreezes(USDT0_EVM, USDT0_SPEC, opts);

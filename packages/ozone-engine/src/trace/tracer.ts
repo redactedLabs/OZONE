@@ -24,7 +24,7 @@
  * - services (addresses with very large activity) never propagate.
  */
 import { riskFromRank, riskRank, type Category, type Risk } from '../../../ozone-client/src/index.js';
-import { CONTRACT_ACTION, THORCHAIN_MODULES, extractFlows, type Flow, type Relation } from './flows.js';
+import { CONTRACT_ACTION, THORCHAIN_MODULES, extractFlows, type AffiliateSet, type Flow, type Relation } from './flows.js';
 import type { MidgardAction } from './midgard.js';
 import type { PriceOracle } from './prices.js';
 
@@ -40,6 +40,8 @@ export interface TraceConfig {
 	 * still published with their reason, but not traced further, and logged.
 	 */
 	maxDustRecipients: number;
+	/** Affiliate fee collectors and names known so far (interface infrastructure: no ownership links through them). */
+	affiliates?: AffiliateSet;
 }
 
 export const DEFAULT_TRACE_CONFIG: TraceConfig = {
@@ -203,7 +205,7 @@ export function traceAction(
 	onDust?: (dust: DustFlow) => void,
 	onLink?: (link: PayerLink) => void
 ): TraceHit[] {
-	return traceFlows(extractFlows(action, prices), lookup, cfg, onDust, onLink);
+	return traceFlows(extractFlows(action, prices, cfg.affiliates), lookup, cfg, onDust, onLink);
 }
 
 /** The per-flow rules of traceAction, for flows from any source (Midgard actions, chain transaction events). */
@@ -235,7 +237,8 @@ export function traceFlows(
 		if (src.since !== undefined && flow.height <= src.since) continue;
 		if (src.sinceTime !== undefined && Date.parse(flow.date) / 1000 < src.sinceTime) continue;
 		if (target && target.hop === 0) continue; // already listed in its own right
-		const hop = flow.relation === 'value' ? src.hop + 1 : Math.max(1, src.hop);
+		// ownership links (LP pair, THORName) keep the hop; a value flow or a bond is one more
+		const hop = flow.relation === 'value' || flow.relation === 'bond' ? src.hop + 1 : Math.max(1, src.hop);
 		const risk = traceRisk(src.originRisk, hop, flow.usd, flow.relation, cfg);
 		if (!risk) {
 			if (
@@ -278,7 +281,8 @@ export function traceFlows(
 const RELATION_TEXT: Record<Relation, string> = {
 	value: 'received',
 	lp_pair: 'co-owns a THORChain liquidity position with',
-	thorname: 'is linked by a THORName to'
+	thorname: 'is linked by a THORName to',
+	bond: 'is a bond provider of the THORChain node'
 };
 
 /**
@@ -319,6 +323,10 @@ export function describeHit(h: TraceHit): string {
 		return `Funded two hops before THORChain from ${origin}: ${h.fromAddress}, itself funded by it, sent ${h.amount ?? 'value'} on ${date} (${h.fromChain} transaction ${h.txid}), then ~$${Math.round(h.usd ?? 0).toLocaleString('en-US')} was deposited into THORChain`;
 	}
 	const via = viaText(h);
+	if (h.relation === 'bond') {
+		const node = h.hop === 1 ? `${h.fromAddress}, listed by ${origin}` : `${h.fromAddress} (${h.hop - 1} hop${h.hop > 2 ? 's' : ''} from ${origin})`;
+		return `${RELATION_TEXT.bond} ${node}: bonded ${h.amount ?? 'RUNE'} to it in ${via} ${h.txid} on ${date}`;
+	}
 	if (h.relation !== 'value') {
 		return `${RELATION_TEXT[h.relation]} ${h.fromAddress}, flagged via ${origin}; ${via} ${h.txid} on ${date}`;
 	}
