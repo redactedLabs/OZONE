@@ -1,6 +1,8 @@
 import { auth } from '$lib/server/auth';
 import { isAuthorizedAdminRequest } from '$lib/server/request-auth';
 import { redirect, type Handle } from '@sveltejs/kit';
+import { dev } from '$app/environment';
+import { addNonce, newNonce, viewCsp } from '$lib/viewkey/csp';
 
 // Routes that require authentication (admin only)
 const PROTECTED_ROUTES = [
@@ -71,6 +73,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const routeKey = event.route.id ?? decodedPathname(event.url.pathname);
 	if (isProtectedRoute(routeKey) && !isAuthorizedAdminRequest(event.request, event.locals.user)) {
 		throw redirect(303, '/login');
+	}
+
+	// The view-key page (/view): its own Content-Security-Policy. Network only to the two chain
+	// sources and Ozone itself; scripts only from Ozone (nonce for the inline bootstrap).
+	if (routeKey === '/view') {
+		const nonce = newNonce();
+		const response = await resolve(event, { transformPageChunk: ({ html }) => addNonce(html, nonce) });
+		response.headers.set('content-security-policy', viewCsp(nonce, dev));
+		response.headers.set('referrer-policy', 'no-referrer');
+		response.headers.set('x-content-type-options', 'nosniff');
+		response.headers.set('cache-control', 'no-store');
+		return response;
 	}
 
 	return resolve(event);

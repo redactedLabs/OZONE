@@ -1,0 +1,17 @@
+Redacted vault SDK, the view-only part (errata E-66 (4)), for the /view page.
+
+Source   hops, branch integration, commit 3e9aa75f147a3351b1c2e72c093714a63d5ae813
+Export   git archive --format=tar 3e9aa75 | tar -x   (a clean export, no working tree)
+Build    packages/vault-sdk/scripts/build-wasm.sh, production module only (feature `wasm`,
+         rust 1.95.0, wasm-bindgen 0.2.128, wasm-opt 132, host paths remapped), then `tsc -p tsconfig.json`
+Result   wasm/vault_core_bg.wasm  sha256 79bf6de8198bf5dbfde468fb2608b1d3978c0ed75a8eeea2ed3c5243d076bb55
+         (3,708,297 bytes) = CORE_WASM_SHA256 pinned in checksums.js; initCore refuses other bytes (E-30)
+
+Files    dist/{viewer,core,checksums,sha256,types}.{js,d.ts} and wasm/{vault_core.js,vault_core.d.ts,
+         vault_core_bg.wasm,vault_core_bg.wasm.d.ts}, unchanged; SHA256SUMS lists them (checked by
+         src/lib/viewkey/vendor.test.ts). The page uses ViewerService/dispatchViewer (VIEWER_METHODS: reads
+         only), util.deployment and util.snapshotFromFeeds. Nothing else of the SDK (no vault, no prover,
+         no relay) is vendored.
+
+Update   export the new commit the same way, build, copy the same files, regenerate SHA256SUMS, and run
+         node src/lib/viewkey/__fixtures__/generate.mjs <export> for the test fixture.

@@ -6,5 +6,9 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	ssr: {
 		noExternal: ['three', 'gsap']
+	},
+	// The view-key page's Worker (src/lib/viewkey/viewer.worker.ts) is an ES module
+	worker: {
+		format: 'es'
 	}
 });
