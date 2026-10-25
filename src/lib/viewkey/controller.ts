@@ -5,7 +5,7 @@
  * Network: chain reads (`ChainPair`, GET to the two RPC sources) and one or more `POST /api/v1/screen`
  * with addresses. The file text goes only to the Worker (`postMessage`, in this browser).
  */
-import type { ChainSource, DeploymentConfig } from './config';
+import type { ChainSource, DeploymentConfig, FileKind } from './config';
 import { CHAIN_SOURCES } from './config';
 import type { ActivityTx, FetchFn, ProxyFacts } from './chain';
 import { ChainPair, platformFetch } from './chain';
@@ -13,8 +13,11 @@ import type { ViewerBridge } from './bridge';
 import type { ViewAnswers, ViewModel } from './model';
 import { buildModel, counterpartyAddresses } from './model';
 import { screenAddresses } from './screen';
-import type { Opened } from './protocol';
-import type { ViewAccount, ViewEvent, ViewNote, ViewSyncStatus } from '$lib/vendor/vault-sdk/types.js';
+import type { EnvProvider, Opened } from './protocol';
+import type { HistoryAccount, HistoryItem, HistoryStatus, HistoryTotals, ViewAccount, ViewEvent, ViewNote, ViewSyncStatus } from '$lib/vendor/vault-sdk/types.js';
+import type { HistoryAnswers, HistoryModel } from './model-history';
+import { buildHistoryModel, historyCounterparties } from './model-history';
+import { pageStorage, windowSeedFor, type SeedStorage } from './seed';
 
 export type Step = 'open' | 'chain' | 'payees' | 'screen' | 'done';
 
@@ -28,21 +31,43 @@ export const DEPOSIT_MARGIN_BLOCKS = 20_000;
 export interface RunOptions {
 	bridge: ViewerBridge;
 	text: string;
+	/** Which file `text` is (`checkViewFileText`). */
+	kind: FileKind;
 	deployments: DeploymentConfig[];
 	sources?: readonly [ChainSource, ChainSource];
 	fetchFn?: FetchFn;
 	onStep?: (s: Step) => void;
 	/** Errata E-66 (4): reach deeper gaps (more work), still cross-checked. */
 	deep?: boolean;
+	/** Where the history files' window seeds are kept (default: this page's localStorage). */
+	seedStorage?: SeedStorage | null;
 }
 
-export async function runView(o: RunOptions): Promise<{ model: ViewModel; answers: ViewAnswers }> {
+export type RunResult = { model: ViewModel; answers: ViewAnswers } | { model: HistoryModel; answers: HistoryAnswers };
+
+/** One view of a view-key file or a history file. */
+export async function runView(o: RunOptions): Promise<RunResult> {
 	const fetchFn = o.fetchFn ?? platformFetch;
 	const sources = o.sources ?? CHAIN_SOURCES;
 	o.onStep?.('open');
-	const opened = await o.bridge.open(o.text, o.deployments);
+	const opened = await o.bridge.open(o.text, o.kind, o.deployments);
 	const chain = new ChainPair(sources, opened.deployment.chain_id, opened.deployment.proxy, fetchFn);
-	o.bridge.env = { height: () => chain.tip(), feedRecords: () => chain.feedRecords(), balances: (a) => chain.balances(a) };
+	let seedKept = true;
+	const storage = o.seedStorage === undefined ? pageStorage() : o.seedStorage;
+	const env: EnvProvider = {
+		height: () => chain.tip(),
+		feedRecords: () => chain.feedRecords(),
+		balances: (a) => chain.balances(a),
+		blockHashes: (h) => chain.blockHashes(h),
+		// errata E-68 (15) R4-J1: this page's own seed for the file, kept per fingerprint; it never leaves the browser
+		windowSeed: async (fingerprint) => {
+			const r = windowSeedFor(fingerprint, storage);
+			if (!r.kept) seedKept = false;
+			return r.seed;
+		}
+	};
+	o.bridge.env = env;
+	if (opened.kind === 'history') return runHistory(o, opened, chain, sources, fetchFn, () => seedKept);
 
 	o.onStep?.('chain');
 	const status = await o.bridge.call<ViewSyncStatus>('sync', { deep: o.deep ?? false });
@@ -102,4 +127,44 @@ export async function runView(o: RunOptions): Promise<{ model: ViewModel; answer
 	const screen = await screenAddresses(counterpartyAddresses(answers), fetchFn);
 	o.onStep?.('done');
 	return { model: buildModel(answers, screen), answers };
+}
+
+/**
+ * A history file (errata E-68 (4)): the viewer checks every item against two sources at the cut (it drops every
+ * record above it) and the cut's block hash inside this viewer's window; the page then reads the proxy's events for
+ * depositors (the range ends at the height read, so the request does not name the cut; events above the cut are
+ * dropped) and screens every address.
+ */
+async function runHistory(
+	o: RunOptions,
+	opened: Opened,
+	chain: ChainPair,
+	sources: readonly [ChainSource, ChainSource],
+	fetchFn: FetchFn,
+	seedKept: () => boolean
+): Promise<{ model: HistoryModel; answers: HistoryAnswers }> {
+	o.onStep?.('chain');
+	const status = await o.bridge.call<HistoryStatus>('verifyHistory');
+	const [items, totals, accounts, warnings] = await Promise.all([
+		o.bridge.call<HistoryItem[]>('historyItems'),
+		o.bridge.call<HistoryTotals>('historyTotals'),
+		o.bridge.call<HistoryAccount[]>('historyAccounts'),
+		o.bridge.call<string[]>('historyWarnings')
+	]);
+
+	o.onStep?.('payees');
+	let facts: ProxyFacts | null = null;
+	const heights = items.map((i) => i.height).filter((h) => Number.isSafeInteger(h) && h > 0);
+	if (heights.length) {
+		try {
+			facts = await chain.proxyFacts(Math.min(...heights) - DEPOSIT_MARGIN_BLOCKS);
+		} catch {
+			facts = null;
+		}
+	}
+	const answers: HistoryAnswers = { opened, status, items, totals, accounts, warnings, facts, sourceNames: sources.map((s) => s.name), seedKept: seedKept() };
+	o.onStep?.('screen');
+	const screen = await screenAddresses(historyCounterparties(answers), fetchFn);
+	o.onStep?.('done');
+	return { model: buildHistoryModel(answers, screen), answers };
 }

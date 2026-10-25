@@ -1,6 +1,6 @@
 /**
- * The auditor view for Redacted view keys (errata E-66): where the page reads the chain, and which
- * Redacted deployments it knows.
+ * The auditor view for Redacted view keys (errata E-66) and history files (errata E-68): where the page
+ * reads the chain, and which Redacted deployments it knows.
  *
  * Everything runs in the visitor's browser. The page reads public chain data from two independent
  * THORChain RPC operators (the two-source check, C5) and sends Ozone only counterparty addresses. The
@@ -74,7 +74,15 @@ export function parseDeployments(raw: string | undefined | null): DeploymentConf
 }
 
 /** The largest view-key file (errata E-66 (1): at most 1 MiB, plus one trailing newline). */
-export const MAX_FILE_BYTES = 1024 * 1024 + 1;
+export const MAX_VIEW_KEY_BYTES = 1024 * 1024 + 1;
+/** The largest history file (errata E-68 (1): at most 16 MiB, plus one trailing newline). */
+export const MAX_HISTORY_BYTES = 16 * 1024 * 1024 + 1;
+/** The largest file the page reads at all. */
+export const MAX_FILE_BYTES = MAX_HISTORY_BYTES;
+
+/** The two files the page opens, by their `version` member. */
+export const FILE_VERSIONS = { 'hops/v1/view-key': 'view_key', 'hops/v1/history': 'history' } as const;
+export type FileKind = (typeof FILE_VERSIONS)[keyof typeof FILE_VERSIONS];
 
 /** E-48 / E-59: the two sources' tips may differ by at most this many blocks. */
 export const MAX_TIP_SPREAD = 10;

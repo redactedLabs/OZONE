@@ -8,6 +8,11 @@ export class PhraseRotationHandle {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
+    /**
+     * Errata E-68 (13) R2-L4: the warning of a private move while notes a history file's holder can follow are
+     * unspent (their fundings are refused: merge them first); `undefined` otherwise.
+     */
+    historyWarning(): string | undefined;
     steps(): string;
     /**
      * Take the new account's vault (once).
@@ -61,6 +66,37 @@ export class WasmAgent {
 }
 
 /**
+ * Errata E-68 (4): a read-only history session, built from a history file and a deployment alone. It holds the file's
+ * values and, after `verify`, its verdicts; every method reads. No method takes or returns a secret: the file holds
+ * none (E-68 (2)), and nothing here prepares, signs, proves or builds a message.
+ */
+export class WasmHistorySession {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    accounts(): string;
+    /**
+     * The cut (`{height, block_hash}` JSON).
+     */
+    cut(): string;
+    deploymentId(): string;
+    exitAddresses(): string;
+    fingerprint(): string;
+    generations(): string;
+    heldNullifiersIncluded(): boolean;
+    items(): string;
+    spendingAccounts(): string;
+    status(): string;
+    totals(): string;
+    /**
+     * Check every listed item against the chain at the cut: two sources' snapshots (`b_json` null: one) at or above
+     * the cut, and the header hash of the block at the cut from each (`blocks_json`: a JSON list of one or two).
+     */
+    verify(a_json: string, b_json: string | null | undefined, blocks_json: string): void;
+    warnings(): string;
+}
+
+/**
  * The opened vault (one unlock per session, E-4).
  */
 export class WasmVault {
@@ -88,8 +124,20 @@ export class WasmVault {
      * The deployment's accounts (public data).
      */
     accounts(dep: string): string;
+    /**
+     * Errata E-68 (12) L-1, (13) Info 7: the owner acknowledges the exposure for the one message `action_json` names
+     * (`HistoryAckAction`: `{"kind":"exit","notes":[…],"to":"home"}`, `{"kind":"lineage_audits"}`,
+     * `{"kind":"veto_home","nf":…}`, `{"kind":"redirect_home","id":…}`); the notes exposed (JSON).
+     */
+    acknowledgeHistoryExposure(dep: string, action_json: string): string;
     agentSlots(dep: string, n: number, count: number): string;
     applyRestoredCounters(): void;
+    /**
+     * Errata E-68 (13) R2-L2: apply a state blob another device wrote (the node's `blob`, raw bytes): counters, the
+     * address book, the published-opening mark, the history export records; only ever adds. Refused (`REPLAY`) below
+     * the version floor. Returns its version.
+     */
+    applyStateBlob(dep: string, blob: Uint8Array): bigint;
     /**
      * Attach a deployment (JSON from `newDeployment`); returns its id (hex).
      */
@@ -182,6 +230,11 @@ export class WasmVault {
      */
     expireReservation(dep: string, handles_json: string, why: string): string;
     /**
+     * The history file (`{file, fingerprint}` as JSON), exactly the one the last disclosure showed, only with its
+     * fingerprint and while no sync happened since.
+     */
+    exportHistory(dep: string, fingerprint: string): string;
+    /**
      * The sealed local state of a deployment for IndexedDB.
      */
     exportState(dep: string): Uint8Array;
@@ -245,6 +298,31 @@ export class WasmVault {
      * (`NEEDS_SYNC` otherwise), never over a number the chain gave another header.
      */
     headerRevealMsg(dep: string): string;
+    /**
+     * The disclosure of a history file with `options_json` (`HistoryOptions`; `"{}"`: the cut at the synced height,
+     * held nullifiers left out), as JSON. It reads the chain first: `a_json` and `b_json` are two independent sources'
+     * snapshots at one height (C5; `b_json` null: one source), `opts_json` the `SyncOptions` with the tip the platform
+     * read (`min_height`, required), `blocks_json` the header hash (hex) of the block at the cut height from each
+     * source the platform read it from (a JSON list of one or two). Errata E-68 (13) R2-L3: `activity_json` the listed
+     * accounts' activity per source (`AccountActivity` list; absent: none read, so older action accounts stay live).
+     */
+    historyDisclosure(dep: string, options_json: string, a_json: string, b_json: string | null | undefined, opts_json: string, blocks_json: string, activity_json?: string | null): string;
+    /**
+     * The records of the history files exported for this account (fingerprint, cut, counts; never a file).
+     */
+    historyExports(dep: string): string;
+    /**
+     * Errata E-68 (12) L-1: the move-first path (`HistoryMovePlan` JSON: merges, singles, unknown files).
+     */
+    historyMovePlan(dep: string): string;
+    /**
+     * Errata E-68 (12) L-1: the history files out whose held notes are unspent, and those notes (`[fingerprints, notes]`).
+     */
+    historyNotesUnspent(dep: string): string;
+    /**
+     * Errata E-68 (13) R2-L6: the heights `[lo, hi]` (JSON) whose header hashes the platform reads for a cut at `cut`.
+     */
+    historyWindow(dep: string, cut: bigint): string;
     importState(deployment_json: string, blob: Uint8Array): string;
     lineageReport(dep: string): string;
     /**
@@ -360,6 +438,16 @@ export class WasmVault {
      */
     release(action_id: bigint, envelope: Uint8Array): string;
     /**
+     * Errata E-69 (R4-E1): the text the HOME wallet signs to confirm `rescue` for this wallet account on `dep` ("Confirm
+     * your rescue in your wallet": the rescue address shows in its signing window).
+     */
+    rescueBindingMessage(dep: string, rescue: string): string;
+    /**
+     * Errata E-69 (R3-E1): the text the rescue wallet signs to become this wallet account's rescue on `dep` ("Sign
+     * with your rescue wallet"); `scheme` is the rescue wallet's (`adr036-secp256k1` or `eip191-secp256k1`).
+     */
+    rescueConsentMessage(dep: string, scheme: string, rescue: string): string;
+    /**
      * Errata E-62, "Move privately" step 1: the move's own Spending account (`AccountState`, JSON).
      */
     restartMoveAccount(dep: string): string;
@@ -407,7 +495,10 @@ export class WasmVault {
      * One or two input notes of one header generation covering `amt` (see `Session::select_inputs`);
      * `device_only` keeps to the generations this device holds `d` for (a third-party withdrawal, a
      * funding).
+     * Errata E-68 (13) R2-L4: the inputs of a funding of a Spending account (`selectInputs` with the device's
+     * generations only), skipping notes a history file's holder can follow (merge those first).
      */
+    selectFundingInputs(dep: string, denom: string, amt: string): string;
     selectInputs(dep: string, denom: string, amt: string, device_only?: boolean | null): string;
     /**
      * E-4: `off` (default), `third_party` or `all_withdrawals`.
@@ -425,7 +516,25 @@ export class WasmVault {
      * from that generation's notes needs them.
      */
     setGenerationDestinations(dep: string, generation: number, home: string, rescue?: string | null): void;
+    /**
+     * Errata E-69 (R3-E1, R4-E1): keep the rescue consent (JSON `{ scheme, address, public_key, signature,
+     * home_public_key, home_signature }`, hex: the rescue wallet's and the home wallet's answers),
+     * verified now; then set the rescue as usual (`setDestinations`, or a generation rotation after the header).
+     */
+    setRescueConsent(consent_json: string): void;
     standingOrder(dep: string, n: number, key: string, order_id: number, min_amounts_json: string, max_returns: number, order_expiry: bigint, expiry: bigint): string;
+    /**
+     * Errata E-68 (13) R2-L2: the version floor (the highest version this device applied or wrote; write floor + 1).
+     */
+    stateBlobFloor(dep: string): bigint;
+    /**
+     * Errata E-68 (13) R2-L2: the id of this account's state blob (`GET /blob/{id}`).
+     */
+    stateBlobId(dep: string): string;
+    /**
+     * Errata E-68 (13) R2-L2: a node took the blob of `version`: the floor rises to it.
+     */
+    stateBlobWritten(dep: string, version: bigint): void;
     /**
      * The node-mirrored state blob: JSON `{ id, token, blob }` for `PUT /blob/{id}`.
      */
@@ -572,6 +681,12 @@ export function exitSplit(a: string, max_parts: number): string;
 
 export function exitTiming(now: bigint, max_expiry_delta: bigint, send_now: boolean): string;
 
+/**
+ * Errata E-68 (14) R3-J3: the heights `[lo, hi]` (JSON) a reader with the 32-byte `seed_hex` asks for a cut at `cut`
+ * (a viewer keeps a random seed of its own per file).
+ */
+export function historyCutWindow(seed_hex: string, cut: bigint): string;
+
 export function ladderCeil(a: string): string | undefined;
 
 export function ladderFloor(a: string): string | undefined;
@@ -590,6 +705,11 @@ export function mockProve(job_json: string): Uint8Array;
  * A deployment (JSON) from chain id, proxy and prefix, with the launch windows.
  */
 export function newDeployment(chain_id: string, proxy: string, hrp: string, localnet_fast: boolean, account_code_checksum?: string | null): string;
+
+/**
+ * Errata E-68 (4): open a history file for a deployment (JSON, `newDeployment`).
+ */
+export function openHistory(file: string, deployment_json: string): WasmHistorySession;
 
 /**
  * Errata E-66 (4): open a view-key file for a deployment (JSON, `newDeployment`).
@@ -613,6 +733,18 @@ export function proverDocument(job_json: string): string;
  * proxy's expiry rule (`expires ≥ now` and `attestation_expiry ≤ expires`).
  */
 export function registeredCount(attest_root_json: string, attestation_expiry: bigint, now: bigint): number;
+
+/**
+ * Errata E-69 (R4-E1): the text the home wallet (`home_scheme`, `home`) of the wallet account with fingerprint
+ * `account_hex` signs to confirm `rescue` on the deployment.
+ */
+export function rescueBindingMessage(deployment_json: string, account_hex: string, home_scheme: string, home: string, rescue: string): string;
+
+/**
+ * Errata E-69 (R3-E1): the text a rescue wallet signs to become the rescue of the wallet account with fingerprint
+ * `account_hex` on the deployment (`scheme` the rescue wallet's: `adr036-secp256k1` or `eip191-secp256k1`).
+ */
+export function rescueConsentMessage(deployment_json: string, account_hex: string, scheme: string, rescue: string): string;
 
 /**
  * Errata E-28: would the proxy admit a third-party return of `slots` under the per-denomination
@@ -661,6 +793,13 @@ export function txSize(msg_json: string): number;
 export function version(): string;
 
 /**
+ * Errata E-69: a wallet account's home, its wallet's canonical THORChain address under the deployment's prefix
+ * (ADR-036 the signer's address; EIP-191 the THORChain form of the same 20 bytes, `address` `0x…` or that form).
+ * `fromWallet` refuses settings with any other home (`WALLET_HOME`).
+ */
+export function walletHome(scheme: string, deployment_json: string, address: string): string;
+
+/**
  * E-18a: the text the wallet signs for a wallet account of `scheme` (`adr036`, `eip191`,
  * `transition-adr036`, `transition-eip191`, with or without `-secp256k1`): it names the vault origin, the
  * deployment, the wallet and the scheme's version.
@@ -683,6 +822,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly __wbg_phraserotationhandle_free: (a: number, b: number) => void;
     readonly __wbg_wasmagent_free: (a: number, b: number) => void;
+    readonly __wbg_wasmhistorysession_free: (a: number, b: number) => void;
     readonly __wbg_wasmvault_free: (a: number, b: number) => void;
     readonly __wbg_wasmviewsession_free: (a: number, b: number) => void;
     readonly acceptProverOutput: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
@@ -694,18 +834,23 @@ export interface InitOutput {
     readonly crossCheckSnapshots: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly exitSplit: (a: number, b: number, c: number, d: number) => void;
     readonly exitTiming: (a: number, b: bigint, c: bigint, d: number) => void;
+    readonly historyCutWindow: (a: number, b: number, c: number, d: bigint) => void;
     readonly ladderCeil: (a: number, b: number, c: number) => void;
     readonly ladderFloor: (a: number, b: number, c: number) => void;
     readonly lintEdge: (a: number, b: number, c: number, d: bigint, e: number, f: number, g: bigint) => void;
     readonly mockProve: (a: number, b: number, c: number) => void;
     readonly newDeployment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
+    readonly openHistory: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly openViewKey: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly phraseCheck: (a: number, b: number, c: number) => void;
+    readonly phraserotationhandle_historyWarning: (a: number, b: number) => void;
     readonly phraserotationhandle_steps: (a: number, b: number) => void;
     readonly phraserotationhandle_takeNewVault: (a: number, b: number) => void;
     readonly phraserotationhandle_viewKeyWarning: (a: number, b: number) => void;
     readonly proverDocument: (a: number, b: number, c: number) => void;
     readonly registeredCount: (a: number, b: number, c: number, d: bigint, e: bigint) => void;
+    readonly rescueBindingMessage: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
+    readonly rescueConsentMessage: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly returnWithinCeiling: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly secondProofRequired: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly selftest: (a: number) => void;
@@ -714,6 +859,7 @@ export interface InitOutput {
     readonly transitionWalletKeys: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly txSize: (a: number, b: number, c: number) => void;
     readonly version: (a: number) => void;
+    readonly walletHome: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly walletMessage: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly walletPasskeySalt: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly walletSignDoc: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -729,14 +875,29 @@ export interface InitOutput {
     readonly wasmagent_setDelegation: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmagent_swapToSelf: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: bigint) => void;
     readonly wasmagent_vk: (a: number, b: number) => void;
+    readonly wasmhistorysession_accounts: (a: number, b: number) => void;
+    readonly wasmhistorysession_cut: (a: number, b: number) => void;
+    readonly wasmhistorysession_deploymentId: (a: number, b: number) => void;
+    readonly wasmhistorysession_exitAddresses: (a: number, b: number) => void;
+    readonly wasmhistorysession_fingerprint: (a: number, b: number) => void;
+    readonly wasmhistorysession_generations: (a: number, b: number) => void;
+    readonly wasmhistorysession_heldNullifiersIncluded: (a: number) => number;
+    readonly wasmhistorysession_items: (a: number, b: number) => void;
+    readonly wasmhistorysession_spendingAccounts: (a: number, b: number) => void;
+    readonly wasmhistorysession_status: (a: number, b: number) => void;
+    readonly wasmhistorysession_totals: (a: number, b: number) => void;
+    readonly wasmhistorysession_verify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+    readonly wasmhistorysession_warnings: (a: number, b: number) => void;
     readonly wasmvault_abandon: (a: number, b: number, c: bigint) => void;
     readonly wasmvault_abandonDeposit: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_accountCall: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: bigint) => void;
     readonly wasmvault_accountForTask: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_accountKind: (a: number, b: number) => void;
     readonly wasmvault_accounts: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmvault_acknowledgeHistoryExposure: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_agentSlots: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_applyRestoredCounters: (a: number) => void;
+    readonly wasmvault_applyStateBlob: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_attach: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_authorizations: (a: number, b: number) => void;
     readonly wasmvault_backupConfirmed: (a: number) => number;
@@ -764,6 +925,7 @@ export interface InitOutput {
     readonly wasmvault_exitSendHome: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmvault_expireAction: (a: number, b: number, c: bigint, d: number, e: number) => void;
     readonly wasmvault_expireReservation: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+    readonly wasmvault_exportHistory: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_exportState: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_exportViewKey: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmvault_finishDeposit: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: bigint, j: number, k: number, l: number) => void;
@@ -779,6 +941,11 @@ export interface InitOutput {
     readonly wasmvault_headerPlan: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_headerReport: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_headerRevealMsg: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmvault_historyDisclosure: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number) => void;
+    readonly wasmvault_historyExports: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmvault_historyMovePlan: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmvault_historyNotesUnspent: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmvault_historyWindow: (a: number, b: number, c: number, d: number, e: bigint) => void;
     readonly wasmvault_importState: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_lineageReport: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_lock: (a: number) => void;
@@ -809,6 +976,8 @@ export interface InitOutput {
     readonly wasmvault_refreshSlots: (a: number, b: number, c: number, d: number, e: number, f: bigint) => void;
     readonly wasmvault_release: (a: number, b: number, c: bigint, d: number, e: number) => void;
     readonly wasmvault_releaseCall: (a: number, b: number, c: bigint) => void;
+    readonly wasmvault_rescueBindingMessage: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly wasmvault_rescueConsentMessage: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmvault_restartMoveAccount: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_restartReport: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_restartSendHome: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
@@ -828,12 +997,17 @@ export interface InitOutput {
     readonly wasmvault_secondProofDone: (a: number, b: bigint) => void;
     readonly wasmvault_secondProofJob: (a: number, b: number, c: bigint) => void;
     readonly wasmvault_secondProofsDue: (a: number, b: number) => void;
+    readonly wasmvault_selectFundingInputs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmvault_selectInputs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly wasmvault_setConfirmPolicy: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_setDestinations: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_setGenerationDestinations: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly wasmvault_setRescueConsent: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_standingOrder: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: bigint, m: bigint) => void;
     readonly wasmvault_stateBlob: (a: number, b: number, c: number, d: number, e: bigint) => void;
+    readonly wasmvault_stateBlobFloor: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmvault_stateBlobId: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmvault_stateBlobWritten: (a: number, b: number, c: number, d: number, e: bigint) => void;
     readonly wasmvault_sweepHome: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: bigint) => void;
     readonly wasmvault_switchState: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_sync: (a: number, b: number, c: number, d: number, e: number, f: number) => void;

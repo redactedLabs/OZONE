@@ -5,9 +5,21 @@
  * recorded, so a test can check what left the page.
  */
 import fixture from './view-fixture.json';
+import historyFixture from './history-fixture.json';
 import { CHAIN_SOURCES } from '../config';
 
-export { fixture };
+export { fixture, historyFixture };
+
+/** What the fake network serves: either fixture's chain (feeds at a tip, transactions, blocks, balances). */
+export interface ChainFixture {
+	deployment: { chain_id: string; proxy: string };
+	height: number;
+	feeds: { height: number; [feed: string]: unknown };
+	denoms: string[];
+	txs: Record<string, { height: string }[]>;
+	blocks: Record<string, string>;
+	balances: Record<string, { denom: string; amount: string }[]>;
+}
 
 export interface Call {
 	url: string;
@@ -54,7 +66,7 @@ function fields(buf: Uint8Array): Map<number, Uint8Array[]> {
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
 const hexToBytes = (h: string) => Uint8Array.from(Buffer.from(h, 'hex'));
 
-type Records = typeof fixture.feeds;
+type Records = ChainFixture['feeds'];
 type Rec = Record<string, unknown>;
 
 const LISTS: Record<string, { key: keyof Records; list: string; cursor: (r: Rec) => string | number; numeric: boolean }> = {
@@ -68,9 +80,9 @@ const LISTS: Record<string, { key: keyof Records; list: string; cursor: (r: Rec)
 };
 
 /** What the fake proxy answers to one smart query. */
-function proxyAnswer(feeds: Records, q: Rec): unknown {
+function proxyAnswer(fx: ChainFixture, feeds: Records, q: Rec): unknown {
 	const [name, args] = Object.entries(q)[0] as [string, Rec];
-	if (name === 'denoms') return { denoms: fixture.denoms.map((denom) => ({ config: { denom, enabled: true, ceiling: '0', min_deposit: '0', floors: {} }, pending: null })) };
+	if (name === 'denoms') return { denoms: fx.denoms.map((denom) => ({ config: { denom, enabled: true, ceiling: '0', min_deposit: '0', floors: {} }, pending: null })) };
 	const spec = LISTS[name];
 	if (!spec) throw new Error(`unknown query ${name}`);
 	let all = (feeds[spec.key] as Rec[]).slice();
@@ -81,6 +93,10 @@ function proxyAnswer(feeds: Records, q: Rec): unknown {
 }
 
 export interface FakeOptions {
+	/** The chain to serve (default: the view-key fixture's). */
+	fx?: ChainFixture;
+	/** Source B serves this block hash at every height (a source on another chain, or a lying one). */
+	blockHashB?: string;
 	/** Source B answers this instead (a lying or lagging source). */
 	feedsB?: Records;
 	tipB?: number;
@@ -92,10 +108,11 @@ export interface FakeOptions {
 }
 
 export function fakeNetwork(opts: FakeOptions = {}) {
+	const fx: ChainFixture = opts.fx ?? (fixture as unknown as ChainFixture);
 	const calls: Call[] = [];
 	const [A, B] = CHAIN_SOURCES;
-	const tip = (i: number) => (i === 1 && opts.tipB !== undefined ? opts.tipB : fixture.height);
-	const feeds = (i: number) => (i === 1 && opts.feedsB ? opts.feedsB : fixture.feeds);
+	const tip = (i: number) => (i === 1 && opts.tipB !== undefined ? opts.tipB : fx.height);
+	const feeds = (i: number) => (i === 1 && opts.feedsB ? opts.feedsB : fx.feeds);
 	const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 	const fetchFn = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -124,13 +141,23 @@ export function fakeNetwork(opts: FakeOptions = {}) {
 		const u = new URL(url);
 		const path = u.pathname.slice(new URL((i === 0 ? A : B).rpc).pathname.replace(/\/$/, '').length);
 		if (path === '/status') {
-			return json({ jsonrpc: '2.0', id: -1, result: { node_info: { network: i === 1 && opts.networkB ? opts.networkB : fixture.deployment.chain_id }, sync_info: { latest_block_height: String(tip(i)), catching_up: false } } });
+			return json({ jsonrpc: '2.0', id: -1, result: { node_info: { network: i === 1 && opts.networkB ? opts.networkB : fx.deployment.chain_id }, sync_info: { latest_block_height: String(tip(i)), catching_up: false } } });
+		}
+		if (path === '/blockchain') {
+			const lo = Number(u.searchParams.get('minHeight'));
+			const hi = Number(u.searchParams.get('maxHeight'));
+			const metas = [];
+			for (let h = hi; h >= lo; h--) {
+				const hash = i === 1 && opts.blockHashB ? opts.blockHashB : fx.blocks[String(h)];
+				if (hash && h <= tip(i)) metas.push({ block_id: { hash, parts: { total: 1, hash: '00' } }, header: { height: String(h), chain_id: fx.deployment.chain_id } });
+			}
+			return json({ jsonrpc: '2.0', id: -1, result: { last_height: String(tip(i)), block_metas: metas } });
 		}
 		if (path === '/tx_search') {
 			const q = JSON.parse(u.searchParams.get('query')!) as string;
 			const m = /^execute\._contract_address='([a-z0-9]+)' AND tx\.height>=(\d+) AND tx\.height<=(\d+)$/.exec(q);
 			if (!m) return json({ jsonrpc: '2.0', id: -1, error: { code: -32603, message: 'Internal error', data: 'query not indexed' } });
-			const all = ((fixture.txs as Record<string, { height: string }[]>)[m[1]!] ?? []).filter((t) => Number(t.height) >= Number(m[2]) && Number(t.height) <= Number(m[3]));
+			const all = (fx.txs[m[1]!] ?? []).filter((t) => Number(t.height) >= Number(m[2]) && Number(t.height) <= Number(m[3]));
 			const per = Number(u.searchParams.get('per_page'));
 			const page = Number(u.searchParams.get('page'));
 			return json({ jsonrpc: '2.0', id: -1, result: { txs: all.slice((page - 1) * per, page * per), total_count: String(all.length) } });
@@ -143,11 +170,11 @@ export function fakeNetwork(opts: FakeOptions = {}) {
 			const address = dec.decode(req.get(1)![0]!);
 			let value: Uint8Array;
 			if (qpath === '/cosmwasm.wasm.v1.Query/SmartContractState') {
-				if (address !== fixture.deployment.proxy) return json({ jsonrpc: '2.0', id: -1, result: { response: { code: 5, log: 'no such contract' } } });
+				if (address !== fx.deployment.proxy) return json({ jsonrpc: '2.0', id: -1, result: { response: { code: 5, log: 'no such contract' } } });
 				const q = JSON.parse(dec.decode(req.get(2)![0]!));
-				value = Uint8Array.from(lenField(1, enc.encode(JSON.stringify(proxyAnswer(feeds(i), q)))));
+				value = Uint8Array.from(lenField(1, enc.encode(JSON.stringify(proxyAnswer(fx, feeds(i), q)))));
 			} else if (qpath === '/cosmos.bank.v1beta1.Query/AllBalances') {
-				const coins = (fixture.balances as Record<string, { denom: string; amount: string }[]>)[address] ?? [];
+				const coins = fx.balances[address] ?? [];
 				value = Uint8Array.from(coins.flatMap((c) => lenField(1, Uint8Array.from([...lenField(1, enc.encode(c.denom)), ...lenField(2, enc.encode(c.amount))]))));
 			} else return json({ jsonrpc: '2.0', id: -1, result: { response: { code: 6, log: 'unknown path' } } });
 			return json({ jsonrpc: '2.0', id: -1, result: { response: { code: 0, height: String(height), value: b64(value) } } });

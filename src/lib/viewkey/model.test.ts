@@ -12,7 +12,7 @@ const NONE = { verdicts: new Map(), snapshot: null, error: null, signed: false }
 function answers(over: Partial<ViewAnswers> = {}): ViewAnswers {
 	const e = fixture.expect;
 	return {
-		opened: { fingerprint: fixture.fingerprint, generations: [0], deployment: { chain_id: fixture.deployment.chain_id, proxy: fixture.deployment.proxy, id: fixture.deployment_id } },
+		opened: { kind: 'view_key', fingerprint: fixture.fingerprint, generations: [0], deployment: { chain_id: fixture.deployment.chain_id, proxy: fixture.deployment.proxy, id: fixture.deployment_id } },
 		status: e.status as ViewAnswers['status'],
 		warnings: e.warnings,
 		notes: structuredClone(e.notes) as ViewNote[],

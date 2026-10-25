@@ -7,7 +7,7 @@ import { SCREEN_BATCH, SCREEN_ENDPOINT } from './config';
 import type { FetchFn } from './chain';
 import { platformFetch } from './chain';
 
-export type Role = 'depositor' | 'payee' | 'slow_recipient' | 'queued_recipient' | 'spending_account' | 'returning_account' | 'exit_address' | 'spending_payee' | 'called_contract';
+export type Role = 'depositor' | 'payee' | 'slow_recipient' | 'queued_recipient' | 'spending_account' | 'returning_account' | 'exit_address' | 'spending_payee' | 'called_contract' | 'gift_account';
 
 export interface Reason {
 	code: string;

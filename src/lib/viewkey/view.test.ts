@@ -7,9 +7,17 @@
 import { describe, expect, it } from 'vitest';
 import { fakeNetwork, fixture } from './__fixtures__/fake-chain';
 import { inProcessViewer, wasmBytes } from './__fixtures__/harness';
-import { runView } from './controller';
+import { runView, type RunOptions } from './controller';
 import { CHAIN_SOURCES, type DeploymentConfig } from './config';
 import { ViewerCallError } from './bridge';
+import type { ViewAnswers, ViewModel } from './model';
+
+/** A view of a view-key file (the page tells the kind by the file's `version`). */
+async function runKey(o: Omit<RunOptions, 'kind'>): Promise<{ model: ViewModel; answers: ViewAnswers }> {
+	const r = await runView({ ...o, kind: 'view_key', seedStorage: null });
+	if (r.model.kind !== 'view_key') throw new Error('not a view-key view');
+	return r as { model: ViewModel; answers: ViewAnswers };
+}
 
 const DEPLOYMENTS: DeploymentConfig[] = [{ chain_id: fixture.deployment.chain_id, proxy: fixture.deployment.proxy, label: 'fixture' }];
 const FILE = fixture.file;
@@ -51,7 +59,7 @@ describe('view-key page: the view of a fixture account', () => {
 		const { bridge, toWorker } = await viewer();
 		const net = fakeNetwork({ flagged: { [C.exchange]: 'Test list entry (fixture)' } });
 		const steps: string[] = [];
-		const { model, answers } = await runView({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn, onStep: (s) => steps.push(s) });
+		const { model, answers } = await runKey({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn, onStep: (s) => steps.push(s) });
 		expect(steps).toEqual(['open', 'chain', 'payees', 'screen', 'done']);
 
 		// the production module answers what the SDK's own viewer (test module) answered for this account, but
@@ -102,6 +110,7 @@ describe('view-key page: the view of a fixture account', () => {
 		expect(model.counterparties[0]!.reasons[0]!.text).toBe('Test list entry (fixture)');
 		expect(model.counterparties.find((c) => c.address === C.bob)?.label).toEqual({ text: 'Clear', tone: 'ok' });
 		expect(model.screening).toMatchObject({ error: null, signed: true, snapshot: { version: 7 } });
+		expect(model.kind).toBe('view_key');
 
 		// the file went to the Worker once, in an `open` message, and nowhere else
 		expect(toWorker.filter((m) => m.kind === 'open').map((m) => (m as { file: string }).file)).toEqual([FILE]);
@@ -116,7 +125,7 @@ describe('view-key page: the view of a fixture account', () => {
 	it('sends nothing of the file: chain reads name the proxy, a height or a listed address; Ozone gets addresses only', async () => {
 		const { bridge } = await viewer();
 		const net = fakeNetwork();
-		const { model } = await runView({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn });
+		const { model } = await runKey({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn });
 		expect(net.calls.length).toBeGreaterThan(10);
 		const secrets = fileSecrets();
 		for (const c of net.calls) {
@@ -149,7 +158,7 @@ describe('view-key page: files it refuses (no request made)', () => {
 	async function refused(text: string, deployments = DEPLOYMENTS) {
 		const { bridge } = await viewer();
 		const net = fakeNetwork();
-		const err = await runView({ bridge, text, deployments, fetchFn: net.fetchFn }).then(
+		const err = await runKey({ bridge, text, deployments, fetchFn: net.fetchFn }).then(
 			() => null,
 			(e) => e as ViewerCallError
 		);
@@ -191,7 +200,7 @@ describe('view-key page: files it refuses (no request made)', () => {
 		const bytes = new Uint8Array(wasmBytes());
 		bytes[bytes.length - 1] ^= 1;
 		await expect(v.bridge.init(bytes.buffer)).rejects.toMatchObject({ code: 'WASM_INTEGRITY' });
-		await expect(v.bridge.open(FILE, DEPLOYMENTS)).rejects.toMatchObject({ code: 'NOT_INITIALIZED' });
+		await expect(v.bridge.open(FILE, 'view_key', DEPLOYMENTS)).rejects.toMatchObject({ code: 'NOT_INITIALIZED' });
 		v.bridge.close();
 	});
 });
@@ -202,7 +211,7 @@ describe('view-key page: the two-source check', () => {
 		const feedsB = structuredClone(fixture.feeds);
 		(feedsB.queue[0] as { recipient: string }).recipient = C.bob;
 		const net = fakeNetwork({ feedsB });
-		await expect(runView({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn })).rejects.toMatchObject({ code: 'REPLAY' });
+		await expect(runKey({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn })).rejects.toMatchObject({ code: 'REPLAY' });
 		expect(net.calls.some((c) => c.url === '/api/v1/screen')).toBe(false);
 		bridge.close();
 	});
@@ -211,7 +220,7 @@ describe('view-key page: the two-source check', () => {
 		for (const opts of [{ networkB: 'thorchain-stagenet-2' }, { tipB: fixture.height + 50 }]) {
 			const { bridge } = await viewer();
 			const net = fakeNetwork(opts);
-			await expect(runView({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn })).rejects.toMatchObject({
+			await expect(runKey({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn })).rejects.toMatchObject({
 				code: opts.networkB ? 'CHAIN_MISMATCH' : 'SOURCES_DISAGREE'
 			});
 			bridge.close();
@@ -221,7 +230,7 @@ describe('view-key page: the two-source check', () => {
 	it('shows the view without verdicts when Ozone cannot screen', async () => {
 		const { bridge } = await viewer();
 		const net = fakeNetwork({ screenDown: true });
-		const { model } = await runView({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn });
+		const { model } = await runKey({ bridge, text: FILE, deployments: DEPLOYMENTS, fetchFn: net.fetchFn });
 		expect(model.screening.error).toBe('Screening data unavailable');
 		expect(model.counterparties.every((c) => c.label.text === 'Not checked')).toBe(true);
 		expect(model.banners[0]!.title).toBe('Not a proof of funds');

@@ -65,6 +65,7 @@ export interface CounterpartyRow {
 	reasons: { text: string; source: string; risk: string; ref?: string }[];
 }
 export interface ViewModel {
+	kind: 'view_key';
 	banners: Banner[];
 	warnings: string[];
 	summary: { fingerprint: string; chain: string; proxy: string; height: number; sources: number; sourceNames: string[]; generations: number[]; nk: string };
@@ -104,7 +105,8 @@ export const ROLE_TEXT: Record<Role, string> = {
 	returning_account: 'Returned from',
 	exit_address: 'Exit address',
 	spending_payee: 'Paid from Spending',
-	called_contract: 'Called from Spending'
+	called_contract: 'Called from Spending',
+	gift_account: 'Gift from'
 };
 
 /** Amounts on THORChain carry 8 decimals for every denomination. */
@@ -305,6 +307,7 @@ export function buildModel(a: ViewAnswers, screen: ScreenResult): ViewModel {
 	else banners.push({ tone: 'warn', title: 'One source', text: 'This sync read one source only: a spend could be hidden.' });
 
 	return {
+		kind: 'view_key',
 		banners,
 		warnings: a.warnings,
 		summary: {

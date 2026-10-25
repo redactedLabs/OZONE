@@ -230,6 +230,18 @@ export class SourceReader {
 		}
 	}
 
+	/**
+	 * Errata E-68 (4): the CometBFT header hash (`block_id.hash`) of the block at `height` (`/blockchain` of that
+	 * one height: block metadata only). The page asks it for each height of the viewer's window around a cut.
+	 */
+	async blockHash(height: number): Promise<string> {
+		const res = await this.rpc('/blockchain', { minHeight: String(height), maxHeight: String(height) });
+		const meta = Array.isArray(res?.block_metas) ? res.block_metas.find((m: any) => Number(m?.header?.height) === height) : undefined;
+		const hash = String(meta?.block_id?.hash ?? '');
+		if (!/^[0-9A-Fa-f]{64}$/.test(hash)) throw new ChainError('CHAIN_UNAVAILABLE', `${this.source.name} serves no block at ${height}`);
+		return hash.toLowerCase();
+	}
+
 	/** One page of `tx_search` (CometBFT; only indexed keys: `execute._contract_address` and `tx.height` here). */
 	async txSearch(query: string, page: number): Promise<{ txs: any[]; total: number }> {
 		const res = await this.rpc('/tx_search', { query: `"${query}"`, page: String(page), per_page: '100', order_by: '"asc"' });
@@ -357,6 +369,13 @@ export class ChainPair {
 		const [a, b] = await Promise.all(this.readers.map((r) => r.balancesAt(address, h)));
 		if (JSON.stringify(a) !== JSON.stringify(b)) throw new ChainError('SOURCES_DISAGREE', `the two chain sources disagree on the balances of ${address}`);
 		return a!;
+	}
+
+	/** Errata E-68 (4): the block hash at `height` from each source (vault-core compares each with the file's). */
+	async blockHashes(height: number): Promise<string[]> {
+		const top = await this.at();
+		if (!Number.isSafeInteger(height) || height < 1 || height > top) throw new ChainError('REPLAY', `block ${height} is above the height read (${top})`);
+		return Promise.all(this.readers.map((r) => r.blockHash(height)));
 	}
 
 	/** Depositors and payees in [from, to], the same from both sources (null: too much history to read). */

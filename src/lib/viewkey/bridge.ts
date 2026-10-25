@@ -2,7 +2,7 @@
  * The page side of the viewer Worker: requests by id, and the answers to the Worker's chain reads
  * (from `EnvProvider`, i.e. the page's two RPC sources).
  */
-import type { DeploymentConfig } from './config';
+import type { DeploymentConfig, FileKind } from './config';
 import type { EnvProvider, FromWorker, Opened, ToWorker, ViewError } from './protocol';
 
 export interface Port {
@@ -65,6 +65,8 @@ export class ViewerBridge {
 			if (m.fn === 'height') reply = { result: await this.env.height() };
 			else if (m.fn === 'feedRecords') reply = { result: await this.env.feedRecords() };
 			else if (m.fn === 'balances') reply = { result: await this.env.balances(String(m.args[0])) };
+			else if (m.fn === 'blockHashes') reply = { result: await this.env.blockHashes(Number(m.args[0])) };
+			else if (m.fn === 'windowSeed') reply = { result: await this.env.windowSeed(String(m.args[0])) };
 			else throw new ViewerCallError('FORBIDDEN', 'unknown request');
 		} catch (e) {
 			const err = e as { code?: string; message?: string };
@@ -77,8 +79,8 @@ export class ViewerBridge {
 		return this.request({ kind: 'init', wasm }, [wasm]);
 	}
 
-	open(file: string, deployments: DeploymentConfig[]): Promise<Opened> {
-		return this.request({ kind: 'open', file, deployments });
+	open(file: string, kind: FileKind, deployments: DeploymentConfig[]): Promise<Opened> {
+		return this.request({ kind: 'open', file, file_kind: kind, deployments });
 	}
 
 	call<T>(method: string, ...params: unknown[]): Promise<T> {

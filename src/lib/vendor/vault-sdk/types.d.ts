@@ -9,6 +9,34 @@ export interface VaultConfig {
     address_book?: Record<string, string>;
     /** E-18: set by the vault (`Vault.fromWallet`); a phrase account when absent. */
     account?: AccountKind;
+    /**
+     * Errata E-69 (R3-E1, R4-E1): a wallet account's rescue only with the rescue wallet's own consent and the home
+     * wallet's confirmation, one entry per rescue wallet (obtained by the vault UI: "Sign with your rescue wallet",
+     * `Vault.rescueConsentMessage`; then "Confirm your rescue in your wallet", `Vault.rescueBindingMessage`).
+     */
+    rescue_consents?: RescueConsent[];
+}
+/**
+ * Errata E-69 (R3-E1, R4-E1): a rescue's consent: the rescue wallet's raw answer for `rescueConsentMessage` and the home
+ * wallet's raw answer for `rescueBindingMessage` (hex). Both are required.
+ */
+export interface RescueConsent {
+    scheme: "adr036-secp256k1" | "eip191-secp256k1";
+    /** The rescue wallet as it signed (bech32, or 0x… / the THORChain form for EIP-191). */
+    address: string;
+    /** ADR-036: the rescue wallet's compressed public key (hex); EIP-191: empty. */
+    public_key?: string;
+    /** ADR-036: 64 bytes r ‖ s (hex); EIP-191: the 65-byte personal_sign answer (hex). */
+    signature: string;
+    /** Errata E-69 (R4-E1): ADR-036 home: the home wallet's compressed public key (hex); EIP-191 home: empty. */
+    home_public_key?: string;
+    /** Errata E-69 (R4-E1): the home wallet's answer for `rescueBindingMessage` (hex, as `signature`). */
+    home_signature: string;
+    /**
+     * Errata E-69 (R4-E2): set by the vault when the rescue was removed or replaced: it only recognizes the generations
+     * already written with that rescue; a returning rescue needs both signatures again. Never set it yourself.
+     */
+    retired?: boolean;
 }
 export type ConfirmPolicy = "off" | "third_party" | "all_withdrawals";
 /** `rescue_build`: the proxy runs the exit-only rescue build (errata E-10; E-34: exits to rescue if set). */
@@ -329,6 +357,13 @@ export interface ExitPlan {
      * it before the owner picks the proof-free exit; never a block.
      */
     fast_to_rescue?: string;
+    /**
+     * Errata E-68 (3): history files of this account list notes as held that are still unspent; the exit publishes the
+     * account's owner opening, with which their holders compute those notes' nullifiers and, in Bunker-K, Bunker-P and
+     * the rescue build, can push them out to the owner's rescue or home. Moving them first (any spend) ends it. Show it
+     * before the owner exits; never a block.
+     */
+    history_warning?: string;
 }
 /** The bulk feeds a sync reads (vault-core `feed::ChainSnapshot`). */
 export interface ChainSnapshot {
@@ -578,6 +613,251 @@ export interface StdSignature {
         value: string;
     };
     signature: string;
+}
+/** Errata E-68 (3): what a history file lists; `{}` cuts at the synced height and leaves held notes' nullifiers out. */
+export interface HistoryOptions {
+    /** Errata E-68 (5): each held note's nullifier in the file (a viewer confirms them unspent at the cut; their next move becomes visible). */
+    include_held_nullifiers?: boolean;
+    /** The cut height: at most the synced height (the default). */
+    cut_height?: number;
+    /** Errata E-68 (12) M-2: accept that the live Spending accounts the file names stay linked (else retire them first). */
+    accept_account_linkage?: boolean;
+}
+/** Errata E-68 (12) L-3: an address a history file names (or links: a depositor wallet), with its role. */
+export interface NamedAddress {
+    address: string;
+    role: "action_account" | "pay_in_account" | "own_account" | "gift_account" | "exit_address" | "payee" | "depositor_wallet";
+    note: string;
+}
+/** Errata E-68 (12) L-1: the move-first path (commitments hex): merge each pair, spend each single once. */
+export interface HistoryMovePlan {
+    merges: [Hex32, Hex32][];
+    singles: Hex32[];
+    /** Mirrored records whose held list was truncated: every unspent note below the tree size at their cut counts. */
+    unknown_files: string[];
+    /**
+     * Errata E-68 (13) R2-L5: listed held notes left out because a merge would cancel the owner's own pending SLOW
+     * request on them (§6.6.3): show the request; wait for its release, or merge knowingly and file the payment again.
+     */
+    pending_slow: PendingSlowMove[];
+    /**
+     * Errata E-68 (15) R4-01: moves of listed held notes under a pending SLOW request this device did not file (E-12):
+     * each cancels that request (`note` is "cancels a request no device of yours filed"). Ask the owner whether a device
+     * of theirs filed it (if one did, skip it here); otherwise run it: merge the two `notes`, or spend the one home.
+     * Never offer to wait for such a request (its release pays whoever filed it).
+     */
+    cancelling: {
+        notes: Hex32[];
+        cancels: PendingSlowMove[];
+        note: string;
+    }[];
+}
+/** Errata E-68 (13) R2-L5: a listed held note under a pending SLOW request (`filed_here`: this device filed it). */
+export interface PendingSlowMove {
+    note: Hex32;
+    nf: Hex32;
+    recipient: string;
+    denom: string;
+    amount: Amount;
+    release: number;
+    filed_here: boolean;
+}
+/** Errata E-68 (13) R2-L3: why a listed Spending account counts as live. */
+export type LiveReason = "current_action_account" | "unknown_role" | "not_read" | "holds_coins" | "standing_order" | "open_positions" | "one_source"
+/** Errata E-68 (15) R4-02: a listed held note paid it after the cut and the file carries held nullifiers. */
+ | "paid_after_cut";
+/**
+ * Errata E-68 (13) R2-L3: a Spending account's activity as one source of the platform reads it from the chain, at or
+ * above the disclosure's synced height: bank balances, standing orders in force (the proxy's `standing_orders`), the
+ * open positions the platform tracks (orders on a book, loans, liquidity).
+ */
+export interface AccountActivity {
+    address: string;
+    height: number;
+    coins: Coin[];
+    standing_orders: number;
+    positions: number;
+}
+/** Errata E-68 (13) Info 7: the one message an acknowledgement of the history exposure covers. */
+export type HistoryAckAction = {
+    kind: "exit";
+    notes: Hex32[];
+    to: Destination;
+} | {
+    kind: "lineage_audits";
+} | {
+    kind: "veto_home";
+    nf: Hex32;
+} | {
+    kind: "redirect_home";
+    id: number;
+};
+/** Errata E-68: the cut of a history file: the height and that block's header hash (`block_id.hash`, lowercase hex). */
+export interface HistoryCut {
+    height: number;
+    block_hash: Hex32;
+}
+/** Errata E-68 (3): what the vault UI shows before a history export; `exportHistory` needs `fingerprint` back. */
+export interface HistoryDisclosure {
+    fingerprint: string;
+    cut: HistoryCut;
+    /** The chain height of the sync the disclosure read first. */
+    height: number;
+    /** 2: that sync cross-checked two sources (C5); 1: one source. */
+    sources: number;
+    /** How many sources gave the cut's block hash (2: they agreed). */
+    block_sources: number;
+    held_nullifiers: boolean;
+    counts: {
+        notes: number;
+        deposits: number;
+        returns: number;
+        gifts: number;
+        changes: number;
+        spent: number;
+        held: number;
+        pending_not_listed: number;
+        after_cut_not_listed: number;
+    };
+    /** The value the file lists as held at the cut. */
+    held: Record<string, Amount>;
+    spending_accounts: string[];
+    exit_addresses: string[];
+    /** Errata E-68 (12) L-3, M-2, M-3: every address the file names, and the depositor wallets it links. */
+    named_addresses: NamedAddress[];
+    /**
+     * Errata E-68 (12) M-2: the listed Spending accounts later actions would still use. Retire each before the file
+     * leaves (a fresh action account `act#<n+1>` whatever the once-a-day limit says, the free coins returned to the
+     * Reserve) and show the disclosure again; `exportHistory` refuses (`HISTORY_ACCOUNTS_LIVE`) otherwise, unless the
+     * options accept the linkage.
+     */
+    live_accounts: {
+        index: number;
+        address: string;
+        task: string | null;
+        why: LiveReason[];
+    }[];
+    account_linkage_accepted: boolean;
+    /** Errata E-68 (12) M-3: listed deposits whose paying wallet this device did not record. */
+    depositor_wallets_unknown: number;
+    /** Errata E-68 (12) L-7: generations with a listed SLOW spend (advise a new header generation). */
+    slow_generations: number[];
+    /** Errata E-68 (12) I-1: listed spends whose queued payout goes elsewhere now. */
+    redirected: {
+        index: number;
+        authorized: string;
+        now: string;
+    }[];
+    /** Errata E-68 (12) L-1: the owner opening is public: do not offer the held-nullifier option (it is void). */
+    held_nullifiers_void: boolean;
+    /**
+     * Errata E-68 (15) R4-02: Spending accounts a listed held note paid after the cut while the file carries held
+     * nullifiers (or the opening is public): named, and live until retired (`live_accounts`, why `paid_after_cut`).
+     */
+    paid_after_cut: string[];
+    /**
+     * Errata E-68 (15) R4-02: listed held notes spent after the cut by a spend whose payee this device cannot name (another
+     * device's): the export then needs a later cut or the linkage accepted (`HISTORY_ACCOUNTS_LIVE` otherwise).
+     */
+    paid_after_cut_unknown: number;
+    shows: string[];
+    never: string[];
+    warnings: string[];
+}
+/** Errata E-68: the exported history file (canonical JSON, one line) and its fingerprint. */
+export interface HistoryExport {
+    file: string;
+    fingerprint: string;
+}
+/** Errata E-68 (3): the record of a history export (never the file). */
+export interface HistoryExportRecord {
+    fingerprint: string;
+    cut_height: number;
+    height: number;
+    notes: number;
+    held_nullifiers: boolean;
+    spending_accounts: number;
+    exit_addresses: number;
+    /** The commitments of the notes the file lists as held. */
+    held: Hex32[];
+    /** Errata E-68 (12) L-2: a record mirrored from another device whose held list was cut short. */
+    held_truncated?: boolean;
+    /** Errata E-68 (13) Info 8: the note tree's size at the cut. */
+    leaves_at_cut: number;
+}
+/** Errata E-68 (4): one listed note with its verdict (no `rho`). */
+export interface HistoryItem {
+    index: number;
+    generation: number;
+    cm: Hex32;
+    denom: string;
+    amount: Amount;
+    height: number;
+    arrived: {
+        kind: "deposit";
+        inner: Hex32;
+    } | {
+        kind: "return";
+        account: string;
+        inner: Hex32;
+    } | {
+        kind: "gift";
+        account: string;
+        inner: Hex32;
+    } | {
+        kind: "change";
+        stmt: number;
+        parents: Hex32[];
+        out: Amount;
+    };
+    fate: {
+        kind: "held";
+        nf?: Hex32;
+    } | {
+        kind: "spent";
+        nf: Hex32;
+        height: number;
+        by: "fast1" | "fast2" | "slow1" | "exit";
+        child: number | null;
+        payee: string | null;
+        payee_is: "authorized_destination";
+    };
+    /** `stated`: an exit no published opening ties to this note (errata E-68 (4)(d)): shown, counted nowhere. */
+    verdict: "not_checked" | "verified" | "stated" | "failed";
+    /** For a spent note: what binds its nullifier (`child_opens`, `opening_published`, or `stated`). */
+    spend_check?: "child_opens" | "opening_published" | "stated";
+    /** For a held note: `not_checked` (nullifiers left out), `nullifier_unspent` (the named nullifier is unspent at the cut; that it is the note's needs nk), `nullifier_spent` (failed). */
+    held_check?: "not_checked" | "nullifier_unspent" | "nullifier_spent";
+    reasons: string[];
+}
+/** Errata E-68 (4): the last check of a history file. */
+export interface HistoryStatus {
+    cut: HistoryCut;
+    held_nullifiers: boolean;
+    checked: boolean;
+    verified: boolean;
+    failed: number;
+    /** Errata E-68 (12) M-1: exits that are the file's statement. */
+    stated: number;
+    sources: number;
+    block_sources: number;
+    snapshot_heights: number[];
+}
+/** Errata E-68 (4): totals at the cut over the verified notes. Not a proof of funds. */
+export interface HistoryTotals {
+    held: Record<string, Amount>;
+    held_nullifier_unspent: Record<string, Amount>;
+    deposited: Record<string, Amount>;
+    returned: Record<string, Amount>;
+    gifts: Record<string, Amount>;
+    left: Record<string, Amount>;
+    counted: number;
+}
+/** Errata E-68 (4): a listed address and what the check says of it. */
+export interface HistoryAccount {
+    address: string;
+    kind: "spending" | "exit";
+    check: "not_checked" | "on_chain_at_cut" | "not_on_chain_at_cut" | "stated_by_file";
 }
 /** Errata E-66 (3): what a view key names; the default (`{}`) names every written generation and both lists. */
 export interface ViewKeyOptions {

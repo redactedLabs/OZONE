@@ -1,4 +1,4 @@
-import type { AttestRootInfo, AuthorizationRecord, Call, CallFees, CloseRule, SlotEntry, ChainMode, ChainSnapshot, Coin, ConfirmPolicy, ConfirmRequest, Deployment, DepositPlan, Destination, ExecuteMsg, AccountKind, ExitPlan, FeedRecords, TransitionKeys, WalletSchemeName, WalletSignIn, WalletLevelName, PasskeyCheck, RestartReport, HeaderReport, SwitchState, SyncOptions, SyncStatus, CallPlan, SwapQuote, MyQueueItem, QueueFeedRecord, FreeInputs, Hex32, FeeTerms, FinishedDeposit, KeyKind, NodeAttestation, NoteView, Policy, ProofJob, ReviewCard, SpendKind, SpendOptions, SpendPlan, VaultConfig, WithdrawalPlan, ExitKeying, ViewKeyOptions, ViewKeyDisclosure, ViewKeyExport, ViewKeyExportRecord } from "./types.js";
+import type { AttestRootInfo, AuthorizationRecord, Call, CallFees, CloseRule, SlotEntry, ChainMode, ChainSnapshot, Coin, ConfirmPolicy, ConfirmRequest, Deployment, DepositPlan, Destination, ExecuteMsg, AccountKind, ExitPlan, FeedRecords, TransitionKeys, WalletSchemeName, WalletSignIn, WalletLevelName, PasskeyCheck, RestartReport, HeaderReport, SwitchState, SyncOptions, SyncStatus, CallPlan, SwapQuote, MyQueueItem, QueueFeedRecord, FreeInputs, Hex32, FeeTerms, FinishedDeposit, KeyKind, NodeAttestation, NoteView, Policy, ProofJob, ReviewCard, SpendKind, SpendOptions, SpendPlan, VaultConfig, WithdrawalPlan, ExitKeying, ViewKeyOptions, ViewKeyDisclosure, ViewKeyExport, ViewKeyExportRecord, HistoryOptions, HistoryDisclosure, HistoryExport, HistoryExportRecord, HistoryMovePlan, HistoryAckAction, AccountActivity, RescueConsent } from "./types.js";
 /** The wasm-bindgen module (generated `wasm/vault_core.js`). */
 export interface WasmModule {
     initSync(arg: {
@@ -21,6 +21,9 @@ export interface WasmModule {
     exitTiming(now: bigint, maxExpiryDelta: bigint, sendNow: boolean): string;
     registeredCount(attestRootJson: string, attestationExpiry: bigint, now: bigint): number;
     walletMessage(scheme: string, origin: string, deploymentJson: string, address: string): string;
+    walletHome(scheme: string, deploymentJson: string, address: string): string;
+    rescueConsentMessage(deploymentJson: string, accountHex: string, scheme: string, rescue: string): string;
+    rescueBindingMessage(deploymentJson: string, accountHex: string, homeScheme: string, home: string, rescue: string): string;
     walletSignDoc(address: string, message: string): Uint8Array;
     transitionWalletKeys(kDeploymentJson: string, signInJson: string): string;
     walletPasskeySalt(deploymentJson: string, signInJson: string): string;
@@ -35,6 +38,8 @@ export interface WasmModule {
     mockProve(job: string): Uint8Array;
     /** Errata E-66 (4): a view-only session from a view-key file and a deployment (JSON). */
     openViewKey(file: string, deploymentJson: string): any;
+    /** Errata E-68 (4): a read-only history session from a history file and a deployment (JSON). */
+    openHistory(file: string, deploymentJson: string): any;
     /** Test builds only (`wasm-test/`): every secret of an account a test chose (hex list). */
     viewKeySecretsForTests?(sHex: string, dHex: string, deploymentJson: string): string;
     WasmVault: any;
@@ -47,6 +52,26 @@ export declare class VaultError extends Error {
     constructor(code: string, message: string);
 }
 export declare function asVaultError(e: unknown): VaultError;
+/** Errata E-66 (1), E-68 (1): the largest view-key and history texts the parsers read (the SDK refuses longer ones before the module copies them, E-68 (12) I-2). */
+export declare const VIEW_KEY_MAX_BYTES: number;
+export declare const HISTORY_MAX_BYTES: number;
+/**
+ * Errata E-68 (13) R2-I2: whether `text` is longer than `max` bytes of UTF-8, counted without copying (a JS string
+ * counts UTF-16 code units: up to three bytes each). Stops counting once past `max`.
+ */
+export declare function utf8Over(text: string, max: number): boolean;
+/**
+ * Errata E-68 (13) R2-L6: the platform's default history cut lies this many blocks below the tip it read (vault-core's
+ * `HISTORY_CUT_MARGIN`), so the block-hash window never has the cut as its top and never reaches above the tip.
+ */
+export declare const HISTORY_CUT_MARGIN = 24;
+/**
+ * Errata E-68 (12) L-4, (13) R2-L6, (14) R3-J3: the header hash of the block at `cut` from each source `read` asks, read
+ * inside the window `[lo, hi]` of 8 to 24 consecutive heights fixed by a seed (the vault's `historyWindow`, from its own
+ * key; a viewer's random seed of its own per file), asked in random order: asking again asks the same heights, so
+ * repeats do not narrow it, and the cut is not its top. Residual: the window contains the cut.
+ */
+export declare function cutBlockHashes(read: (height: number) => Promise<string[]>, cut: number, window: [number, number]): Promise<string[]>;
 export interface InitOptions {
     /**
      * The expected SHA-256 of `wasm` as 64 hex characters; default: the pinned production module
@@ -117,6 +142,22 @@ export declare const util: {
      */
     walletMessage: (scheme: WalletSchemeName, origin: string, deployment: Deployment, address: string) => string;
     /**
+     * Errata E-69: a wallet account's home, the wallet's own THORChain address (ADR-036 the signer's address,
+     * EIP-191 the THORChain form of the same 20 bytes; `address` may be 0x… or that form). The settings of
+     * `Vault.fromWallet` carry it as `home`; any other home is refused (`WALLET_HOME`). A rescue can be another wallet.
+     */
+    walletHome: (scheme: WalletSchemeName, deployment: Deployment, address: string) => string;
+    /**
+     * Errata E-69 (R3-E1): the text a rescue wallet signs to become the rescue of the wallet account with fingerprint
+     * `account` (hex) on `deployment` ("Sign with your rescue wallet"; `scheme` the rescue wallet's).
+     */
+    rescueConsentMessage: (deployment: Deployment, account: Hex32, scheme: "adr036-secp256k1" | "eip191-secp256k1", rescue: string) => string;
+    /**
+     * Errata E-69 (R4-E1): the text the HOME wallet (`homeScheme`, `home`) of the wallet account with fingerprint
+     * `account` signs to confirm `rescue` ("Confirm your rescue in your wallet": its signing window shows the rescue).
+     */
+    rescueBindingMessage: (deployment: Deployment, account: Hex32, homeScheme: "adr036-secp256k1" | "eip191-secp256k1", home: string, rescue: string) => string;
+    /**
      * E-18a: a Transition (K contract) wallet account's K-path keys and fingerprint, from the wallet's answer(s)
      * for `walletMessage("transition-…", origin, kDeployment, address)`. `S_w` stays in WebAssembly.
      */
@@ -169,7 +210,9 @@ export declare class Vault {
      * as Vultisig sign differently each time and need the phrase account), later once with the
      * `fingerprint` kept from `walletFingerprint()` (a mismatch is `NOT_DETERMINISTIC`: ask again). Low S, the
      * key's address is the wallet's (`SIGNATURE` otherwise). Two-Key off by default. The phrase account stays
-     * the recommended default; say plainly that this account is only as safe as the wallet's key.
+     * the recommended default; say plainly that this account is only as safe as the wallet's key. Errata E-69:
+     * `config.home` is the wallet itself (`util.walletHome`), any other home is refused (`WALLET_HOME`); the
+     * rescue can be another wallet.
      */
     static fromWallet(p: WalletSignIn & {
         deployment: Deployment;
@@ -197,6 +240,7 @@ export declare class Vault {
         vault: Vault;
         steps: unknown[];
         view_key_warning?: string;
+        history_warning?: string;
     };
     /** E-18b "bring everything home", the notes (one FAST withdrawal home each; prove, release, relay). */
     planHomeWithdrawals(dep: string, denom: string | null, opts: SpendOptions): {
@@ -230,6 +274,7 @@ export declare class Vault {
         vault: Vault;
         steps: unknown[];
         view_key_warning?: string;
+        history_warning?: string;
     };
     phrase(): string;
     phraseChallenge(): number[];
@@ -352,6 +397,11 @@ export declare class Vault {
      * the other generations pay home or rescue only, spec §3.6).
      */
     selectInputs(dep: string, denom: string, amount: string, deviceOnly?: boolean): string[];
+    /**
+     * Errata E-68 (13) R2-L4: the inputs of a funding of a Spending account (`selectInputs` with `deviceOnly`), skipping
+     * the notes a history file's holder can follow (merge those first, `historyMovePlan`).
+     */
+    selectFundingInputs(dep: string, denom: string, amount: string): string[];
     prepareSpend(dep: string, inputs: string[], amount: string, kind: SpendKind, opts: SpendOptions): SpendPlan;
     /** The proof job with the witness: only for the vault's prover Worker. */
     proofJob(actionId: number): ProofJob;
@@ -474,6 +524,32 @@ export declare class Vault {
     /** The records of the view keys exported for this account. */
     viewKeyExports(dep: string): ViewKeyExportRecord[];
     /**
+     * What a history file with `options` lists and shows, what its holder can never do, the warnings, and its
+     * fingerprint. It reads the chain first: `a` and `b` two independent sources at one height (C5; `b` null: one
+     * source), `opts.min_height` the tip the platform read itself (required), `blockHashes` the header hash of the block
+     * at the cut height from each source the platform read it from (one or two, hex).
+     */
+    historyDisclosure(dep: string, options: HistoryOptions, a: ChainSnapshot | string, b: ChainSnapshot | string | null, opts: SyncOptions, blockHashes: string[], activity?: AccountActivity[]): HistoryDisclosure;
+    /** Errata E-68 (13) R2-L6: the heights `[lo, hi]` whose header hashes the platform reads for a history cut at `cut`. */
+    historyWindow(dep: string, cut: number): [number, number];
+    /** The history file of the last disclosure, only with its fingerprint and while no sync happened since (`CONFIRMATION_REQUIRED`). */
+    exportHistory(dep: string, fingerprint: string): HistoryExport;
+    /** The records of the history files exported for this account. */
+    historyExports(dep: string): HistoryExportRecord[];
+    /** Errata E-68 (12) L-1: the history files out whose held notes are unspent, and those notes. */
+    historyNotesUnspent(dep: string): {
+        files: string[];
+        notes: Hex32[];
+    };
+    /** Errata E-68 (12) L-1: the move-first path (merge each pair, spend each single once). */
+    historyMovePlan(dep: string): HistoryMovePlan;
+    /**
+     * Errata E-68 (12) L-1, (13) Info 7: acknowledge the exposure for the one message `action` names (an exit of these
+     * notes to this destination, the lineage audits, a veto home of this request, a redirect home of this queue item); a
+     * build that fails keeps it.
+     */
+    acknowledgeHistoryExposure(dep: string, action: HistoryAckAction): Hex32[];
+    /**
      * E-12: start a phrase rotation; returns the new vault and the steps (veto, new header, moves, sweeps).
      * `view_key_warning` (errata E-66 (5)(b), (8), view-key audit run-1 M4): set when a view key of this account was
      * given out: its holder will see where the moved value lands. Show it before the move.
@@ -482,6 +558,7 @@ export declare class Vault {
         vault: Vault;
         steps: unknown[];
         view_key_warning?: string;
+        history_warning?: string;
     };
     rotationMoveNote(newVault: Vault, dep: string, handle: string, opts: SpendOptions): {
         plan: SpendPlan;
@@ -540,6 +617,31 @@ export declare class Vault {
         token: string;
         blob: string;
     };
+    /** Errata E-68 (13) R2-L2: the id of this account's state blob (`GET /blob/{id}`). */
+    stateBlobId(dep: string): Hex32;
+    /**
+     * Errata E-68 (13) R2-L2: apply a state blob another device wrote (raw bytes; only ever adds: counters, the address
+     * book, the published-opening mark, history export records). `REPLAY` below the version floor. Returns its version.
+     */
+    applyStateBlob(dep: string, blob: Uint8Array): number;
+    /** Errata E-68 (13) R2-L2: the version floor (write floor + 1). */
+    stateBlobFloor(dep: string): number;
+    /** Errata E-68 (13) R2-L2: a node took the blob of `version`: the floor rises to it. */
+    stateBlobWritten(dep: string, version: number): void;
+    /**
+     * Errata E-69 (R3-E1): the text the rescue wallet signs to become this wallet account's rescue ("Sign with your
+     * rescue wallet"); `scheme` is the rescue wallet's.
+     */
+    rescueConsentMessage(dep: string, scheme: "adr036-secp256k1" | "eip191-secp256k1", rescue: string): string;
+    /**
+     * Errata E-69 (R4-E1): the text this account's own (home) wallet signs to confirm `rescue` ("Confirm your rescue in
+     * your wallet": the rescue address shows in its signing window).
+     */
+    rescueBindingMessage(dep: string, rescue: string): string;
+    /**
+     * Errata E-69 (R3-E1, R4-E1): keep the rescue's consent (both answers, verified now); then set the rescue as usual.
+     */
+    setRescueConsent(consent: RescueConsent): void;
     /** Lock: every secret is dropped; afterwards every call answers `LOCKED`. */
     lock(): void;
 }

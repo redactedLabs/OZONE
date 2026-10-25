@@ -1,16 +1,16 @@
 /**
- * The Worker side of the viewer: vault-core's view-only session (`ViewerService`, errata E-66 (4))
- * behind `dispatchViewer`, which serves `VIEWER_METHODS` only (reads). It verifies the client module
+ * The Worker side of the viewer: vault-core's view-only session (`ViewerService`, errata E-66 (4)) and
+ * history session (errata E-68 (4)) behind `dispatchViewer`, which serves `VIEWER_METHODS` only (reads). It verifies the client module
  * against its pinned SHA-256 before running it (E-30, `initCore`), picks the deployment the file names,
  * and asks the page for every chain read (it has no network). Nothing here logs or stores anything.
  */
 import { initCore, util, VaultError, asVaultError } from '$lib/vendor/vault-sdk/core.js';
 import { ViewerService, dispatchViewer } from '$lib/vendor/vault-sdk/viewer.js';
 import * as glue from '$lib/vendor/vault-sdk/wasm/vault_core.js';
-import type { DeploymentConfig } from './config';
+import type { DeploymentConfig, FileKind } from './config';
 import { fileDeploymentId } from './file';
 import type { FeedRecords } from './chain';
-import type { FromWorker, Opened, ToWorker, ViewError } from './protocol';
+import type { EnvFn, FromWorker, Opened, ToWorker, ViewError } from './protocol';
 
 type Post = (m: FromWorker) => void;
 
@@ -25,17 +25,18 @@ export function createHost(post: Post): (msg: ToWorker) => Promise<void> {
 	let seq = 0;
 	const waiting = new Map<number, { resolve: (v: unknown) => void; reject: (e: unknown) => void }>();
 
-	const ask = <T>(fn: 'height' | 'feedRecords' | 'balances', args: unknown[] = []): Promise<T> =>
+	const ask = <T>(fn: EnvFn, args: unknown[] = []): Promise<T> =>
 		new Promise<T>((resolve, reject) => {
 			const id = ++seq;
 			waiting.set(id, { resolve: resolve as (v: unknown) => void, reject });
 			post({ kind: 'env', id, fn, args });
 		});
 
-	function open(file: string, configs: DeploymentConfig[]): Opened {
+	function open(file: string, kind: FileKind, configs: DeploymentConfig[]): Opened {
 		if (!ready) throw new VaultError('NOT_INITIALIZED', 'the client module is not loaded');
+		const invalid = kind === 'history' ? 'HISTORY_INVALID' : 'VIEW_KEY_INVALID';
 		const id = fileDeploymentId(file);
-		if (!id) throw new VaultError('VIEW_KEY_INVALID', 'not a view-key file: one line of JSON naming its deployment');
+		if (!id) throw new VaultError(invalid, 'not a view-key or history file: one line of JSON naming its deployment');
 		for (const c of configs) {
 			let d;
 			try {
@@ -54,10 +55,18 @@ export function createHost(post: Post): (msg: ToWorker) => Promise<void> {
 					return [util.snapshotFromFeeds(a as never), util.snapshotFromFeeds(b as never)];
 				},
 				height: () => ask<number>('height'),
-				l1Account: async (address: string) => ({ accountNumber: 0, sequence: 0, balances: await ask<{ denom: string; amount: string }[]>('balances', [address]) })
+				l1Account: async (address: string) => ({ accountNumber: 0, sequence: 0, balances: await ask<{ denom: string; amount: string }[]>('balances', [address]) }),
+				// errata E-68 (4): the cut's block from each source; (15) R4-J1: the page's own seed for this file
+				blockHashes: (height: number) => ask<string[]>('blockHashes', [height]),
+				windowSeed: (fingerprint: string) => ask<string>('windowSeed', [fingerprint])
 			});
+			const deployment = { chain_id: c.chain_id, proxy: d.proxy, id: d.id, ...(c.label ? { label: c.label } : {}) };
+			if (kind === 'history') {
+				const o = svc.openHistory(file);
+				return { kind, fingerprint: o.fingerprint, generations: [], cut: o.cut, held_nullifiers: o.held_nullifiers, deployment };
+			}
 			const o = svc.open(file);
-			return { fingerprint: o.fingerprint, generations: o.generations, deployment: { chain_id: c.chain_id, proxy: d.proxy, id: d.id, ...(c.label ? { label: c.label } : {}) } };
+			return { kind, fingerprint: o.fingerprint, generations: o.generations, deployment };
 		}
 		throw new VaultError('UNKNOWN_DEPLOYMENT', 'this view key is for a deployment Ozone does not read');
 	}
@@ -85,7 +94,7 @@ export function createHost(post: Post): (msg: ToWorker) => Promise<void> {
 			}
 			case 'open': {
 				try {
-					post({ kind: 'result', id: msg.id, result: open(msg.file, msg.deployments) });
+					post({ kind: 'result', id: msg.id, result: open(msg.file, msg.file_kind, msg.deployments) });
 				} catch (e) {
 					svc?.close();
 					svc = null;
@@ -98,8 +107,8 @@ export function createHost(post: Post): (msg: ToWorker) => Promise<void> {
 					post({ kind: 'result', id: msg.id, error: { code: 'LOCKED', message: 'open a view-key file first' } });
 					return;
 				}
-				// `open` goes through the message above (it picks the deployment); every other read through dispatchViewer
-				if (msg.method === 'open') {
+				// opening goes through the message above (it picks the deployment); every other read through dispatchViewer
+				if (msg.method === 'open' || msg.method === 'openHistory') {
 					post({ kind: 'result', id: msg.id, error: { code: 'FORBIDDEN', message: 'open is a message of its own' } });
 					return;
 				}

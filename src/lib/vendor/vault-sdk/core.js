@@ -25,6 +25,73 @@ export function asVaultError(e) {
         return new VaultError("LOCKED", "this vault handle is locked or was handed over");
     return new VaultError("UNKNOWN", msg);
 }
+/** Errata E-66 (1), E-68 (1): the largest view-key and history texts the parsers read (the SDK refuses longer ones before the module copies them, E-68 (12) I-2). */
+export const VIEW_KEY_MAX_BYTES = 1 << 20;
+export const HISTORY_MAX_BYTES = 16 << 20;
+/**
+ * Errata E-68 (13) R2-I2: whether `text` is longer than `max` bytes of UTF-8, counted without copying (a JS string
+ * counts UTF-16 code units: up to three bytes each). Stops counting once past `max`.
+ */
+export function utf8Over(text, max) {
+    if (text.length > max)
+        return true;
+    if (text.length * 3 <= max)
+        return false;
+    let n = 0;
+    for (let i = 0; i < text.length; i++) {
+        const c = text.charCodeAt(i);
+        if (c < 0x80)
+            n += 1;
+        else if (c < 0x800)
+            n += 2;
+        else if (c >= 0xd800 && c <= 0xdbff && i + 1 < text.length && (text.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+            n += 4;
+            i++;
+        }
+        else
+            n += 3;
+        if (n > max)
+            return true;
+    }
+    return false;
+}
+/**
+ * Errata E-68 (13) R2-L6: the platform's default history cut lies this many blocks below the tip it read (vault-core's
+ * `HISTORY_CUT_MARGIN`), so the block-hash window never has the cut as its top and never reaches above the tip.
+ */
+export const HISTORY_CUT_MARGIN = 24;
+function randomBelow32(n) {
+    const r = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(r);
+    return r[0] % n;
+}
+/**
+ * Errata E-68 (12) L-4, (13) R2-L6, (14) R3-J3: the header hash of the block at `cut` from each source `read` asks, read
+ * inside the window `[lo, hi]` of 8 to 24 consecutive heights fixed by a seed (the vault's `historyWindow`, from its own
+ * key; a viewer's random seed of its own per file), asked in random order: asking again asks the same heights, so
+ * repeats do not narrow it, and the cut is not its top. Residual: the window contains the cut.
+ */
+export async function cutBlockHashes(read, cut, window) {
+    const [lo, hi] = window;
+    if (!(lo <= cut && cut <= hi && hi - lo < 24))
+        throw new VaultError("INVALID_INPUT", "the block window must contain the cut");
+    const heights = [];
+    for (let h = lo; h <= hi; h++)
+        heights.push(h);
+    for (let i = heights.length - 1; i > 0; i--) {
+        const j = randomBelow32(i + 1);
+        [heights[i], heights[j]] = [heights[j], heights[i]];
+    }
+    let mine = null;
+    for (const h of heights) {
+        const x = await read(h);
+        if (h === cut)
+            mine = x;
+    }
+    if (!mine || mine.length < 1 || mine.length > 2)
+        throw new VaultError("INVALID_INPUT", "the block hash at the cut from one or two sources");
+    return mine.map((x) => x.toLowerCase());
+}
 /** What a `Vault` holds after `lock()`: every call answers `LOCKED`. */
 const LOCKED_HANDLE = new Proxy({}, {
     get: () => () => {
@@ -134,6 +201,22 @@ export const util = {
      */
     walletMessage: (scheme, origin, deployment, address) => call(() => core().walletMessage(scheme, origin, JSON.stringify(deployment), address)),
     /**
+     * Errata E-69: a wallet account's home, the wallet's own THORChain address (ADR-036 the signer's address,
+     * EIP-191 the THORChain form of the same 20 bytes; `address` may be 0x… or that form). The settings of
+     * `Vault.fromWallet` carry it as `home`; any other home is refused (`WALLET_HOME`). A rescue can be another wallet.
+     */
+    walletHome: (scheme, deployment, address) => call(() => core().walletHome(scheme, JSON.stringify(deployment), address)),
+    /**
+     * Errata E-69 (R3-E1): the text a rescue wallet signs to become the rescue of the wallet account with fingerprint
+     * `account` (hex) on `deployment` ("Sign with your rescue wallet"; `scheme` the rescue wallet's).
+     */
+    rescueConsentMessage: (deployment, account, scheme, rescue) => call(() => core().rescueConsentMessage(JSON.stringify(deployment), account, scheme, rescue)),
+    /**
+     * Errata E-69 (R4-E1): the text the HOME wallet (`homeScheme`, `home`) of the wallet account with fingerprint
+     * `account` signs to confirm `rescue` ("Confirm your rescue in your wallet": its signing window shows the rescue).
+     */
+    rescueBindingMessage: (deployment, account, homeScheme, home, rescue) => call(() => core().rescueBindingMessage(JSON.stringify(deployment), account, homeScheme, home, rescue)),
+    /**
      * E-18a: a Transition (K contract) wallet account's K-path keys and fingerprint, from the wallet's answer(s)
      * for `walletMessage("transition-…", origin, kDeployment, address)`. `S_w` stays in WebAssembly.
      */
@@ -194,7 +277,9 @@ export class Vault {
      * as Vultisig sign differently each time and need the phrase account), later once with the
      * `fingerprint` kept from `walletFingerprint()` (a mismatch is `NOT_DETERMINISTIC`: ask again). Low S, the
      * key's address is the wallet's (`SIGNATURE` otherwise). Two-Key off by default. The phrase account stays
-     * the recommended default; say plainly that this account is only as safe as the wallet's key.
+     * the recommended default; say plainly that this account is only as safe as the wallet's key. Errata E-69:
+     * `config.home` is the wallet itself (`util.walletHome`), any other home is refused (`WALLET_HOME`); the
+     * rescue can be another wallet.
      */
     static fromWallet(p) {
         const prf = p.passkeyPrf === undefined ? undefined : typeof p.passkeyPrf === "string" ? p.passkeyPrf : toHex(p.passkeyPrf);
@@ -225,7 +310,8 @@ export class Vault {
         const h = call(() => this.w.beginUpgradeToPasskey(dep, prf));
         const steps = JSON.parse(h.steps());
         const warning = h.viewKeyWarning?.() ?? undefined;
-        return { vault: new Vault(call(() => h.takeNewVault())), steps, ...(warning ? { view_key_warning: warning } : {}) };
+        const history = h.historyWarning?.() ?? undefined;
+        return { vault: new Vault(call(() => h.takeNewVault())), steps, ...(warning ? { view_key_warning: warning } : {}), ...(history ? { history_warning: history } : {}) };
     }
     /** E-18b "bring everything home", the notes (one FAST withdrawal home each; prove, release, relay). */
     planHomeWithdrawals(dep, denom, opts) {
@@ -262,7 +348,8 @@ export class Vault {
         const h = call(() => this.w.beginUpgradeToPhrase(dep));
         const steps = JSON.parse(h.steps());
         const warning = h.viewKeyWarning?.() ?? undefined;
-        return { vault: new Vault(call(() => h.takeNewVault())), steps, ...(warning ? { view_key_warning: warning } : {}) };
+        const history = h.historyWarning?.() ?? undefined;
+        return { vault: new Vault(call(() => h.takeNewVault())), steps, ...(warning ? { view_key_warning: warning } : {}), ...(history ? { history_warning: history } : {}) };
     }
     // ---- secrets out (vault UI only)
     phrase() {
@@ -438,6 +525,13 @@ export class Vault {
      */
     selectInputs(dep, denom, amount, deviceOnly = false) {
         return JSON.parse(call(() => this.w.selectInputs(dep, denom, amount, deviceOnly)));
+    }
+    /**
+     * Errata E-68 (13) R2-L4: the inputs of a funding of a Spending account (`selectInputs` with `deviceOnly`), skipping
+     * the notes a history file's holder can follow (merge those first, `historyMovePlan`).
+     */
+    selectFundingInputs(dep, denom, amount) {
+        return JSON.parse(call(() => this.w.selectFundingInputs(dep, denom, amount)));
     }
     prepareSpend(dep, inputs, amount, kind, opts) {
         return JSON.parse(call(() => this.w.prepareSpend(dep, JSON.stringify(inputs), amount, JSON.stringify(kind), JSON.stringify(opts))));
@@ -638,6 +732,49 @@ export class Vault {
     viewKeyExports(dep) {
         return JSON.parse(call(() => this.w.viewKeyExports(dep)));
     }
+    // ---- history files (errata E-68): the vault UI channel only
+    /**
+     * What a history file with `options` lists and shows, what its holder can never do, the warnings, and its
+     * fingerprint. It reads the chain first: `a` and `b` two independent sources at one height (C5; `b` null: one
+     * source), `opts.min_height` the tip the platform read itself (required), `blockHashes` the header hash of the block
+     * at the cut height from each source the platform read it from (one or two, hex).
+     */
+    historyDisclosure(dep, options, a, b, opts, blockHashes, activity = []) {
+        const sa = typeof a === "string" ? a : JSON.stringify(a);
+        const sb = b === null ? undefined : typeof b === "string" ? b : JSON.stringify(b);
+        const hashes = JSON.stringify(blockHashes.map((h) => h.toLowerCase()));
+        return JSON.parse(call(() => this.w.historyDisclosure(dep, JSON.stringify(options), sa, sb, syncOptionsJson(opts), hashes, JSON.stringify(activity))));
+    }
+    /** Errata E-68 (13) R2-L6: the heights `[lo, hi]` whose header hashes the platform reads for a history cut at `cut`. */
+    historyWindow(dep, cut) {
+        const [lo, hi] = JSON.parse(call(() => this.w.historyWindow(dep, big(cut))));
+        return [Number(lo), Number(hi)];
+    }
+    /** The history file of the last disclosure, only with its fingerprint and while no sync happened since (`CONFIRMATION_REQUIRED`). */
+    exportHistory(dep, fingerprint) {
+        return JSON.parse(call(() => this.w.exportHistory(dep, fingerprint)));
+    }
+    /** The records of the history files exported for this account. */
+    historyExports(dep) {
+        return JSON.parse(call(() => this.w.historyExports(dep)));
+    }
+    /** Errata E-68 (12) L-1: the history files out whose held notes are unspent, and those notes. */
+    historyNotesUnspent(dep) {
+        const [files, notes] = JSON.parse(call(() => this.w.historyNotesUnspent(dep)));
+        return { files, notes };
+    }
+    /** Errata E-68 (12) L-1: the move-first path (merge each pair, spend each single once). */
+    historyMovePlan(dep) {
+        return JSON.parse(call(() => this.w.historyMovePlan(dep)));
+    }
+    /**
+     * Errata E-68 (12) L-1, (13) Info 7: acknowledge the exposure for the one message `action` names (an exit of these
+     * notes to this destination, the lineage audits, a veto home of this request, a redirect home of this queue item); a
+     * build that fails keeps it.
+     */
+    acknowledgeHistoryExposure(dep, action) {
+        return JSON.parse(call(() => this.w.acknowledgeHistoryExposure(dep, JSON.stringify(action))));
+    }
     /**
      * E-12: start a phrase rotation; returns the new vault and the steps (veto, new header, moves, sweeps).
      * `view_key_warning` (errata E-66 (5)(b), (8), view-key audit run-1 M4): set when a view key of this account was
@@ -647,7 +784,8 @@ export class Vault {
         const h = call(() => this.w.beginPhraseRotation(dep));
         const steps = JSON.parse(h.steps());
         const warning = h.viewKeyWarning?.() ?? undefined;
-        return { vault: new Vault(call(() => h.takeNewVault())), steps, ...(warning ? { view_key_warning: warning } : {}) };
+        const history = h.historyWarning?.() ?? undefined;
+        return { vault: new Vault(call(() => h.takeNewVault())), steps, ...(warning ? { view_key_warning: warning } : {}), ...(history ? { history_warning: history } : {}) };
     }
     rotationMoveNote(newVault, dep, handle, opts) {
         return JSON.parse(call(() => this.w.rotationMoveNote(newVault.w, dep, handle, JSON.stringify(opts))));
@@ -710,6 +848,45 @@ export class Vault {
     }
     stateBlob(dep, version) {
         return JSON.parse(call(() => this.w.stateBlob(dep, big(version))));
+    }
+    /** Errata E-68 (13) R2-L2: the id of this account's state blob (`GET /blob/{id}`). */
+    stateBlobId(dep) {
+        return call(() => this.w.stateBlobId(dep));
+    }
+    /**
+     * Errata E-68 (13) R2-L2: apply a state blob another device wrote (raw bytes; only ever adds: counters, the address
+     * book, the published-opening mark, history export records). `REPLAY` below the version floor. Returns its version.
+     */
+    applyStateBlob(dep, blob) {
+        return Number(call(() => this.w.applyStateBlob(dep, blob)));
+    }
+    /** Errata E-68 (13) R2-L2: the version floor (write floor + 1). */
+    stateBlobFloor(dep) {
+        return Number(call(() => this.w.stateBlobFloor(dep)));
+    }
+    /** Errata E-68 (13) R2-L2: a node took the blob of `version`: the floor rises to it. */
+    stateBlobWritten(dep, version) {
+        call(() => this.w.stateBlobWritten(dep, big(version)));
+    }
+    /**
+     * Errata E-69 (R3-E1): the text the rescue wallet signs to become this wallet account's rescue ("Sign with your
+     * rescue wallet"); `scheme` is the rescue wallet's.
+     */
+    rescueConsentMessage(dep, scheme, rescue) {
+        return call(() => this.w.rescueConsentMessage(dep, scheme, rescue));
+    }
+    /**
+     * Errata E-69 (R4-E1): the text this account's own (home) wallet signs to confirm `rescue` ("Confirm your rescue in
+     * your wallet": the rescue address shows in its signing window).
+     */
+    rescueBindingMessage(dep, rescue) {
+        return call(() => this.w.rescueBindingMessage(dep, rescue));
+    }
+    /**
+     * Errata E-69 (R3-E1, R4-E1): keep the rescue's consent (both answers, verified now); then set the rescue as usual.
+     */
+    setRescueConsent(consent) {
+        call(() => this.w.setRescueConsent(JSON.stringify(consent)));
     }
     /** Lock: every secret is dropped; afterwards every call answers `LOCKED`. */
     lock() {
