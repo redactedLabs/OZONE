@@ -1,6 +1,6 @@
 /**
- * The vendored client (src/lib/vendor/vault-sdk, from a clean `git archive` export of hops client-next
- * a948a92): the files are the ones SHA256SUMS names, the module is the pinned fe3ca597…, the glue ships no
+ * The vendored client (src/lib/vendor/vault-sdk, from a clean `git archive` export of hops integration
+ * feaa13b): the files are the ones SHA256SUMS names, the module is the pinned 234db908…, the glue ships no
  * test helper; and the page's own code has no network in the Worker, logs nothing, and stores only the
  * history files' window seeds (seed.ts).
  */
@@ -25,9 +25,9 @@ describe('vendored client module', () => {
 		}
 	});
 
-	it('the module is the pinned client fe3ca597…, 4,204,487 bytes', () => {
-		expect(CORE_WASM_SHA256).toBe('fe3ca5978af33ca9c33200c0d19c72ecbdc43e1f80f59b79d2cb7d8a9e61ad82');
-		expect(CORE_WASM_BYTES).toBe(4204487);
+	it('the module is the pinned client 234db908…, 4,205,357 bytes', () => {
+		expect(CORE_WASM_SHA256).toBe('234db9087c9fbe414ee57d53f96a2fc6ff7f9510de0768d40884e369b80da1bd');
+		expect(CORE_WASM_BYTES).toBe(4205357);
 		expect(sha(VENDOR + 'wasm/vault_core_bg.wasm')).toBe(CORE_WASM_SHA256);
 	});
 

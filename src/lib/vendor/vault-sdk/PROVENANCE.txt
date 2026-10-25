@@ -1,12 +1,14 @@
 Redacted vault SDK, the viewer part (errata E-66 (4) view keys, E-68 (4) history files), for the /view page.
 
-Source   hops, branch client-next, commit a948a92c39d8f29899eba631f8c6f6b64f75fa91 (release candidate)
-Export   git archive --format=tar a948a92 | tar -x   (a clean export, no working tree)
+Source   hops, branch integration, commit feaa13b58e0751d178c824a0f2ed22b64f40c9a3 (client-next 428f4ae merged:
+         errata E-68 and E-69, the final client)
+Export   git archive --format=tar feaa13b | tar -x   (a clean export, no working tree)
 Build    packages/vault-sdk/scripts/build-wasm.sh, production module only (feature `wasm`,
          rust 1.95.0, wasm-bindgen 0.2.128, wasm-opt 132, host paths remapped), then `tsc -p tsconfig.json`
-Result   wasm/vault_core_bg.wasm  sha256 fe3ca5978af33ca9c33200c0d19c72ecbdc43e1f80f59b79d2cb7d8a9e61ad82
-         (4,204,487 bytes) = CORE_WASM_SHA256 pinned in checksums.js; initCore refuses other bytes (E-30).
-         The four wasm artifacts are byte-identical to the build in the client-next worktree.
+Result   wasm/vault_core_bg.wasm  sha256 234db9087c9fbe414ee57d53f96a2fc6ff7f9510de0768d40884e369b80da1bd
+         (4,205,357 bytes) = CORE_WASM_SHA256 pinned in checksums.js; initCore refuses other bytes (E-30).
+         The bindings (vault_core.js and the .d.ts files) are byte-identical to client-next a948a92's;
+         the viewer API is unchanged since a948a92.
 
 Files    dist/{viewer,core,checksums,sha256,types}.{js,d.ts} and wasm/{vault_core.js,vault_core.d.ts,
          vault_core_bg.wasm,vault_core_bg.wasm.d.ts}, unchanged; SHA256SUMS lists them (checked by
