@@ -441,6 +441,58 @@ export type WalletLevelName = "passkey" | "wallet" | "home-only";
 /** E-18b: what a passkey-level session's `d` is to the account (after a sync). */
 export type PasskeyCheck = "not_passkey" | "home_only" | "fresh" | "matches" | "wallet_only_so_far" | "mismatch" | "restarted" | "protected_by_passkey";
 /**
+ * Errata E-72 (1): what `restorePasskeyBackup` did with the file's `d`: `own` (the session's own `d`, nothing added),
+ * `exit_addresses` (errata E-63: the lost passkey's exit addresses only), `session` (a cross-checked header on chain
+ * binds the file's `d` and no other passkey's generation is written: it is now the session's, the full account),
+ * `other_generations` (review E72-1: a cross-checked header binds the file's `d`, but other written generations are
+ * another passkey's, one this account restarted away from (E-62) or one a holder of `S` wrote (E-47): nothing is
+ * adopted, the file's `d` reaches the exit addresses; the vault UI shows `passkeyBackupGenerations` and the person
+ * names their own generation, `restorePasskeyBackupAs`).
+ */
+export type PasskeyRestore = "own" | "exit_addresses" | "session" | "other_generations";
+/** Errata E-72 (1), review E72-1: whose passkey a written header generation binds. */
+export type GenerationOwner = "file" | "wallet_only" | "session" | "other";
+/**
+ * Errata E-72 (1), review E72-1: a written header generation as `passkeyBackupGenerations` lists it: its number, the
+ * chain's height of it, whose passkey binds it, the unspent notes under it with their amounts per denomination (decimal
+ * strings), and whether the sync that showed it was cross-checked (C5). The vault UI shows these rows before the person
+ * names the generation that is theirs.
+ */
+export interface PasskeyBackupGeneration {
+    deployment_id: string;
+    generation: number;
+    height: number;
+    owner: GenerationOwner;
+    notes: number;
+    amounts: Record<string, string>;
+    cross_checked: boolean;
+}
+/**
+ * Errata E-72 (4), review E72-6: `passkeyFailed`: the passkey step was offered here and failed (`NotSupportedError`,
+ * no PRF output, a cancelled or timed-out popup): the list without `passkey`, so the app falls through to the other
+ * ways instead of forcing "Bring home".
+ */
+export interface OpeningOptions {
+    passkeyFailed?: boolean;
+}
+/** Errata E-72 (4): what this browser can do before any passkey step (`probeCapabilities`). */
+export interface Capabilities {
+    /** `PublicKeyCredential` and `navigator.credentials` exist. */
+    webauthn: boolean;
+    /** The PRF extension, from `PublicKeyCredential.getClientCapabilities()`; `"unknown"` when the browser cannot say. */
+    prf: boolean | "unknown";
+    /** An in-app browser (a wallet app's, a social app's, a platform WebView), from the user agent. */
+    in_app_browser: boolean;
+    /** A platform authenticator with user verification is available; `"unknown"` when the browser cannot say. */
+    user_verifying_platform: boolean | "unknown";
+    /** The user agent the probe read. */
+    agent: string;
+}
+/** Errata E-72 (4): the ways the app offers to open an account here (`openingPaths`), in order. */
+export type OpeningPath = "passkey" | "pairing" | "passkey_backup" | "home_only" | "wallet_only";
+/** Errata E-72 (4): what is being opened: a wallet + passkey account, the wallet-only level, or a new account. */
+export type OpeningLevel = "passkey" | "wallet" | "new";
+/**
  * Errata E-62 (owner F3): "Restart with this passkey". `offered`: show the one row (the account's generations
  * are another passkey's: every passkey lost, or a squatted `g`). After the restart the new generation is written
  * like any header; `old_notes` (the lost passkey's) pay home at once ("Send home") or move privately (a SLOW

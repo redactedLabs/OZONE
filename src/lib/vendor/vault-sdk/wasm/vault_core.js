@@ -993,6 +993,27 @@ export class WasmVault {
         }
     }
     /**
+     * Errata E-70 (7): the creation of account `n` was refused `SafeKeyInUse`: retire it (the next allocation takes
+     * the next index).
+     * @param {string} dep
+     * @param {number} n
+     */
+    accountSquatted(dep, n) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmvault_accountSquatted(retptr, this.__wbg_ptr, ptr0, len0, n);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
      * The deployment's accounts (public data).
      * @param {string} dep
      * @returns {string}
@@ -1348,16 +1369,19 @@ export class WasmVault {
      * Announce a withdrawal that goes out in parts (E-13: one card, one confirmation for all parts).
      * `parts` JSON `[[destination, amount], ...]`, `fee` JSON of `FeeTerms`. Each part is then prepared
      * with `prepareSpend` and options `{ ..., withdrawal: withdrawal_id }`.
+     * Review RF-03 of the E-70 fixes: `timings_json` (optional) is one timing per part (`planPrivateExit`'s), kept in
+     * the withdrawal's record (`withdrawals` lists them); a part to a fresh exit address needs one (`STATE`).
      * @param {string} dep
      * @param {string} denom
      * @param {string} parts_json
      * @param {string} fee_json
      * @param {bigint} expiry_height
+     * @param {string | null} [timings_json]
      * @returns {string}
      */
-    beginWithdrawal(dep, denom, parts_json, fee_json, expiry_height) {
-        let deferred6_0;
-        let deferred6_1;
+    beginWithdrawal(dep, denom, parts_json, fee_json, expiry_height, timings_json) {
+        let deferred7_0;
+        let deferred7_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             const ptr0 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
@@ -1368,23 +1392,25 @@ export class WasmVault {
             const len2 = WASM_VECTOR_LEN;
             const ptr3 = passStringToWasm0(fee_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
             const len3 = WASM_VECTOR_LEN;
-            wasm.wasmvault_beginWithdrawal(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, expiry_height);
+            var ptr4 = isLikeNone(timings_json) ? 0 : passStringToWasm0(timings_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            var len4 = WASM_VECTOR_LEN;
+            wasm.wasmvault_beginWithdrawal(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, expiry_height, ptr4, len4);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
             var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr5 = r0;
-            var len5 = r1;
+            var ptr6 = r0;
+            var len6 = r1;
             if (r3) {
-                ptr5 = 0; len5 = 0;
+                ptr6 = 0; len6 = 0;
                 throw takeObject(r2);
             }
-            deferred6_0 = ptr5;
-            deferred6_1 = len5;
-            return getStringFromWasm0(ptr5, len5);
+            deferred7_0 = ptr6;
+            deferred7_1 = len6;
+            return getStringFromWasm0(ptr6, len6);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred6_0, deferred6_1, 1);
+            wasm.__wbindgen_export4(deferred7_0, deferred7_1, 1);
         }
     }
     /**
@@ -2798,6 +2824,42 @@ export class WasmVault {
         }
     }
     /**
+     * Errata E-72 (1), review E72-1: every written header generation with whose passkey binds it (`file`,
+     * `wallet_only`, `session`, `other`), its height, the unspent notes under it and their amounts, and whether the
+     * sync was cross-checked: what the vault UI shows before the person names the generation that is theirs.
+     * @param {Uint8Array} file
+     * @param {string} passphrase
+     * @returns {string}
+     */
+    passkeyBackupGenerations(file, passphrase) {
+        let deferred4_0;
+        let deferred4_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(file, wasm.__wbindgen_export2);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(passphrase, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len1 = WASM_VECTOR_LEN;
+            wasm.wasmvault_passkeyBackupGenerations(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            var ptr3 = r0;
+            var len3 = r1;
+            if (r3) {
+                ptr3 = 0; len3 = 0;
+                throw takeObject(r2);
+            }
+            deferred4_0 = ptr3;
+            deferred4_1 = len3;
+            return getStringFromWasm0(ptr3, len3);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export4(deferred4_0, deferred4_1, 1);
+        }
+    }
+    /**
      * E-18b: what this session's passkey is to the account (after a sync): `not_passkey`, `home_only`,
      * `fresh`, `matches`, `wallet_only_so_far` or `mismatch`.
      * @param {string} dep
@@ -3739,13 +3801,56 @@ export class WasmVault {
         }
     }
     /**
-     * Errata E-63: open a passkey backup of this wallet + passkey account; its `d` reaches the lost passkey's exit
-     * addresses (`false`: it is this session's own `d`).
+     * Errata E-72 (1), review E72-1: after `other_generations`, adopt the file's `d` because header generation
+     * `generation` on `dep` (which binds it, shown by a cross-checked sync) is the person's own.
      * @param {Uint8Array} file
      * @param {string} passphrase
-     * @returns {boolean}
+     * @param {string} dep
+     * @param {number} generation
+     * @returns {string}
+     */
+    restorePasskeyBackupAs(file, passphrase, dep, generation) {
+        let deferred5_0;
+        let deferred5_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(file, wasm.__wbindgen_export2);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(passphrase, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len2 = WASM_VECTOR_LEN;
+            wasm.wasmvault_restorePasskeyBackupAs(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, generation);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            var ptr4 = r0;
+            var len4 = r1;
+            if (r3) {
+                ptr4 = 0; len4 = 0;
+                throw takeObject(r2);
+            }
+            deferred5_0 = ptr4;
+            deferred5_1 = len4;
+            return getStringFromWasm0(ptr4, len4);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export4(deferred5_0, deferred5_1, 1);
+        }
+    }
+    /**
+     * Errata E-63: open a passkey backup of this wallet + passkey account; its `d` reaches the lost passkey's exit
+     * addresses (`exit_addresses`; `own`: it is this session's own `d`). Errata E-72 (1): on a session opened with
+     * the wallet alone whose synced deployment shows a written header binding the file's `d`, the `d` becomes the
+     * session's (`session`: the full account).
+     * @param {Uint8Array} file
+     * @param {string} passphrase
+     * @returns {string}
      */
     restorePasskeyBackup(file, passphrase) {
+        let deferred4_0;
+        let deferred4_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             const ptr0 = passArray8ToWasm0(file, wasm.__wbindgen_export2);
@@ -3756,12 +3861,19 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            if (r2) {
-                throw takeObject(r1);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            var ptr3 = r0;
+            var len3 = r1;
+            if (r3) {
+                ptr3 = 0; len3 = 0;
+                throw takeObject(r2);
             }
-            return r0 !== 0;
+            deferred4_0 = ptr3;
+            deferred4_1 = len3;
+            return getStringFromWasm0(ptr3, len3);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export4(deferred4_0, deferred4_1, 1);
         }
     }
     /**
@@ -3859,16 +3971,18 @@ export class WasmVault {
         }
     }
     /**
-     * E-12 step 3 for one note: fund a fresh account of `new_vault` with the whole note.
+     * E-12 step 3 for one note: fund a fresh account of `new_vault` with the whole note, or with one part of its
+     * move (`amount`, errata E-70 (3): `MoveNote.parts`).
      * @param {WasmVault} new_vault
      * @param {string} dep
      * @param {string} handle
      * @param {string} opts_json
+     * @param {string | null} [amount]
      * @returns {string}
      */
-    rotationMoveNote(new_vault, dep, handle, opts_json) {
-        let deferred5_0;
-        let deferred5_1;
+    rotationMoveNote(new_vault, dep, handle, opts_json, amount) {
+        let deferred6_0;
+        let deferred6_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             _assertClass(new_vault, WasmVault);
@@ -3878,23 +3992,25 @@ export class WasmVault {
             const len1 = WASM_VECTOR_LEN;
             const ptr2 = passStringToWasm0(opts_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
             const len2 = WASM_VECTOR_LEN;
-            wasm.wasmvault_rotationMoveNote(retptr, this.__wbg_ptr, new_vault.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+            var ptr3 = isLikeNone(amount) ? 0 : passStringToWasm0(amount, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            var len3 = WASM_VECTOR_LEN;
+            wasm.wasmvault_rotationMoveNote(retptr, this.__wbg_ptr, new_vault.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
             var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr4 = r0;
-            var len4 = r1;
+            var ptr5 = r0;
+            var len5 = r1;
             if (r3) {
-                ptr4 = 0; len4 = 0;
+                ptr5 = 0; len5 = 0;
                 throw takeObject(r2);
             }
-            deferred5_0 = ptr4;
-            deferred5_1 = len4;
-            return getStringFromWasm0(ptr4, len4);
+            deferred6_0 = ptr5;
+            deferred6_1 = len5;
+            return getStringFromWasm0(ptr5, len5);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred5_0, deferred5_1, 1);
+            wasm.__wbindgen_export4(deferred6_0, deferred6_1, 1);
         }
     }
     /**
@@ -3993,6 +4109,32 @@ export class WasmVault {
             const ptr0 = passArray8ToWasm0(prf, wasm.__wbindgen_export2);
             const len0 = WASM_VECTOR_LEN;
             wasm.wasmvault_sealDevicePrf(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            if (r3) {
+                throw takeObject(r2);
+            }
+            var v2 = getArrayU8FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_export4(r0, r1 * 1, 1);
+            return v2;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Errata E-72 (3): seal this device's blob under the wallet's `S` and a passphrase (unlock kind 4): a wallet
+     * account on a device without passkeys; `unsealDevice` on the wallet's own session opens it.
+     * @param {string} passphrase
+     * @returns {Uint8Array}
+     */
+    sealDeviceWallet(passphrase) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(passphrase, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmvault_sealDeviceWallet(retptr, this.__wbg_ptr, ptr0, len0);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
@@ -4712,6 +4854,29 @@ export class WasmVault {
         }
     }
     /**
+     * Errata E-72 (3): open this device's kind-4 blob into this wallet + passkey session opened with the wallet alone
+     * (`fromWallet` with `home-only`): the session is then the passkey session.
+     * @param {Uint8Array} blob
+     * @param {string} passphrase
+     */
+    unsealDevice(blob, passphrase) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(blob, wasm.__wbindgen_export2);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(passphrase, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len1 = WASM_VECTOR_LEN;
+            wasm.wasmvault_unsealDevice(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
      * Errata E-34: `mode` (normal, alarm, bunker_k, bunker_p, rescue_build; default normal) decides
      * whether a veto home carries the Bunker-K destination proof.
      * @param {string} dep
@@ -4891,7 +5056,8 @@ export class WasmVault {
         }
     }
     /**
-     * The open split withdrawals: `[{ withdrawal_id, card, released, confirmed_by }]`.
+     * The open split withdrawals: `[{ withdrawal_id, card, released, confirmed_by, timings }]` (`timings`: one per
+     * part, `null` for a part without one; review RF-03).
      * @returns {string}
      */
     withdrawals() {
@@ -5522,6 +5688,32 @@ export function crossCheckSnapshots(a_json, b_json) {
         if (r1) {
             throw takeObject(r0);
         }
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * Errata E-70 (1): the expiry an exit part (its `timing` from `planPrivateExit`) proves with at height `now`;
+ * `STATE` before the part's `submit_at`.
+ * @param {string} timing_json
+ * @param {bigint} now
+ * @param {bigint} max_expiry_delta
+ * @returns {bigint}
+ */
+export function exitPartExpiry(timing_json, now, max_expiry_delta) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(timing_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.exitPartExpiry(retptr, ptr0, len0, now, max_expiry_delta);
+        var r0 = getDataViewMemory0().getBigInt64(retptr + 8 * 0, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        if (r3) {
+            throw takeObject(r2);
+        }
+        return BigInt.asUintN(64, r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }

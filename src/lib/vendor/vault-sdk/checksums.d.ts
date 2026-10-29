@@ -1,4 +1,4 @@
-export declare const CORE_WASM_SHA256 = "234db9087c9fbe414ee57d53f96a2fc6ff7f9510de0768d40884e369b80da1bd";
-export declare const CORE_WASM_BYTES = 4205357;
-export declare const PROVER_WASM_SHA256 = "2f4efffc701a648c34f3543bf5034f9731ba2001ce3f95d56281b30778e0670c";
-export declare const PROVER_WASM_BYTES = 945826;
+export declare const CORE_WASM_SHA256 = "73added38efe27a017d3954db9d60fed0c21b04e6771d60388bb865bb7eace44";
+export declare const CORE_WASM_BYTES = 4279935;
+export declare const PROVER_WASM_SHA256 = "ea042d5fd0d606326855ed67f35a0f42ba59f3460f3c4e062558573a8cc2ad6d";
+export declare const PROVER_WASM_BYTES = 945916;

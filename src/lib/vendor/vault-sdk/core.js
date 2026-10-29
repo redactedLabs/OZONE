@@ -4,7 +4,6 @@
 // pinned at build time (`checksums.ts`); tests with the simulated module say so explicitly.
 import { CORE_WASM_SHA256 } from "./checksums.js";
 import { sha256Hex } from "./sha256.js";
-/** An error from vault-core: `code` is stable (e.g. `PHRASE_CHECKSUM`, `CONFIRMATION_REQUIRED`). */
 export class VaultError extends Error {
     code;
     constructor(code, message) {
@@ -175,6 +174,7 @@ export const util = {
     classifySecret: (s) => core().classifySecret(s),
     canonicalAddress: (a, hrp = "thor") => call(() => core().canonicalAddress(a, hrp)),
     deployment: (chainId, proxy, opts = {}) => JSON.parse(call(() => core().newDeployment(chainId, proxy, opts.hrp ?? "thor", opts.localnetFast ?? false, opts.accountCodeChecksum ?? null))),
+    /** 1 PRF, 2 passphrase or PIN, 3 PRF and PIN, 4 the wallet and a passphrase (errata E-72 (3)). */
     blobUnlockKind: (blob) => call(() => core().blobUnlockKind(blob)),
     backupHeader: (file) => JSON.parse(call(() => core().backupHeader(file))),
     ladderFloor: (a) => call(() => core().ladderFloor(a)) ?? null,
@@ -183,6 +183,11 @@ export const util = {
     coarseAmount: (a, decimals = 8, symbol = "RUNE") => call(() => core().coarseAmount(a, decimals, symbol)),
     lintEdge: (a, height, inflows, window) => JSON.parse(call(() => core().lintEdge(a, big(height), JSON.stringify(inflows), big(window)))),
     exitTiming: (now, maxExpiryDelta, sendNow = false) => JSON.parse(call(() => core().exitTiming(big(now), big(maxExpiryDelta), sendNow))),
+    /**
+     * Errata E-70 (1): the expiry an exit part proves with at height `now` (its own offset from `planPrivateExit`);
+     * throws `STATE` before the part's `submit_at`, so a client-held part is never proved early.
+     */
+    exitPartExpiry: (timing, now, maxExpiryDelta) => Number(call(() => core().exitPartExpiry(JSON.stringify(timing), big(now), big(maxExpiryDelta)))),
     /**
      * Errata E-28: would the proxy admit a third-party return of `slots` under the per-denomination ceilings?
      * The running total of the return's slots per denomination plus the chain's `liability` and the admission
@@ -369,10 +374,29 @@ export class Vault {
     }
     /**
      * Errata E-63: open a passkey backup (`backupFile` with `includeDeviceFactor` at the wallet + passkey level) of
-     * this account: its `d` reaches the lost passkey's exit addresses (keying `s_d_backup`). `false`: this session's own `d`.
+     * this account: its `d` reaches the lost passkey's exit addresses (keying `s_d_backup`): `exit_addresses`; `own`: this
+     * session's own `d`. Errata E-72 (1): on a session opened with the wallet alone (`fromWallet` with `home-only`) whose
+     * synced deployment shows a written header binding the file's `d`, the `d` becomes the session's: `session` (the full
+     * account: `passkeyCheck` says `matches`; it deposits, pairs and seals).
      */
     restorePasskeyBackup(file, passphrase) {
         return call(() => this.w.restorePasskeyBackup(file, passphrase));
+    }
+    /**
+     * Errata E-72 (1), review E72-1: after `other_generations`, adopt the file's `d` because header generation
+     * `generation` on `dep` (which binds it, shown by a cross-checked sync) is the person's own: `session`. `STATE` when
+     * that generation is not written there, does not bind the file's passkey, or came from a one-source sync.
+     */
+    restorePasskeyBackupAs(file, passphrase, dep, generation) {
+        return call(() => this.w.restorePasskeyBackupAs(file, passphrase, dep, generation));
+    }
+    /**
+     * Errata E-72 (1), review E72-1: every written header generation with whose passkey binds it (`file`, `wallet_only`,
+     * `session`, `other`), its height, the unspent notes under it and their amounts, and whether the sync was cross-checked:
+     * what the vault UI shows before the person names the generation that is theirs. Nothing is adopted.
+     */
+    passkeyBackupGenerations(file, passphrase) {
+        return JSON.parse(call(() => this.w.passkeyBackupGenerations(file, passphrase)));
     }
     backupFile(passphrase, opts = {}) {
         return call(() => this.w.backupFile(passphrase, opts.desktop ?? false, opts.includeDeviceFactor ?? false));
@@ -386,6 +410,40 @@ export class Vault {
     sealDevicePrfAndPin(prf, pin) {
         return call(() => this.w.sealDevicePrfAndPin(prf, pin));
     }
+    /**
+     * Errata E-72 (3): seal this device's blob under the wallet's `S` and a passphrase (unlock kind 4): a wallet account on
+     * a device without passkeys. `unsealDevice` on the wallet's own home-only session opens it; the blob alone opens
+     * nothing. A phrase account seals under a passphrase instead (`WALLET_ACCOUNT`).
+     */
+    sealDeviceWallet(passphrase) {
+        return call(() => this.w.sealDeviceWallet(passphrase));
+    }
+    /**
+     * Errata E-72 (3): this device's blob by what the device has: a passkey's PRF output (kind 1), with a PIN (kind 3), or a
+     * passphrase: kind 4 for a wallet account (the wallet and the passphrase open it), kind 2 for a phrase account.
+     */
+    sealDevice(opts) {
+        if (opts.prf && opts.pin !== undefined)
+            return this.sealDevicePrfAndPin(opts.prf, opts.pin);
+        if (opts.prf)
+            return this.sealDevicePrf(opts.prf);
+        if (opts.passphrase === undefined)
+            throw new VaultError("INVALID_INPUT", "sealDevice needs a passkey's PRF output or a passphrase");
+        return this.accountKind().kind === "wallet" ? this.sealDeviceWallet(opts.passphrase) : this.sealDevicePassphrase(opts.passphrase);
+    }
+    /**
+     * Errata E-72 (3): open this device's kind-4 blob into this wallet + passkey session opened with the wallet alone
+     * (`fromWallet` with `home-only`): the session is then the passkey session (`matches` after a sync). The blob must be
+     * this account's (`STATE`, `WALLET_ACCOUNT`); a session holding `d` takes none (`STATE`); kinds 1 to 3 open with
+     * `unlockPrf` and the others (`INVALID_INPUT`).
+     */
+    unsealDevice(blob, opts) {
+        call(() => this.w.unsealDevice(blob, opts.passphrase));
+    }
+    /**
+     * "Approve this device": a pairing code for a new device, which then opens the account with `Vault.fromPairing`
+     * without the wallet. Errata E-72 (2): a wallet account's code names the account (its home is the wallet's).
+     */
     pairingOffer() {
         return JSON.parse(call(() => this.w.pairingOffer()));
     }
@@ -595,8 +653,12 @@ export class Vault {
         call(() => this.w.confirmPin(big(actionId), pin));
     }
     /** E-13: announce a withdrawal that goes out in parts; one card and (if opted in) one confirmation. */
-    beginWithdrawal(dep, denom, parts, fee, expiryHeight) {
-        return JSON.parse(call(() => this.w.beginWithdrawal(dep, denom, JSON.stringify(parts), JSON.stringify(fee), big(expiryHeight))));
+    /**
+     * Review RF-03 of the E-70 fixes: `timings` (one per part, `planPrivateExit`'s) are kept in the withdrawal's own record
+     * (`withdrawals()[i].timings`); a part to a fresh exit address needs one (`STATE` otherwise).
+     */
+    beginWithdrawal(dep, denom, parts, fee, expiryHeight, timings) {
+        return JSON.parse(call(() => this.w.beginWithdrawal(dep, denom, JSON.stringify(parts), JSON.stringify(fee), big(expiryHeight), timings ? JSON.stringify(timings) : undefined)));
     }
     cancelWithdrawal(withdrawalId) {
         call(() => this.w.cancelWithdrawal(big(withdrawalId)));
@@ -616,6 +678,10 @@ export class Vault {
     }
     accountForTask(dep, task) {
         return JSON.parse(call(() => this.w.accountForTask(dep, task)));
+    }
+    /** Errata E-70 (7): account `n`'s creation was refused `SafeKeyInUse`: retire it (the next allocation takes the next index). */
+    accountSquatted(dep, n) {
+        call(() => this.w.accountSquatted(dep, n));
     }
     createAccountMsg(dep, n) {
         return JSON.parse(call(() => this.w.createAccountMsg(dep, n)));
@@ -787,8 +853,9 @@ export class Vault {
         const history = h.historyWarning?.() ?? undefined;
         return { vault: new Vault(call(() => h.takeNewVault())), steps, ...(warning ? { view_key_warning: warning } : {}), ...(history ? { history_warning: history } : {}) };
     }
-    rotationMoveNote(newVault, dep, handle, opts) {
-        return JSON.parse(call(() => this.w.rotationMoveNote(newVault.w, dep, handle, JSON.stringify(opts))));
+    /** E-12 step 3 (`amount`: one part of the note's move, errata E-70 (3), `MoveNote.parts`; omitted: the whole note). */
+    rotationMoveNote(newVault, dep, handle, opts, amount) {
+        return JSON.parse(call(() => this.w.rotationMoveNote(newVault.w, dep, handle, JSON.stringify(opts), amount)));
     }
     beginGenerationRotation(dep, opts) {
         return call(() => this.w.beginGenerationRotation(dep, opts.home, opts.rescue, opts.clearRescue ?? false, opts.newDevice ?? false));
@@ -823,6 +890,11 @@ export class Vault {
     prepareRestartMove(dep, cm, opts) {
         return JSON.parse(call(() => this.w.prepareRestartMove(dep, cm, JSON.stringify(opts))));
     }
+    /**
+     * §9.4 with errata E-70 (1): up to `maxParts` ladder parts, each to its own fresh address with its own timing: prove
+     * a part no earlier than `timing.submit_at`, with `util.exitPartExpiry(timing, height, mde)` as its expiry and
+     * `timing.node_hold_blocks` as its node hold (none when `send_now`).
+     */
     planPrivateExit(dep, amount, maxParts, now, sendNow = false) {
         return JSON.parse(call(() => this.w.planPrivateExit(dep, amount, maxParts, big(now), sendNow)));
     }

@@ -1,6 +1,6 @@
 /**
  * The vendored client (src/lib/vendor/vault-sdk, from a clean `git archive` export of hops integration
- * feaa13b): the files are the ones SHA256SUMS names, the module is the pinned 234db908…, the glue ships no
+ * 975c300): the files are the ones SHA256SUMS names, the module is the pinned 73added3…, the glue ships no
  * test helper; and the page's own code has no network in the Worker, logs nothing, and stores only the
  * history files' window seeds (seed.ts).
  */
@@ -25,10 +25,14 @@ describe('vendored client module', () => {
 		}
 	});
 
-	it('the module is the pinned client 234db908…, 4,205,357 bytes', () => {
-		expect(CORE_WASM_SHA256).toBe('234db9087c9fbe414ee57d53f96a2fc6ff7f9510de0768d40884e369b80da1bd');
-		expect(CORE_WASM_BYTES).toBe(4205357);
+	it('the module is the pinned client 73added3…, 4,279,935 bytes, with the glue of integration 975c300', () => {
+		expect(CORE_WASM_SHA256).toBe('73added38efe27a017d3954db9d60fed0c21b04e6771d60388bb865bb7eace44');
+		expect(CORE_WASM_BYTES).toBe(4279935);
 		expect(sha(VENDOR + 'wasm/vault_core_bg.wasm')).toBe(CORE_WASM_SHA256);
+		expect(readFileSync(VENDOR + 'wasm/vault_core_bg.wasm').length).toBe(CORE_WASM_BYTES);
+		// INTEGRATION.md §1 (row "every device", 975c300): the glue the module was cut with
+		expect(sha(VENDOR + 'wasm/vault_core.js')).toBe('08c97ef1316a5a250b023e7e9ca7d7c66d9c194dbfc7b0ba4e51aa69ca30ad4f');
+		expect(readFileSync(VENDOR + 'wasm/vault_core.js').length).toBe(287555);
 	});
 
 	it('ships the viewer and no test helper; the viewer API is reads only', () => {

@@ -121,6 +121,11 @@ export class WasmVault {
      */
     accountKind(): string;
     /**
+     * Errata E-70 (7): the creation of account `n` was refused `SafeKeyInUse`: retire it (the next allocation takes
+     * the next index).
+     */
+    accountSquatted(dep: string, n: number): void;
+    /**
      * The deployment's accounts (public data).
      */
     accounts(dep: string): string;
@@ -171,8 +176,10 @@ export class WasmVault {
      * Announce a withdrawal that goes out in parts (E-13: one card, one confirmation for all parts).
      * `parts` JSON `[[destination, amount], ...]`, `fee` JSON of `FeeTerms`. Each part is then prepared
      * with `prepareSpend` and options `{ ..., withdrawal: withdrawal_id }`.
+     * Review RF-03 of the E-70 fixes: `timings_json` (optional) is one timing per part (`planPrivateExit`'s), kept in
+     * the withdrawal's record (`withdrawals` lists them); a part to a fresh exit address needs one (`STATE`).
      */
-    beginWithdrawal(dep: string, denom: string, parts_json: string, fee_json: string, expiry_height: bigint): string;
+    beginWithdrawal(dep: string, denom: string, parts_json: string, fee_json: string, expiry_height: bigint, timings_json?: string | null): string;
     cancelWithdrawal(withdrawal_id: bigint): void;
     /**
      * Errata E-28: would the proxy accept `calls` from the safe key? `rules` JSON: `[{contract, variant,
@@ -361,6 +368,12 @@ export class WasmVault {
      */
     pairingOffer(): string;
     /**
+     * Errata E-72 (1), review E72-1: every written header generation with whose passkey binds it (`file`,
+     * `wallet_only`, `session`, `other`), its height, the unspent notes under it and their amounts, and whether the
+     * sync was cross-checked: what the vault UI shows before the person names the generation that is theirs.
+     */
+    passkeyBackupGenerations(file: Uint8Array, passphrase: string): string;
+    /**
      * E-18b: what this session's passkey is to the account (after a sync): `not_passkey`, `home_only`,
      * `fresh`, `matches`, `wallet_only_so_far` or `mismatch`.
      */
@@ -466,10 +479,17 @@ export class WasmVault {
     static restoreFromBackup(file: Uint8Array, passphrase: string): WasmVault;
     static restoreFromPhrase(phrase: string, config_json: string): WasmVault;
     /**
-     * Errata E-63: open a passkey backup of this wallet + passkey account; its `d` reaches the lost passkey's exit
-     * addresses (`false`: it is this session's own `d`).
+     * Errata E-72 (1), review E72-1: after `other_generations`, adopt the file's `d` because header generation
+     * `generation` on `dep` (which binds it, shown by a cross-checked sync) is the person's own.
      */
-    restorePasskeyBackup(file: Uint8Array, passphrase: string): boolean;
+    restorePasskeyBackupAs(file: Uint8Array, passphrase: string, dep: string, generation: number): string;
+    /**
+     * Errata E-63: open a passkey backup of this wallet + passkey account; its `d` reaches the lost passkey's exit
+     * addresses (`exit_addresses`; `own`: it is this session's own `d`). Errata E-72 (1): on a session opened with
+     * the wallet alone whose synced deployment shows a written header binding the file's `d`, the `d` becomes the
+     * session's (`session`: the full account).
+     */
+    restorePasskeyBackup(file: Uint8Array, passphrase: string): string;
     /**
      * The counters a backup file carried (JSON), to apply after attaching the deployments.
      */
@@ -477,13 +497,19 @@ export class WasmVault {
     revokeDelegation(dep: string, n: number, delegation_id: number, key: string, expiry: bigint): string;
     rotationAdvice(dep: string): string;
     /**
-     * E-12 step 3 for one note: fund a fresh account of `new_vault` with the whole note.
+     * E-12 step 3 for one note: fund a fresh account of `new_vault` with the whole note, or with one part of its
+     * move (`amount`, errata E-70 (3): `MoveNote.parts`).
      */
-    rotationMoveNote(new_vault: WasmVault, dep: string, handle: string, opts_json: string): string;
+    rotationMoveNote(new_vault: WasmVault, dep: string, handle: string, opts_json: string, amount?: string | null): string;
     scheduleLineageAudits(dep: string, mode_str: string, proactive: boolean, chunk: number): string;
     sealDevicePassphrase(passphrase: string): Uint8Array;
     sealDevicePrfAndPin(prf: Uint8Array, pin: string): Uint8Array;
     sealDevicePrf(prf: Uint8Array): Uint8Array;
+    /**
+     * Errata E-72 (3): seal this device's blob under the wallet's `S` and a passphrase (unlock kind 4): a wallet
+     * account on a device without passkeys; `unsealDevice` on the wallet's own session opens it.
+     */
+    sealDeviceWallet(passphrase: string): Uint8Array;
     secondProofBody(action_id: bigint, envelope: Uint8Array): string;
     secondProofDone(action_id: bigint): void;
     /**
@@ -572,6 +598,11 @@ export class WasmVault {
     static unlockPrfAndPin(blob: Uint8Array, prf: Uint8Array, pin: string, config_json: string): WasmVault;
     static unlockPrf(blob: Uint8Array, prf: Uint8Array, config_json: string): WasmVault;
     /**
+     * Errata E-72 (3): open this device's kind-4 blob into this wallet + passkey session opened with the wallet alone
+     * (`fromWallet` with `home-only`): the session is then the passkey session.
+     */
+    unsealDevice(blob: Uint8Array, passphrase: string): void;
+    /**
      * Errata E-34: `mode` (normal, alarm, bunker_k, bunker_p, rescue_build; default normal) decides
      * whether a veto home carries the Bunker-K destination proof.
      */
@@ -594,7 +625,8 @@ export class WasmVault {
     walletFingerprint(): string;
     warnings(dep: string): string;
     /**
-     * The open split withdrawals: `[{ withdrawal_id, card, released, confirmed_by }]`.
+     * The open split withdrawals: `[{ withdrawal_id, card, released, confirmed_by, timings }]` (`timings`: one per
+     * part, `null` for a part without one; review RF-03).
      */
     withdrawals(): string;
 }
@@ -676,6 +708,12 @@ export function coarseAmount(a: string, decimals: number, symbol: string): strin
  * C5: two snapshots from independent sources must agree exactly at one height.
  */
 export function crossCheckSnapshots(a_json: string, b_json: string): void;
+
+/**
+ * Errata E-70 (1): the expiry an exit part (its `timing` from `planPrivateExit`) proves with at height `now`;
+ * `STATE` before the part's `submit_at`.
+ */
+export function exitPartExpiry(timing_json: string, now: bigint, max_expiry_delta: bigint): bigint;
 
 export function exitSplit(a: string, max_parts: number): string;
 
@@ -832,6 +870,7 @@ export interface InitOutput {
     readonly classifySecret: (a: number, b: number, c: number) => void;
     readonly coarseAmount: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly crossCheckSnapshots: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly exitPartExpiry: (a: number, b: number, c: number, d: bigint, e: bigint) => void;
     readonly exitSplit: (a: number, b: number, c: number, d: number) => void;
     readonly exitTiming: (a: number, b: bigint, c: bigint, d: number) => void;
     readonly historyCutWindow: (a: number, b: number, c: number, d: bigint) => void;
@@ -893,6 +932,7 @@ export interface InitOutput {
     readonly wasmvault_accountCall: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: bigint) => void;
     readonly wasmvault_accountForTask: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_accountKind: (a: number, b: number) => void;
+    readonly wasmvault_accountSquatted: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmvault_accounts: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_acknowledgeHistoryExposure: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_agentSlots: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
@@ -907,7 +947,7 @@ export interface InitOutput {
     readonly wasmvault_beginPhraseRotation: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_beginUpgradeToPasskey: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_beginUpgradeToPhrase: (a: number, b: number, c: number, d: number) => void;
-    readonly wasmvault_beginWithdrawal: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: bigint) => void;
+    readonly wasmvault_beginWithdrawal: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: bigint, l: number, m: number) => void;
     readonly wasmvault_cancelWithdrawal: (a: number, b: number, c: bigint) => void;
     readonly wasmvault_checkSafeClose: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmvault_config: (a: number, b: number) => void;
@@ -956,6 +996,7 @@ export interface InitOutput {
     readonly wasmvault_noteExitUsed: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly wasmvault_notes: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_pairingOffer: (a: number, b: number) => void;
+    readonly wasmvault_passkeyBackupGenerations: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_passkeyCheck: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_pendingActions: (a: number, b: number) => void;
     readonly wasmvault_phrase: (a: number, b: number) => void;
@@ -985,14 +1026,16 @@ export interface InitOutput {
     readonly wasmvault_restoreFromBackup: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmvault_restoreFromPhrase: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmvault_restorePasskeyBackup: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly wasmvault_restorePasskeyBackupAs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly wasmvault_restoredCounters: (a: number, b: number) => void;
     readonly wasmvault_revokeDelegation: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: bigint) => void;
     readonly wasmvault_rotationAdvice: (a: number, b: number, c: number, d: number) => void;
-    readonly wasmvault_rotationMoveNote: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly wasmvault_rotationMoveNote: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
     readonly wasmvault_scheduleLineageAudits: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmvault_sealDevicePassphrase: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_sealDevicePrf: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_sealDevicePrfAndPin: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly wasmvault_sealDeviceWallet: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_secondProofBody: (a: number, b: number, c: bigint, d: number, e: number) => void;
     readonly wasmvault_secondProofDone: (a: number, b: bigint) => void;
     readonly wasmvault_secondProofJob: (a: number, b: number, c: bigint) => void;
@@ -1018,6 +1061,7 @@ export interface InitOutput {
     readonly wasmvault_unlockPassphrase: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly wasmvault_unlockPrf: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly wasmvault_unlockPrfAndPin: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly wasmvault_unsealDevice: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_veto: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: bigint, k: number, l: number) => void;
     readonly wasmvault_viewKeyDisclosure: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => void;
     readonly wasmvault_viewKeyExports: (a: number, b: number, c: number, d: number) => void;

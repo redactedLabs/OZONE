@@ -1,4 +1,4 @@
-import type { AttestRootInfo, AuthorizationRecord, Call, CallFees, CloseRule, SlotEntry, ChainMode, ChainSnapshot, Coin, ConfirmPolicy, ConfirmRequest, Deployment, DepositPlan, Destination, ExecuteMsg, AccountKind, ExitPlan, FeedRecords, TransitionKeys, WalletSchemeName, WalletSignIn, WalletLevelName, PasskeyCheck, RestartReport, HeaderReport, SwitchState, SyncOptions, SyncStatus, CallPlan, SwapQuote, MyQueueItem, QueueFeedRecord, FreeInputs, Hex32, FeeTerms, FinishedDeposit, KeyKind, NodeAttestation, NoteView, Policy, ProofJob, ReviewCard, SpendKind, SpendOptions, SpendPlan, VaultConfig, WithdrawalPlan, ExitKeying, ViewKeyOptions, ViewKeyDisclosure, ViewKeyExport, ViewKeyExportRecord, HistoryOptions, HistoryDisclosure, HistoryExport, HistoryExportRecord, HistoryMovePlan, HistoryAckAction, AccountActivity, RescueConsent } from "./types.js";
+import type { AttestRootInfo, AuthorizationRecord, Call, CallFees, CloseRule, SlotEntry, ChainMode, ChainSnapshot, Coin, ConfirmPolicy, ConfirmRequest, Deployment, DepositPlan, Destination, ExecuteMsg, AccountKind, ExitPlan, FeedRecords, TransitionKeys, WalletSchemeName, WalletSignIn, WalletLevelName, PasskeyCheck, RestartReport, HeaderReport, SwitchState, SyncOptions, SyncStatus, CallPlan, SwapQuote, MyQueueItem, QueueFeedRecord, FreeInputs, Hex32, FeeTerms, FinishedDeposit, KeyKind, NodeAttestation, NoteView, Policy, ProofJob, ReviewCard, SpendKind, SpendOptions, SpendPlan, VaultConfig, WithdrawalPlan, ExitKeying, ViewKeyOptions, ViewKeyDisclosure, ViewKeyExport, ViewKeyExportRecord, HistoryOptions, HistoryDisclosure, HistoryExport, HistoryExportRecord, HistoryMovePlan, HistoryAckAction, AccountActivity, RescueConsent, PasskeyRestore, PasskeyBackupGeneration } from "./types.js";
 /** The wasm-bindgen module (generated `wasm/vault_core.js`). */
 export interface WasmModule {
     initSync(arg: {
@@ -19,6 +19,7 @@ export interface WasmModule {
     coarseAmount(a: string, decimals: number, symbol: string): string;
     lintEdge(a: string, height: bigint, inflows: string, window: bigint): string;
     exitTiming(now: bigint, maxExpiryDelta: bigint, sendNow: boolean): string;
+    exitPartExpiry(timingJson: string, now: bigint, maxExpiryDelta: bigint): bigint;
     registeredCount(attestRootJson: string, attestationExpiry: bigint, now: bigint): number;
     walletMessage(scheme: string, origin: string, deploymentJson: string, address: string): string;
     walletHome(scheme: string, deploymentJson: string, address: string): string;
@@ -47,6 +48,14 @@ export interface WasmModule {
     WasmSim?: any;
 }
 /** An error from vault-core: `code` is stable (e.g. `PHRASE_CHECKSUM`, `CONFIRMATION_REQUIRED`). */
+/** Errata E-70 (1): an exit part's timing (`planPrivateExit`, `util.exitTiming`). */
+export type ExitTiming = {
+    send_now: boolean;
+    submit_at: number;
+    node_hold_blocks: number;
+    expiry_offset: number;
+    expiry_height: number;
+};
 export declare class VaultError extends Error {
     readonly code: string;
     constructor(code: string, message: string);
@@ -98,7 +107,8 @@ export declare const util: {
         localnetFast?: boolean;
         accountCodeChecksum?: string;
     }) => Deployment;
-    blobUnlockKind: (blob: Uint8Array) => 1 | 2 | 3;
+    /** 1 PRF, 2 passphrase or PIN, 3 PRF and PIN, 4 the wallet and a passphrase (errata E-72 (3)). */
+    blobUnlockKind: (blob: Uint8Array) => 1 | 2 | 3 | 4;
     backupHeader: (file: Uint8Array) => {
         m_kib: number;
         t: number;
@@ -118,12 +128,12 @@ export declare const util: {
         ladder_amount: string | null;
         private_timing: boolean;
     };
-    exitTiming: (now: number, maxExpiryDelta: number, sendNow?: boolean) => {
-        send_now: boolean;
-        submit_at: number;
-        node_hold_blocks: number;
-        expiry_height: number;
-    };
+    exitTiming: (now: number, maxExpiryDelta: number, sendNow?: boolean) => ExitTiming;
+    /**
+     * Errata E-70 (1): the expiry an exit part proves with at height `now` (its own offset from `planPrivateExit`);
+     * throws `STATE` before the part's `submit_at`, so a client-held part is never proved early.
+     */
+    exitPartExpiry: (timing: ExitTiming, now: number, maxExpiryDelta: number) => number;
     /**
      * Errata E-28: would the proxy admit a third-party return of `slots` under the per-denomination ceilings?
      * The running total of the return's slots per denomination plus the chain's `liability` and the admission
@@ -283,9 +293,24 @@ export declare class Vault {
     get backupConfirmed(): boolean;
     /**
      * Errata E-63: open a passkey backup (`backupFile` with `includeDeviceFactor` at the wallet + passkey level) of
-     * this account: its `d` reaches the lost passkey's exit addresses (keying `s_d_backup`). `false`: this session's own `d`.
+     * this account: its `d` reaches the lost passkey's exit addresses (keying `s_d_backup`): `exit_addresses`; `own`: this
+     * session's own `d`. Errata E-72 (1): on a session opened with the wallet alone (`fromWallet` with `home-only`) whose
+     * synced deployment shows a written header binding the file's `d`, the `d` becomes the session's: `session` (the full
+     * account: `passkeyCheck` says `matches`; it deposits, pairs and seals).
      */
-    restorePasskeyBackup(file: Uint8Array, passphrase: string): boolean;
+    restorePasskeyBackup(file: Uint8Array, passphrase: string): PasskeyRestore;
+    /**
+     * Errata E-72 (1), review E72-1: after `other_generations`, adopt the file's `d` because header generation
+     * `generation` on `dep` (which binds it, shown by a cross-checked sync) is the person's own: `session`. `STATE` when
+     * that generation is not written there, does not bind the file's passkey, or came from a one-source sync.
+     */
+    restorePasskeyBackupAs(file: Uint8Array, passphrase: string, dep: string, generation: number): PasskeyRestore;
+    /**
+     * Errata E-72 (1), review E72-1: every written header generation with whose passkey binds it (`file`, `wallet_only`,
+     * `session`, `other`), its height, the unspent notes under it and their amounts, and whether the sync was cross-checked:
+     * what the vault UI shows before the person names the generation that is theirs. Nothing is adopted.
+     */
+    passkeyBackupGenerations(file: Uint8Array, passphrase: string): PasskeyBackupGeneration[];
     backupFile(passphrase: string, opts?: {
         desktop?: boolean;
         includeDeviceFactor?: boolean;
@@ -293,6 +318,34 @@ export declare class Vault {
     sealDevicePrf(prf: Uint8Array): Uint8Array;
     sealDevicePassphrase(passphrase: string): Uint8Array;
     sealDevicePrfAndPin(prf: Uint8Array, pin: string): Uint8Array;
+    /**
+     * Errata E-72 (3): seal this device's blob under the wallet's `S` and a passphrase (unlock kind 4): a wallet account on
+     * a device without passkeys. `unsealDevice` on the wallet's own home-only session opens it; the blob alone opens
+     * nothing. A phrase account seals under a passphrase instead (`WALLET_ACCOUNT`).
+     */
+    sealDeviceWallet(passphrase: string): Uint8Array;
+    /**
+     * Errata E-72 (3): this device's blob by what the device has: a passkey's PRF output (kind 1), with a PIN (kind 3), or a
+     * passphrase: kind 4 for a wallet account (the wallet and the passphrase open it), kind 2 for a phrase account.
+     */
+    sealDevice(opts: {
+        prf?: Uint8Array;
+        pin?: string;
+        passphrase?: string;
+    }): Uint8Array;
+    /**
+     * Errata E-72 (3): open this device's kind-4 blob into this wallet + passkey session opened with the wallet alone
+     * (`fromWallet` with `home-only`): the session is then the passkey session (`matches` after a sync). The blob must be
+     * this account's (`STATE`, `WALLET_ACCOUNT`); a session holding `d` takes none (`STATE`); kinds 1 to 3 open with
+     * `unlockPrf` and the others (`INVALID_INPUT`).
+     */
+    unsealDevice(blob: Uint8Array, opts: {
+        passphrase: string;
+    }): void;
+    /**
+     * "Approve this device": a pairing code for a new device, which then opens the account with `Vault.fromPairing`
+     * without the wallet. Errata E-72 (2): a wallet account's code names the account (its home is the wallet's).
+     */
     pairingOffer(): {
         qr_inline: string;
         qr_by_id: string;
@@ -436,18 +489,25 @@ export declare class Vault {
     confirmPasskey(actionId: number, challengeHex: string): void;
     confirmPin(actionId: number, pin: string): void;
     /** E-13: announce a withdrawal that goes out in parts; one card and (if opted in) one confirmation. */
-    beginWithdrawal(dep: string, denom: string, parts: [string, string][], fee: FeeTerms, expiryHeight: number): WithdrawalPlan;
+    /**
+     * Review RF-03 of the E-70 fixes: `timings` (one per part, `planPrivateExit`'s) are kept in the withdrawal's own record
+     * (`withdrawals()[i].timings`); a part to a fresh exit address needs one (`STATE` otherwise).
+     */
+    beginWithdrawal(dep: string, denom: string, parts: [string, string][], fee: FeeTerms, expiryHeight: number, timings?: ExitTiming[] | null): WithdrawalPlan;
     cancelWithdrawal(withdrawalId: number): void;
     withdrawals(): {
         withdrawal_id: number;
         card: ReviewCard;
         released: boolean[];
         confirmed_by: string | null;
+        timings?: (ExitTiming | null)[];
     }[];
     authorizations(): AuthorizationRecord[];
     pendingActions(): unknown[];
     newAccount(dep: string, scope: unknown, policy?: Policy, loosenDelay?: number): any;
     accountForTask(dep: string, task: string): any;
+    /** Errata E-70 (7): account `n`'s creation was refused `SafeKeyInUse`: retire it (the next allocation takes the next index). */
+    accountSquatted(dep: string, n: number): void;
     createAccountMsg(dep: string, n: number): ExecuteMsg;
     /**
      * A signed Spending call. Errata E-39: under an opted-in confirmation policy a full-key call that moves
@@ -560,7 +620,8 @@ export declare class Vault {
         view_key_warning?: string;
         history_warning?: string;
     };
-    rotationMoveNote(newVault: Vault, dep: string, handle: string, opts: SpendOptions): {
+    /** E-12 step 3 (`amount`: one part of the note's move, errata E-70 (3), `MoveNote.parts`; omitted: the whole note). */
+    rotationMoveNote(newVault: Vault, dep: string, handle: string, opts: SpendOptions, amount?: string): {
         plan: SpendPlan;
         new_account_index: number;
     };
@@ -605,7 +666,16 @@ export declare class Vault {
         on_chain: boolean;
     };
     prepareRestartMove(dep: string, cm: string, opts: SpendOptions): SpendPlan;
-    planPrivateExit(dep: string, amount: string, maxParts: number, now: number, sendNow?: boolean): any;
+    /**
+     * §9.4 with errata E-70 (1): up to `maxParts` ladder parts, each to its own fresh address with its own timing: prove
+     * a part no earlier than `timing.submit_at`, with `util.exitPartExpiry(timing, height, mde)` as its expiry and
+     * `timing.node_hold_blocks` as its node hold (none when `send_now`).
+     */
+    planPrivateExit(dep: string, amount: string, maxParts: number, now: number, sendNow?: boolean): {
+        address: string;
+        amount: string;
+        timing: ExitTiming;
+    }[];
     delegate(dep: string, n: number, agentVk: string, policy: Policy, delegationExpiry: number, canReturn: boolean, now: number, expiry: number): ExecuteMsg;
     revokeDelegation(dep: string, n: number, delegationId: number, key: KeyKind, expiry: number): ExecuteMsg;
     freezeAgents(dep: string, n: number, key: KeyKind, expiry: number): ExecuteMsg;
