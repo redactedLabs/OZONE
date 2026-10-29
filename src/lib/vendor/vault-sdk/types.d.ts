@@ -442,12 +442,13 @@ export type WalletLevelName = "passkey" | "wallet" | "home-only";
 export type PasskeyCheck = "not_passkey" | "home_only" | "fresh" | "matches" | "wallet_only_so_far" | "mismatch" | "restarted" | "protected_by_passkey";
 /**
  * Errata E-72 (1): what `restorePasskeyBackup` did with the file's `d`: `own` (the session's own `d`, nothing added),
- * `exit_addresses` (errata E-63: the lost passkey's exit addresses only), `session` (a cross-checked header on chain
- * binds the file's `d` and no other passkey's generation is written: it is now the session's, the full account),
- * `other_generations` (review E72-1: a cross-checked header binds the file's `d`, but other written generations are
- * another passkey's, one this account restarted away from (E-62) or one a holder of `S` wrote (E-47): nothing is
- * adopted, the file's `d` reaches the exit addresses; the vault UI shows `passkeyBackupGenerations` and the person
- * names their own generation, `restorePasskeyBackupAs`).
+ * `exit_addresses` (errata E-63: the lost passkey's exit addresses only), `session` (the file's `d` is now the session's,
+ * the full account: by the person's choice, `restorePasskeyBackupAs`, or, without one, only when this device's saved
+ * state already confirms it), `other_generations` (review E72-1 and review run-4 R4-A: a cross-checked header binds the
+ * file's `d`, but this device never confirmed it; the chain's `g` proves only that a holder of `S` bound that `d`, one
+ * this account restarted away from (E-62) or one a holder of `S` wrote and funded at will (E-47), so nothing is adopted,
+ * the file's `d` reaches the exit addresses, the vault UI shows `passkeyBackupGenerations` (its `notes` are information,
+ * no evidence) and the person names their own generation, `restorePasskeyBackupAs`).
  */
 export type PasskeyRestore = "own" | "exit_addresses" | "session" | "other_generations";
 /** Errata E-72 (1), review E72-1: whose passkey a written header generation binds. */
@@ -494,8 +495,10 @@ export type OpeningPath = "passkey" | "pairing" | "passkey_backup" | "home_only"
 export type OpeningLevel = "passkey" | "wallet" | "new";
 /**
  * Errata E-62 (owner F3): "Restart with this passkey". `offered`: show the one row (the account's generations
- * are another passkey's: every passkey lost, or a squatted `g`). After the restart the new generation is written
- * like any header; `old_notes` (the lost passkey's) pay home at once ("Send home") or move privately (a SLOW
+ * are another passkey's: every passkey lost, or a squatted `g`); false on a held session (errata E-72 review run-5:
+ * an unconfirmed outside `d`, which `restartWithThisPasskey` refuses with `NEEDS_GENERATION_CHOICE`), and E-74 (7)
+ * binds the app not to offer the restart from a paired or unlocked device. After the restart the new generation is
+ * written like any header; `old_notes` (the lost passkey's) pay home at once ("Send home") or move privately (a SLOW
  * request to `move_account`, 7 days, cancellable, then returned as own money).
  */
 export interface RestartReport {

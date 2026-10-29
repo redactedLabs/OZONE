@@ -376,8 +376,10 @@ export class Vault {
      * Errata E-63: open a passkey backup (`backupFile` with `includeDeviceFactor` at the wallet + passkey level) of
      * this account: its `d` reaches the lost passkey's exit addresses (keying `s_d_backup`): `exit_addresses`; `own`: this
      * session's own `d`. Errata E-72 (1): on a session opened with the wallet alone (`fromWallet` with `home-only`) whose
-     * synced deployment shows a written header binding the file's `d`, the `d` becomes the session's: `session` (the full
-     * account: `passkeyCheck` says `matches`; it deposits, pairs and seals).
+     * cross-checked sync shows a written header binding the file's `d`: `other_generations` (review run-4, R4-A: nothing
+     * the chain shows adopts an outside `d`; the person names the generation, `restorePasskeyBackupAs`), or `session`
+     * only when this device's saved state already confirms the file's `d` (the full account: `passkeyCheck` says
+     * `matches`; it deposits, pairs and seals).
      */
     restorePasskeyBackup(file, passphrase) {
         return call(() => this.w.restorePasskeyBackup(file, passphrase));
@@ -397,6 +399,24 @@ export class Vault {
      */
     passkeyBackupGenerations(file, passphrase) {
         return JSON.parse(call(() => this.w.passkeyBackupGenerations(file, passphrase)));
+    }
+    /**
+     * Errata E-72 review run-2 (R2-A, R2-B): the written header generations for the generation choice after a pairing
+     * code, a device blob or the backup gave this session a `d` from outside (`session` marks the one this device's `d`
+     * binds), each with its height, notes and amounts, and whether the sync was cross-checked. Nothing is adopted; the
+     * vault UI shows these rows and the person confirms their own with `confirmDeviceGeneration`.
+     */
+    deviceGenerations(dep) {
+        return JSON.parse(call(() => this.w.deviceGenerations(dep)));
+    }
+    /**
+     * Errata E-72 review run-2 (R2-A, R2-B): the person confirms that written header generation `generation` on `dep`,
+     * which this session's own `d` binds, is theirs, opening the generation-choice gate (`NEEDS_GENERATION_CHOICE`).
+     * `STATE` when that generation is not written there, came from a one-source sync, or is not the generation this
+     * session's `d` binds.
+     */
+    confirmDeviceGeneration(dep, generation) {
+        call(() => this.w.confirmDeviceGeneration(dep, generation));
     }
     backupFile(passphrase, opts = {}) {
         return call(() => this.w.backupFile(passphrase, opts.desktop ?? false, opts.includeDeviceFactor ?? false));

@@ -270,6 +270,7 @@ export class WasmAgent {
         }
     }
     /**
+     * The sealed key file and its passphrase are taken by value and wiped (review run-2 of findings 78/81).
      * @param {Uint8Array} file
      * @param {string} passphrase
      * @returns {WasmAgent}
@@ -362,7 +363,7 @@ export class WasmAgent {
         }
     }
     /**
-     * The sealed key file (`HOPSAGT1`).
+     * The sealed key file (`HOPSAGT1`), a `Uint8Array` copied from a wiped buffer (`secret_bytes`).
      * @param {string} passphrase
      * @returns {Uint8Array}
      */
@@ -375,13 +376,10 @@ export class WasmAgent {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            if (r3) {
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            var v2 = getArrayU8FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export4(r0, r1 * 1, 1);
-            return v2;
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -1209,7 +1207,8 @@ export class WasmVault {
         return ret !== 0;
     }
     /**
-     * The encrypted backup file. `desktop` selects m = 256 MiB instead of the browser's 64 MiB.
+     * The encrypted backup file. `desktop` selects m = 256 MiB instead of the browser's 64 MiB. A `Uint8Array`
+     * copied from a wiped buffer (`secret_bytes`).
      * @param {string} passphrase
      * @param {boolean} desktop
      * @param {boolean} include_d
@@ -1224,13 +1223,10 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            if (r3) {
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            var v2 = getArrayU8FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export4(r0, r1 * 1, 1);
-            return v2;
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -1505,6 +1501,27 @@ export class WasmVault {
         }
     }
     /**
+     * Errata E-72 review run-2 (R2-A, vault UI channel only): the person confirms that written header generation
+     * `generation` on `dep`, which this session's own `d` binds, is theirs, opening the generation-choice gate.
+     * @param {string} dep
+     * @param {number} generation
+     */
+    confirmDeviceGeneration(dep, generation) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmvault_confirmDeviceGeneration(retptr, this.__wbg_ptr, ptr0, len0, generation);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
      * After the vault Worker verified a WebAuthn assertion (user verification) over `challenge`.
      * @param {bigint} action_id
      * @param {string} challenge_hex
@@ -1525,7 +1542,8 @@ export class WasmVault {
         }
     }
     /**
-     * `answers`: JSON `[[position, "word"], …]`.
+     * `answers`: JSON `[[position, "word"], …]` (words of the phrase: the text is wiped here, review run-2 of
+     * findings 78/81; every word read from it in the core, `Session::confirm_phrase_words_json`, review run-3).
      * @param {string} answers
      * @returns {boolean}
      */
@@ -1683,6 +1701,40 @@ export class WasmVault {
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
             wasm.__wbindgen_export4(deferred5_0, deferred5_1, 1);
+        }
+    }
+    /**
+     * Errata E-72 review run-2 (R2-A, vault UI channel only): the written header generations for the vault UI's
+     * generation choice after a pairing code, a device blob or the backup gave this session a `d` from outside
+     * (`session` marks the one this device's `d` binds), with each height, its notes and amounts, and whether the
+     * sync was cross-checked. Nothing is adopted.
+     * @param {string} dep
+     * @returns {string}
+     */
+    deviceGenerations(dep) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmvault_deviceGenerations(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            var ptr2 = r0;
+            var len2 = r1;
+            if (r3) {
+                ptr2 = 0; len2 = 0;
+                throw takeObject(r2);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export4(deferred3_0, deferred3_1, 1);
         }
     }
     /**
@@ -1894,8 +1946,6 @@ export class WasmVault {
      * @returns {string}
      */
     exportHistory(dep, fingerprint) {
-        let deferred4_0;
-        let deferred4_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             const ptr0 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
@@ -1906,19 +1956,12 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr3 = r0;
-            var len3 = r1;
-            if (r3) {
-                ptr3 = 0; len3 = 0;
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            deferred4_0 = ptr3;
-            deferred4_1 = len3;
-            return getStringFromWasm0(ptr3, len3);
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred4_0, deferred4_1, 1);
         }
     }
     /**
@@ -1955,8 +1998,6 @@ export class WasmVault {
      * @returns {string}
      */
     exportViewKey(dep, options_json, fingerprint) {
-        let deferred5_0;
-        let deferred5_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             const ptr0 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
@@ -1969,19 +2010,12 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr4 = r0;
-            var len4 = r1;
-            if (r3) {
-                ptr4 = 0; len4 = 0;
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            deferred5_0 = ptr4;
-            deferred5_1 = len4;
-            return getStringFromWasm0(ptr4, len4);
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred5_0, deferred5_1, 1);
         }
     }
     /**
@@ -2138,7 +2172,8 @@ export class WasmVault {
         }
     }
     /**
-     * Complete a pairing on the new device; `fetched_blob` is the node blob of an `id:` code.
+     * Complete a pairing on the new device; `fetched_blob` is the node blob of an `id:` code. The code (it carries
+     * the one-time pairing key) and the blob are taken by value and wiped.
      * @param {string} qr
      * @param {Uint8Array | null | undefined} fetched_blob
      * @param {string} config_json
@@ -2169,7 +2204,8 @@ export class WasmVault {
      * E-18, E-18a, E-18b: open a Strict wallet account (`adr036` or `eip191`) from a sign-in
      * (`with_sign_in`'s JSON: two equal answers, or one with the fingerprint the device kept). `level`:
      * `"passkey"` (recommended; `prf_hex` is the primary passkey's PRF output for `walletPasskeySalt`),
-     * `"wallet"` (wallet only, `d = d_w`), or `"home-only"` (every passkey lost: home only).
+     * `"wallet"` (wallet only, `d = d_w`), or `"home-only"` (every passkey lost: home only). The sign-in text
+     * is taken by value and wiped (review run-1 of findings 78/81).
      * @param {string} deployment_json
      * @param {string} sign_in_json
      * @param {string} level
@@ -2797,30 +2833,23 @@ export class WasmVault {
      * A pairing code for a new device: JSON `{ qr_inline, qr_by_id, blob, blob_id, new_device_id }`
      * (`blob` base64, for the node blob store when the inline code is too large). Each code names the
      * next device id (§3.4).
+     * Review run-2 of findings 78/81: both codes carry the one-time pairing key: the text crosses as `secret_json`
+     * does (`PairingOffer`'s own `Serialize`, the same JSON); the TypeScript type stays `string`.
      * @returns {string}
      */
     pairingOffer() {
-        let deferred2_0;
-        let deferred2_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             wasm.wasmvault_pairingOffer(retptr, this.__wbg_ptr);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr1 = r0;
-            var len1 = r1;
-            if (r3) {
-                ptr1 = 0; len1 = 0;
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            deferred2_0 = ptr1;
-            deferred2_1 = len1;
-            return getStringFromWasm0(ptr1, len1);
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred2_0, deferred2_1, 1);
         }
     }
     /**
@@ -2946,31 +2975,23 @@ export class WasmVault {
         }
     }
     /**
-     * The 25 words, for the vault's own display only.
+     * The 25 words, for the vault's own display only. Review run-2 of findings 78/81: a JS string made from the
+     * wiped words (`secret_text`); the TypeScript type stays `string`.
      * @returns {string}
      */
     phrase() {
-        let deferred2_0;
-        let deferred2_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             wasm.wasmvault_phrase(retptr, this.__wbg_ptr);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr1 = r0;
-            var len1 = r1;
-            if (r3) {
-                ptr1 = 0; len1 = 0;
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            deferred2_0 = ptr1;
-            deferred2_1 = len1;
-            return getStringFromWasm0(ptr1, len1);
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred2_0, deferred2_1, 1);
         }
     }
     /**
@@ -3373,32 +3394,24 @@ export class WasmVault {
         }
     }
     /**
-     * The proof job (with the witness) for the vault's prover Worker only.
+     * The proof job (with the witness) for the vault's prover Worker only; the wasm-side text is wiped
+     * (finding 78, `secret_json`).
      * @param {bigint} action_id
      * @returns {string}
      */
     proofJob(action_id) {
-        let deferred2_0;
-        let deferred2_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             wasm.wasmvault_proofJob(retptr, this.__wbg_ptr, action_id);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr1 = r0;
-            var len1 = r1;
-            if (r3) {
-                ptr1 = 0; len1 = 0;
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            deferred2_0 = ptr1;
-            deferred2_1 = len1;
-            return getStringFromWasm0(ptr1, len1);
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred2_0, deferred2_1, 1);
         }
     }
     /**
@@ -3777,6 +3790,8 @@ export class WasmVault {
         }
     }
     /**
+     * Review run-2 of findings 78/81: the phrase is taken by value and wiped, as every secret a binding below takes
+     * (a passphrase, a PIN, a PRF output, a pairing code, a sealed blob or backup file).
      * @param {string} phrase
      * @param {string} config_json
      * @returns {WasmVault}
@@ -4061,13 +4076,10 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            if (r3) {
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            var v2 = getArrayU8FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export4(r0, r1 * 1, 1);
-            return v2;
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -4088,13 +4100,10 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            if (r3) {
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            var v3 = getArrayU8FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export4(r0, r1 * 1, 1);
-            return v3;
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -4112,13 +4121,10 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            if (r3) {
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            var v2 = getArrayU8FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export4(r0, r1 * 1, 1);
-            return v2;
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -4138,13 +4144,10 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            if (r3) {
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            var v2 = getArrayU8FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_export4(r0, r1 * 1, 1);
-            return v2;
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -4192,27 +4195,18 @@ export class WasmVault {
      * @returns {string}
      */
     secondProofJob(action_id) {
-        let deferred2_0;
-        let deferred2_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             wasm.wasmvault_secondProofJob(retptr, this.__wbg_ptr, action_id);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr1 = r0;
-            var len1 = r1;
-            if (r3) {
-                ptr1 = 0; len1 = 0;
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            deferred2_0 = ptr1;
-            deferred2_1 = len1;
-            return getStringFromWasm0(ptr1, len1);
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred2_0, deferred2_1, 1);
         }
     }
     /**
@@ -4527,14 +4521,14 @@ export class WasmVault {
         }
     }
     /**
-     * The node-mirrored state blob: JSON `{ id, token, blob }` for `PUT /blob/{id}`.
+     * The node-mirrored state blob: JSON `{ id, token, blob }` for `PUT /blob/{id}`. Review run-2 of findings
+     * 78/81: the write token crosses as `secret_json` does (`StateBlobUpload`, the same JSON); the TypeScript type
+     * stays `string`.
      * @param {string} dep
      * @param {bigint} version
      * @returns {string}
      */
     stateBlob(dep, version) {
-        let deferred3_0;
-        let deferred3_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             const ptr0 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
@@ -4543,19 +4537,12 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr2 = r0;
-            var len2 = r1;
-            if (r3) {
-                ptr2 = 0; len2 = 0;
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            deferred3_0 = ptr2;
-            deferred3_1 = len2;
-            return getStringFromWasm0(ptr2, len2);
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred3_0, deferred3_1, 1);
         }
     }
     /**
@@ -4739,13 +4726,13 @@ export class WasmVault {
     }
     /**
      * E-18a: the K-path keys of this phrase account on a K deployment: `{ owner_secret, scan_key,
-     * account_id }` (hex; `account_id` base64). `S` stays in WebAssembly.
+     * account_id }` (hex; `account_id` base64). `S` stays in WebAssembly. Review run-2 of findings 78/81:
+     * `owner_secret` and `scan_key` cross as `secret_json` does (as `transitionWalletKeys`' do); the TypeScript
+     * type stays `string`.
      * @param {string} k_deployment_json
      * @returns {string}
      */
     transitionKeys(k_deployment_json) {
-        let deferred3_0;
-        let deferred3_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             const ptr0 = passStringToWasm0(k_deployment_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
@@ -4754,19 +4741,12 @@ export class WasmVault {
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-            var ptr2 = r0;
-            var len2 = r1;
-            if (r3) {
-                ptr2 = 0; len2 = 0;
-                throw takeObject(r2);
+            if (r2) {
+                throw takeObject(r1);
             }
-            deferred3_0 = ptr2;
-            deferred3_1 = len2;
-            return getStringFromWasm0(ptr2, len2);
+            return takeObject(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export4(deferred3_0, deferred3_1, 1);
         }
     }
     /**
@@ -5486,7 +5466,7 @@ if (Symbol.dispose) WasmViewSession.prototype[Symbol.dispose] = WasmViewSession.
 
 /**
  * Check what WP-A's prover returned (`vkId`, `publicInputs`, `piDigest`, `envelope`) against the job and
- * return the envelope.
+ * return the envelope. The job text is taken by value and wiped (finding 78).
  * @param {string} job_json
  * @param {number} vk_id
  * @param {Uint8Array} public_inputs
@@ -5554,7 +5534,9 @@ export function backupHeader(file) {
 }
 
 /**
- * Unlock kind of a device blob without decrypting it: 1 PRF, 2 PIN or passphrase, 3 PRF and PIN.
+ * Unlock kind of a device blob without decrypting it: 1 PRF, 2 PIN or passphrase, 3 PRF and PIN. Review run-2 of
+ * findings 78/81: a sealed secret (a device blob, a backup file) is taken by value and wiped, as its passphrase,
+ * PIN or PRF output is (a `&[u8]` or `&str` argument is the glue's copy, freed unwiped).
  * @param {Uint8Array} blob
  * @returns {number}
  */
@@ -5612,7 +5594,8 @@ export function canonicalAddress(text, hrp) {
 }
 
 /**
- * `pin`, `short`, `passphrase` or `empty` (the 6-digit PIN warning of 04 §3.4).
+ * `pin`, `short`, `passphrase` or `empty` (the 6-digit PIN warning of 04 §3.4). The secret is taken by value and
+ * wiped (review run-2 of findings 78/81).
  * @param {string} s
  * @returns {string}
  */
@@ -5910,7 +5893,8 @@ export function lintEdge(a, height, inflows, window) {
 }
 
 /**
- * The local mock prover (localnet only): the §5.8 envelope over `SHA-256(public_inputs)`.
+ * The local mock prover (localnet only): the §5.8 envelope over `SHA-256(public_inputs)`. The job text
+ * is taken by value and wiped (finding 78).
  * @param {string} job_json
  * @returns {Uint8Array}
  */
@@ -5978,7 +5962,8 @@ export function newDeployment(chain_id, proxy, hrp, localnet_fast, account_code_
 }
 
 /**
- * Errata E-68 (4): open a history file for a deployment (JSON, `newDeployment`).
+ * Errata E-68 (4): open a history file for a deployment (JSON, `newDeployment`). The file (the notes' openings) is
+ * taken by value and wiped, and read without an unwiped copy (review run-3 of findings 78/81).
  * @param {string} file
  * @param {string} deployment_json
  * @returns {WasmHistorySession}
@@ -6004,7 +5989,9 @@ export function openHistory(file, deployment_json) {
 }
 
 /**
- * Errata E-66 (4): open a view-key file for a deployment (JSON, `newDeployment`).
+ * Errata E-66 (4): open a view-key file for a deployment (JSON, `newDeployment`). The file (`rk`, `nk`, `ck`: the
+ * account's whole history) is taken by value and wiped, and read without an unwiped copy (review run-3 of findings
+ * 78/81: a `&str` argument is the glue's copy, freed unwiped).
  * @param {string} file
  * @param {string} deployment_json
  * @returns {WasmViewSession}
@@ -6030,7 +6017,8 @@ export function openViewKey(file, deployment_json) {
 }
 
 /**
- * Check a typed phrase without opening anything (throws the phrase error codes).
+ * Check a typed phrase without opening anything (throws the phrase error codes). The text is taken by value and
+ * wiped (review run-2 of findings 78/81: a `&str` argument is the glue's copy, freed unwiped).
  * @param {string} text
  */
 export function phraseCheck(text) {
@@ -6051,13 +6039,13 @@ export function phraseCheck(text) {
 
 /**
  * WP-A's statement document (A-freeze1 §8) of a proof job, for its prover Worker (`{cmd: 'prove', doc,
- * profile}`). Secret: it carries the witness; it goes only to the prover Worker of the same origin.
+ * profile}`). Secret: it carries the witness; it goes only to the prover Worker of the same origin. The
+ * job text is taken by value and wiped with the job and the document (finding 78); the document crosses as
+ * `secret_json` does.
  * @param {string} job_json
  * @returns {string}
  */
 export function proverDocument(job_json) {
-    let deferred3_0;
-    let deferred3_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(job_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
@@ -6066,19 +6054,12 @@ export function proverDocument(job_json) {
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        var ptr2 = r0;
-        var len2 = r1;
-        if (r3) {
-            ptr2 = 0; len2 = 0;
-            throw takeObject(r2);
+        if (r2) {
+            throw takeObject(r1);
         }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
+        return takeObject(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export4(deferred3_0, deferred3_1, 1);
     }
 }
 
@@ -6342,15 +6323,16 @@ export function splitBelowSecondProof(a, v2, max_parts) {
 }
 
 /**
- * E-18a: the K-path keys of a Transition (K contract) wallet account: `{ owner_secret, scan_key,
- * account_id, fingerprint, address }` (hex; `account_id` base64). `S_w` stays in WebAssembly.
+ * E-18a: the K-path keys of a Transition (K contract) wallet account: `{ account_id, address, fingerprint,
+ * owner_secret, scan_key }` (hex; `account_id` base64). `S_w` stays in WebAssembly. Review run-1 of findings
+ * 78/81: `owner_secret` and `scan_key` cross as `secret_json` does (a `TransitionWalletKeys` written straight
+ * into a wiped text, no `serde_json::Value` on the way, handed to JS as a `JsString`); the sign-in text is taken
+ * by value and wiped. The JS type stays `string`.
  * @param {string} k_deployment_json
  * @param {string} sign_in_json
  * @returns {string}
  */
 export function transitionWalletKeys(k_deployment_json, sign_in_json) {
-    let deferred4_0;
-    let deferred4_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(k_deployment_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
@@ -6361,19 +6343,12 @@ export function transitionWalletKeys(k_deployment_json, sign_in_json) {
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        var ptr3 = r0;
-        var len3 = r1;
-        if (r3) {
-            ptr3 = 0; len3 = 0;
-            throw takeObject(r2);
+        if (r2) {
+            throw takeObject(r1);
         }
-        deferred4_0 = ptr3;
-        deferred4_1 = len3;
-        return getStringFromWasm0(ptr3, len3);
+        return takeObject(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export4(deferred4_0, deferred4_1, 1);
     }
 }
 
@@ -6506,7 +6481,8 @@ export function walletMessage(scheme, origin, deployment_json, address) {
 
 /**
  * E-18b: the input the UI asks the primary passkey's PRF for (WebAuthn `prf.eval.first`, hex), from a
- * wallet sign-in: computed from `S_w` and the deployment, before `d` exists.
+ * wallet sign-in: computed from `S_w` and the deployment, before `d` exists. The sign-in text (the wallet's
+ * signatures, which `S_w` comes from) is taken by value and wiped (review run-1 of findings 78/81).
  * @param {string} deployment_json
  * @param {string} sign_in_json
  * @returns {string}
@@ -6574,6 +6550,15 @@ function __wbg_get_imports(memory) {
         }, arguments); },
         __wbg_new_a32a1ab6c6655abe: function(arg0, arg1) {
             const ret = new Error(getStringFromWasm0(arg0, arg1));
+            return addHeapObject(ret);
+        },
+        __wbg_new_from_slice_4ee02165f9de919e: function(arg0, arg1) {
+            const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
+            return addHeapObject(ret);
+        },
+        __wbindgen_generic_0000000000000001: function(arg0, arg1) {
+            // Cast intrinsic for `Ref(String) -> Externref`.
+            const ret = getStringFromWasm0(arg0, arg1);
             return addHeapObject(ret);
         },
         __wbindgen_object_drop_ref: function(arg0) {

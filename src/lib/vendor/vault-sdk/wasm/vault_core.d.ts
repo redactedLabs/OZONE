@@ -43,11 +43,14 @@ export class WasmAgent {
      * A new agent key; returns the agent with an empty delegation (set it with `setDelegation`).
      */
     static generate(): WasmAgent;
+    /**
+     * The sealed key file and its passphrase are taken by value and wiped (review run-2 of findings 78/81).
+     */
     static open(file: Uint8Array, passphrase: string): WasmAgent;
     pay(dest_id: string, denom: string, amt: string, fees_json: string, now: bigint): string;
     revokeSelf(now: bigint): string;
     /**
-     * The sealed key file (`HOPSAGT1`).
+     * The sealed key file (`HOPSAGT1`), a `Uint8Array` copied from a wiped buffer (`secret_bytes`).
      */
     seal(passphrase: string): Uint8Array;
     /**
@@ -153,7 +156,8 @@ export class WasmVault {
     authorizations(): string;
     backupConfirmed(): boolean;
     /**
-     * The encrypted backup file. `desktop` selects m = 256 MiB instead of the browser's 64 MiB.
+     * The encrypted backup file. `desktop` selects m = 256 MiB instead of the browser's 64 MiB. A `Uint8Array`
+     * copied from a wiped buffer (`secret_bytes`).
      */
     backupFile(passphrase: string, desktop: boolean, include_d: boolean): Uint8Array;
     /**
@@ -190,11 +194,17 @@ export class WasmVault {
     config(): string;
     confirmBackupFile(file: Uint8Array, passphrase: string): void;
     /**
+     * Errata E-72 review run-2 (R2-A, vault UI channel only): the person confirms that written header generation
+     * `generation` on `dep`, which this session's own `d` binds, is theirs, opening the generation-choice gate.
+     */
+    confirmDeviceGeneration(dep: string, generation: number): void;
+    /**
      * After the vault Worker verified a WebAuthn assertion (user verification) over `challenge`.
      */
     confirmPasskey(action_id: bigint, challenge_hex: string): void;
     /**
-     * `answers`: JSON `[[position, "word"], …]`.
+     * `answers`: JSON `[[position, "word"], …]` (words of the phrase: the text is wiped here, review run-2 of
+     * findings 78/81; every word read from it in the core, `Session::confirm_phrase_words_json`, review run-3).
      */
     confirmPhraseWords(answers: string): boolean;
     confirmPin(action_id: bigint, pin: string): void;
@@ -208,6 +218,13 @@ export class WasmVault {
      * Owner side: delegate account `n` to an agent key (D15: a loosening).
      */
     delegate(dep: string, n: number, agent_vk: string, policy_json: string, delegation_expiry: bigint, can_return: boolean, now: bigint, expiry: bigint): string;
+    /**
+     * Errata E-72 review run-2 (R2-A, vault UI channel only): the written header generations for the vault UI's
+     * generation choice after a pairing code, a device blob or the backup gave this session a `d` from outside
+     * (`session` marks the one this device's `d` binds), with each height, its notes and amounts, and whether the
+     * sync was cross-checked. Nothing is adopted.
+     */
+    deviceGenerations(dep: string): string;
     /**
      * This device's id in deployment `dep` (hex), or without it the id the session was opened with.
      */
@@ -262,14 +279,16 @@ export class WasmVault {
     freezeAgents(dep: string, n: number, key: string, expiry: bigint): string;
     freshExitAddress(dep: string): string;
     /**
-     * Complete a pairing on the new device; `fetched_blob` is the node blob of an `id:` code.
+     * Complete a pairing on the new device; `fetched_blob` is the node blob of an `id:` code. The code (it carries
+     * the one-time pairing key) and the blob are taken by value and wiped.
      */
     static fromPairing(qr: string, fetched_blob: Uint8Array | null | undefined, config_json: string): WasmVault;
     /**
      * E-18, E-18a, E-18b: open a Strict wallet account (`adr036` or `eip191`) from a sign-in
      * (`with_sign_in`'s JSON: two equal answers, or one with the fingerprint the device kept). `level`:
      * `"passkey"` (recommended; `prf_hex` is the primary passkey's PRF output for `walletPasskeySalt`),
-     * `"wallet"` (wallet only, `d = d_w`), or `"home-only"` (every passkey lost: home only).
+     * `"wallet"` (wallet only, `d = d_w`), or `"home-only"` (every passkey lost: home only). The sign-in text
+     * is taken by value and wiped (review run-1 of findings 78/81).
      */
     static fromWallet(deployment_json: string, sign_in_json: string, level: string, prf_hex: string | null | undefined, config_json: string): WasmVault;
     hasDeviceFactor(): boolean;
@@ -365,6 +384,8 @@ export class WasmVault {
      * A pairing code for a new device: JSON `{ qr_inline, qr_by_id, blob, blob_id, new_device_id }`
      * (`blob` base64, for the node blob store when the inline code is too large). Each code names the
      * next device id (§3.4).
+     * Review run-2 of findings 78/81: both codes carry the one-time pairing key: the text crosses as `secret_json`
+     * does (`PairingOffer`'s own `Serialize`, the same JSON); the TypeScript type stays `string`.
      */
     pairingOffer(): string;
     /**
@@ -381,7 +402,8 @@ export class WasmVault {
     pendingActions(): string;
     phraseChallenge(): string;
     /**
-     * The 25 words, for the vault's own display only.
+     * The 25 words, for the vault's own display only. Review run-2 of findings 78/81: a JS string made from the
+     * wiped words (`secret_text`); the TypeScript type stays `string`.
      */
     phrase(): string;
     /**
@@ -429,7 +451,8 @@ export class WasmVault {
      */
     prepareSpend(dep: string, inputs_json: string, amt: string, kind_json: string, opts_json: string): string;
     /**
-     * The proof job (with the witness) for the vault's prover Worker only.
+     * The proof job (with the witness) for the vault's prover Worker only; the wasm-side text is wiped
+     * (finding 78, `secret_json`).
      */
     proofJob(action_id: bigint): string;
     /**
@@ -477,6 +500,10 @@ export class WasmVault {
      */
     restartWithThisPasskey(dep: string): string;
     static restoreFromBackup(file: Uint8Array, passphrase: string): WasmVault;
+    /**
+     * Review run-2 of findings 78/81: the phrase is taken by value and wiped, as every secret a binding below takes
+     * (a passphrase, a PIN, a PRF output, a pairing code, a sealed blob or backup file).
+     */
     static restoreFromPhrase(phrase: string, config_json: string): WasmVault;
     /**
      * Errata E-72 (1), review E72-1: after `other_generations`, adopt the file's `d` because header generation
@@ -562,7 +589,9 @@ export class WasmVault {
      */
     stateBlobWritten(dep: string, version: bigint): void;
     /**
-     * The node-mirrored state blob: JSON `{ id, token, blob }` for `PUT /blob/{id}`.
+     * The node-mirrored state blob: JSON `{ id, token, blob }` for `PUT /blob/{id}`. Review run-2 of findings
+     * 78/81: the write token crosses as `secret_json` does (`StateBlobUpload`, the same JSON); the TypeScript type
+     * stays `string`.
      */
     stateBlob(dep: string, version: bigint): string;
     sweepHome(dep: string, n: number, key: string, to: string, dest_generation: number, expiry: bigint): string;
@@ -591,7 +620,9 @@ export class WasmVault {
     sync(dep: string, snapshot_json: string): void;
     /**
      * E-18a: the K-path keys of this phrase account on a K deployment: `{ owner_secret, scan_key,
-     * account_id }` (hex; `account_id` base64). `S` stays in WebAssembly.
+     * account_id }` (hex; `account_id` base64). `S` stays in WebAssembly. Review run-2 of findings 78/81:
+     * `owner_secret` and `scan_key` cross as `secret_json` does (as `transitionWalletKeys`' do); the TypeScript
+     * type stays `string`.
      */
     transitionKeys(k_deployment_json: string): string;
     static unlockPassphrase(blob: Uint8Array, passphrase: string, config_json: string): WasmVault;
@@ -678,7 +709,7 @@ export class WasmViewSession {
 
 /**
  * Check what WP-A's prover returned (`vkId`, `publicInputs`, `piDigest`, `envelope`) against the job and
- * return the envelope.
+ * return the envelope. The job text is taken by value and wiped (finding 78).
  */
 export function acceptProverOutput(job_json: string, vk_id: number, public_inputs: Uint8Array, pi_digest: Uint8Array, envelope: Uint8Array): Uint8Array;
 
@@ -688,7 +719,9 @@ export function acceptProverOutput(job_json: string, vk_id: number, public_input
 export function backupHeader(file: Uint8Array): string;
 
 /**
- * Unlock kind of a device blob without decrypting it: 1 PRF, 2 PIN or passphrase, 3 PRF and PIN.
+ * Unlock kind of a device blob without decrypting it: 1 PRF, 2 PIN or passphrase, 3 PRF and PIN. Review run-2 of
+ * findings 78/81: a sealed secret (a device blob, a backup file) is taken by value and wiped, as its passphrase,
+ * PIN or PRF output is (a `&[u8]` or `&str` argument is the glue's copy, freed unwiped).
  */
 export function blobUnlockKind(blob: Uint8Array): number;
 
@@ -698,7 +731,8 @@ export function blobUnlockKind(blob: Uint8Array): number;
 export function canonicalAddress(text: string, hrp: string): string;
 
 /**
- * `pin`, `short`, `passphrase` or `empty` (the 6-digit PIN warning of 04 §3.4).
+ * `pin`, `short`, `passphrase` or `empty` (the 6-digit PIN warning of 04 §3.4). The secret is taken by value and
+ * wiped (review run-2 of findings 78/81).
  */
 export function classifySecret(s: string): string;
 
@@ -735,7 +769,8 @@ export function ladderFloor(a: string): string | undefined;
 export function lintEdge(a: string, height: bigint, inflows: string, window: bigint): string;
 
 /**
- * The local mock prover (localnet only): the §5.8 envelope over `SHA-256(public_inputs)`.
+ * The local mock prover (localnet only): the §5.8 envelope over `SHA-256(public_inputs)`. The job text
+ * is taken by value and wiped (finding 78).
  */
 export function mockProve(job_json: string): Uint8Array;
 
@@ -745,23 +780,29 @@ export function mockProve(job_json: string): Uint8Array;
 export function newDeployment(chain_id: string, proxy: string, hrp: string, localnet_fast: boolean, account_code_checksum?: string | null): string;
 
 /**
- * Errata E-68 (4): open a history file for a deployment (JSON, `newDeployment`).
+ * Errata E-68 (4): open a history file for a deployment (JSON, `newDeployment`). The file (the notes' openings) is
+ * taken by value and wiped, and read without an unwiped copy (review run-3 of findings 78/81).
  */
 export function openHistory(file: string, deployment_json: string): WasmHistorySession;
 
 /**
- * Errata E-66 (4): open a view-key file for a deployment (JSON, `newDeployment`).
+ * Errata E-66 (4): open a view-key file for a deployment (JSON, `newDeployment`). The file (`rk`, `nk`, `ck`: the
+ * account's whole history) is taken by value and wiped, and read without an unwiped copy (review run-3 of findings
+ * 78/81: a `&str` argument is the glue's copy, freed unwiped).
  */
 export function openViewKey(file: string, deployment_json: string): WasmViewSession;
 
 /**
- * Check a typed phrase without opening anything (throws the phrase error codes).
+ * Check a typed phrase without opening anything (throws the phrase error codes). The text is taken by value and
+ * wiped (review run-2 of findings 78/81: a `&str` argument is the glue's copy, freed unwiped).
  */
 export function phraseCheck(text: string): void;
 
 /**
  * WP-A's statement document (A-freeze1 §8) of a proof job, for its prover Worker (`{cmd: 'prove', doc,
- * profile}`). Secret: it carries the witness; it goes only to the prover Worker of the same origin.
+ * profile}`). Secret: it carries the witness; it goes only to the prover Worker of the same origin. The
+ * job text is taken by value and wiped with the job and the document (finding 78); the document crosses as
+ * `secret_json` does.
  */
 export function proverDocument(job_json: string): string;
 
@@ -815,8 +856,11 @@ export function snapshotFromFeeds(records_json: string): string;
 export function splitBelowSecondProof(a: string, v2: string, max_parts: number): string;
 
 /**
- * E-18a: the K-path keys of a Transition (K contract) wallet account: `{ owner_secret, scan_key,
- * account_id, fingerprint, address }` (hex; `account_id` base64). `S_w` stays in WebAssembly.
+ * E-18a: the K-path keys of a Transition (K contract) wallet account: `{ account_id, address, fingerprint,
+ * owner_secret, scan_key }` (hex; `account_id` base64). `S_w` stays in WebAssembly. Review run-1 of findings
+ * 78/81: `owner_secret` and `scan_key` cross as `secret_json` does (a `TransitionWalletKeys` written straight
+ * into a wiped text, no `serde_json::Value` on the way, handed to JS as a `JsString`); the sign-in text is taken
+ * by value and wiped. The JS type stays `string`.
  */
 export function transitionWalletKeys(k_deployment_json: string, sign_in_json: string): string;
 
@@ -846,7 +890,8 @@ export function walletMessage(scheme: string, origin: string, deployment_json: s
 
 /**
  * E-18b: the input the UI asks the primary passkey's PRF for (WebAuthn `prf.eval.first`, hex), from a
- * wallet sign-in: computed from `S_w` and the deployment, before `d` exists.
+ * wallet sign-in: computed from `S_w` and the deployment, before `d` exists. The sign-in text (the wallet's
+ * signatures, which `S_w` comes from) is taken by value and wiped (review run-1 of findings 78/81).
  */
 export function walletPasskeySalt(deployment_json: string, sign_in_json: string): string;
 
@@ -952,6 +997,7 @@ export interface InitOutput {
     readonly wasmvault_checkSafeClose: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmvault_config: (a: number, b: number) => void;
     readonly wasmvault_confirmBackupFile: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly wasmvault_confirmDeviceGeneration: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmvault_confirmPasskey: (a: number, b: number, c: bigint, d: number, e: number) => void;
     readonly wasmvault_confirmPhraseWords: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_confirmPin: (a: number, b: number, c: bigint, d: number, e: number) => void;
@@ -959,6 +1005,7 @@ export interface InitOutput {
     readonly wasmvault_create: (a: number, b: number, c: number) => void;
     readonly wasmvault_createAccountMsg: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmvault_delegate: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: bigint, k: number, l: bigint, m: bigint) => void;
+    readonly wasmvault_deviceGenerations: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_deviceId: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_exitAddresses: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmvault_exitLock: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;

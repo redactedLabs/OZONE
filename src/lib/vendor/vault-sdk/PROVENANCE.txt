@@ -1,18 +1,22 @@
 Redacted vault SDK, the viewer part (errata E-66 (4) view keys, E-68 (4) history files), for the /view page.
 
-Source   hops, branch integration, commit 975c300546a760d28140122256506a34a8ebac5f (fix/every-device merged as
-         70aa3f4: errata E-72 with its review run-1 fixes; before it the Rujira-audit fixes of 8bea5ff, errata
-         E-70 and E-71; a client-only release, INTEGRATION.md §1)
-Export   git archive --format=tar 975c300 | tar -x   (a clean export, no working tree)
+Source   hops, branch integration, commit 6e41c95732eeb51338b6003ec1067f309e75904c (INTEGRATION §1 on the merge
+         b7d2600 of fix/every-device-r2: errata E-72 review run-2 to run-5 and the amended E-74; before it
+         3c24466, the review run-2 and run-3 fixes of Rujira's findings 78 and 81; a client-only release)
+Export   git archive --format=tar 6e41c95 | tar -x   (a clean export, no working tree)
 Build    packages/vault-sdk/scripts/build-wasm.sh, production module only (feature `wasm`,
          rust 1.95.0, wasm-bindgen 0.2.128, wasm-opt 132, host paths remapped), then `tsc -p tsconfig.json`
-Result   wasm/vault_core_bg.wasm  sha256 73added38efe27a017d3954db9d60fed0c21b04e6771d60388bb865bb7eace44
-         (4,279,935 bytes) = CORE_WASM_SHA256 pinned in checksums.js; initCore refuses other bytes (E-30).
-         wasm/vault_core.js sha256 08c97ef1316a5a250b023e7e9ca7d7c66d9c194dbfc7b0ba4e51aa69ca30ad4f
-         (287,555 bytes), as INTEGRATION.md §1 names it. The viewer API is unchanged since a948a92:
-         viewer.{js,d.ts}, sha256.{js,d.ts} and types.js are byte-identical to feaa13b's; core and types.d.ts
-         gained vault-side methods and types only (E-70, E-72), none on the viewer's path. The test fixtures
-         regenerated from this export differ from feaa13b's only in their `about` line.
+Result   wasm/vault_core_bg.wasm  sha256 9a945b792dd4f777973d2416307e5341ceae69229fb284c871f5676ab9ae3ec0
+         (4,286,819 bytes) = CORE_WASM_SHA256 pinned in checksums.js; initCore refuses other bytes (E-30).
+         wasm/vault_core.js sha256 cb54e979153e61416f904f269d81ba6e62443769461c0da281e3072a38809cbd
+         (288,980 bytes), as INTEGRATION.md §1 and §5.1 name them; byte-identical to the clean export of the
+         merge commit (.wf/rel/export-merge-e72-r5). The prover module (ea042d5f…) is not vendored.
+         The viewer API is unchanged since a948a92: viewer.{js,d.ts}, sha256.{js,d.ts} and types.js are
+         byte-identical to feaa13b's. openViewKey and openHistory now take the file by value and wipe the
+         module's copy (Rujira 78/81 review run-3); their glue and TS types are unchanged, so the page passes
+         the file as before. core and types.d.ts gained vault-side methods and docs only (deviceGenerations,
+         confirmDeviceGeneration; E-72 run-2 to run-5), none on the viewer's path. The test fixtures
+         regenerated from this export differ from 975c300's only in their `about` line.
 
 Files    dist/{viewer,core,checksums,sha256,types}.{js,d.ts} and wasm/{vault_core.js,vault_core.d.ts,
          vault_core_bg.wasm,vault_core_bg.wasm.d.ts}, unchanged; SHA256SUMS lists them (checked by
