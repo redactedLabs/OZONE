@@ -1020,3 +1020,11 @@ html.redacted .hero-word {
 html.redacted .team-row {
 	flex-wrap: wrap;
 }
+/* home: on a phone the day's new entries sit under the number, not on top of it */
+@media (max-width: 639px) {
+	html.redacted .stat-inset {
+		position: static;
+		display: inline-flex;
+		margin-top: 8px;
+	}
+}
