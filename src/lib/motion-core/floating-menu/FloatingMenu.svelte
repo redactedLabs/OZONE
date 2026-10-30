@@ -97,6 +97,10 @@
 		 */
 		classes?: FloatingMenuClasses;
 		/**
+		 * Optional snippet below the link groups, inside the opened menu.
+		 */
+		menuFooter?: Snippet;
+		/**
 		 * The target element or selector to append the menu to.
 		 * Useful for containment in demos or specific containers.
 		 * @default "body"
@@ -107,6 +111,7 @@
 	let {
 		menuGroups,
 		logo,
+		menuFooter,
 		primaryButton,
 		secondaryButton,
 		class: className,
@@ -445,5 +450,10 @@
 				</div>
 			{/each}
 		</div>
+		{#if menuFooter}
+			<div data-slot="menu-footer">
+				{@render menuFooter()}
+			</div>
+		{/if}
 	</div>
 </div>

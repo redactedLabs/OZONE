@@ -1,89 +1,97 @@
 @import 'tailwindcss';
+@import './lib/styles/redacted-theme.css';
 @import './lib/styles/win98-theme.css';
 
-@variant dark (&:where(.dark, .dark *));
-
 /*
- * Ozone Theme System
- * Dark mode only: Deep navy
+ * Ozone themes, on <html>:
+ *   .redacted  the style of redacted.gg (default): src/lib/styles/redacted-theme.css
+ *   .win98     the Windows 98 look: src/lib/styles/win98-theme.css
+ * :root holds the Redacted tokens; .win98 overrides each of them. The colours are redacted.gg's own
+ * (ice, ink, mute, night, line, cyan, sky, blue, amber, alert); anything else is an opacity of one of them.
  */
-
-/* ── Dark Mode (default) ── */
 :root {
-	--base-hue: 265;
-	--radius-base: 0.275rem;
+	--radius-base: 0.25rem;
+
+	/* redacted.gg palette */
+	--ice: #f3f7fa;
+	--ice-2: #e8eff5;
+	--ink: #0a111c;
+	--ink-2: #3c4757;
+	--mute: #6a7686;
+	--night: #05080d;
+	--night-2: #0b1119;
+	--night-3: #121a25;
+	--line: #1c2633;
+	--cyan: #3bd8cf;
+	--sky: #29b4f2;
+	--blue: #1f8ff0;
+	--amber: #f5b13d;
+	--alert: #f2545b;
+	--grad: linear-gradient(160deg, #3bd8cf 0%, #29b4f2 48%, #1f8ff0 100%);
 
 	/* Backgrounds */
-	--background-inset: #060610;
-	--background: #060610;
-	--background-muted: #0d0d1f;
-	--fixed-light: #f1f5f9;
-	--fixed-dark: #060610;
+	--background-inset: #05080d;
+	--background: #ffffff;
+	--background-muted: #e8eff5;
+	--fixed-light: #f3f7fa;
+	--fixed-dark: #0a111c;
 
 	/* Text */
-	--foreground: #f1f5f9;
-	--foreground-muted: #64748b;
+	--foreground: #0a111c;
+	--foreground-muted: #6a7686;
 
 	/* Accent */
-	--accent: #6366f1;
-	--accent-secondary: #4f46e5;
+	--accent: #1f8ff0;
+	--accent-secondary: #29b4f2;
 
 	/* Borders */
-	--border: rgba(99, 102, 241, 0.15);
+	--border: rgba(10, 17, 28, 0.08);
 
 	/* Shadows */
-	--shadow-xs: 0px 1px 2px rgba(0, 0, 0, 0.5);
-	--shadow-sm: 0px 1px 2px rgba(0, 0, 0, 0.5), 0px 3px 6px rgba(0, 0, 0, 0.4);
-	--shadow-md: 0px 2px 4px rgba(0, 0, 0, 0.5), 0px 6px 12px rgba(0, 0, 0, 0.4);
-	--shadow-lg: 0px 4px 8px rgba(0, 0, 0, 0.5), 0px 12px 24px rgba(0, 0, 0, 0.4);
-	--shadow-xl: 0px 8px 16px rgba(0, 0, 0, 0.5), 0px 24px 48px rgba(0, 0, 0, 0.4);
-	--shadow-2xl: 0px 16px 32px rgba(0, 0, 0, 0.5), 0px 48px 96px rgba(0, 0, 0, 0.4);
+	--shadow-xs: 0 1px 2px rgba(10, 17, 28, 0.06);
+	--shadow-sm: 0 8px 20px -14px rgba(10, 17, 28, 0.3);
+	--shadow-md: 0 20px 40px -24px rgba(10, 17, 28, 0.35);
+	--shadow-lg: 0 24px 48px -24px rgba(10, 17, 28, 0.4);
+	--shadow-xl: 0 10px 40px -12px rgba(5, 8, 13, 0.55);
+	--shadow-2xl: 0 30px 60px -20px rgba(5, 8, 13, 0.6);
 
-	/* App tokens */
-	--bg: #060610;
-	--bg-card: #0d0d1f;
-	--bg-card-hover: #13132f;
-	--bg-code: #060610;
-	--app-accent: #6366f1;
-	--accent-glow: #818cf8;
-	--danger: #ef4444;
-	--warning: #f59e0b;
-	--success: #10b981;
-	--muted: #334155;
-	--text: #f1f5f9;
-	--text-secondary: #94a3b8;
-	--text-muted: #64748b;
-	--text-faint: #475569;
-	--text-ghost: #334155;
-	--app-border: #1e293b;
-	--app-border-subtle: rgba(30, 41, 59, 0.5);
-	--card-bg: rgba(13, 13, 31, 0.6);
-	--card-border: #1e293b;
-	--card-glow: rgba(99, 102, 241, 0.25);
-	--hero-title: #f1f5f9;
-	--hero-slash: #334155;
-	--hero-sub: #475569;
-	--stat-indigo: #818cf8;
-	--scrollbar-thumb: #334155;
-	--scrollbar-track: #060610;
-	--tooltip-bg: #1e293b;
-	--tooltip-border: #334155;
-	--input-bg: #060610;
-	--input-border: #1e293b;
-	--input-border-focus: #6366f1;
-	--input-placeholder: #475569;
-	--godrays-bg: #060610;
-	--godrays-color: #6366f1;
-	--globe-land: #1e1b4b;
-	--globe-fresnel: #060610;
-	--globe-rim: #6366f1;
-	--globe-atmo: #6366f1;
-	--globe-pill-bg: rgba(13, 13, 31, 0.9);
-}
-
-/* Keep .dark explicit for motion-core compatibility */
-.dark {
-	/* Same as :root defaults — dark is default */
+	/* App tokens (light: on ice; the night scope in redacted-theme.css redefines them) */
+	--bg: #f3f7fa;
+	--bg-card: #ffffff;
+	--bg-card-hover: #f3f7fa;
+	--bg-code: #f3f7fa;
+	--app-accent: #1f8ff0;
+	--accent-glow: #29b4f2;
+	--danger: #f2545b;
+	--warning: #f5b13d;
+	--success: #3bd8cf;
+	/* the same three as text on ice: mixed with ink so they read on white */
+	--danger-text: color-mix(in srgb, #f2545b 84%, #0a111c);
+	--warning-text: color-mix(in srgb, #f5b13d 62%, #0a111c);
+	--success-text: color-mix(in srgb, #3bd8cf 58%, #0a111c);
+	--text: #0a111c;
+	--text-secondary: #3c4757;
+	--text-muted: #6a7686;
+	--text-faint: rgba(10, 17, 28, 0.45);
+	--text-ghost: rgba(10, 17, 28, 0.28);
+	--app-border: rgba(10, 17, 28, 0.08);
+	--app-border-subtle: rgba(10, 17, 28, 0.06);
+	--card-bg: rgba(255, 255, 255, 0.75);
+	--card-border: rgba(10, 17, 28, 0.07);
+	--card-glow: rgba(41, 180, 242, 0.25);
+	--hero-title: #0a111c;
+	--hero-slash: rgba(10, 17, 28, 0.3);
+	--hero-sub: #6a7686;
+	--stat-indigo: #1f8ff0;
+	--scrollbar-thumb: rgba(10, 17, 28, 0.2);
+	--scrollbar-track: transparent;
+	--tooltip-bg: #ffffff;
+	--tooltip-border: rgba(10, 17, 28, 0.1);
+	--input-bg: #ffffff;
+	--input-border: rgba(10, 17, 28, 0.12);
+	--input-border-focus: #29b4f2;
+	--input-placeholder: rgba(10, 17, 28, 0.38);
+	--globe-pill-bg: rgba(255, 255, 255, 0.85);
 }
 
 @theme {
@@ -124,7 +132,7 @@ html {
 body {
 	background-color: var(--bg);
 	color: var(--text);
-	font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	font-family: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
 	margin: 0;
 	padding: 0;
 	min-height: 100vh;

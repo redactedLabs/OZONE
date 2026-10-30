@@ -97,11 +97,12 @@
 	<meta name="twitter:description" content="Get a verifiable compliance certificate for any THORChain address. Free." />
 </svelte:head>
 
-<div class="mx-auto px-4 pt-20 pb-16" class:max-w-5xl={phase === 'idle'} class:max-w-3xl={phase !== 'idle'}>
+<div class="page-shell mx-auto px-4 pt-20 pb-16" class:max-w-5xl={phase === 'idle'} class:max-w-3xl={phase !== 'idle'}>
 
 	{#if phase === 'idle'}
 
-		<!-- Hero -->
+		<!-- Hero and the input card: the page head -->
+		<div class="page-hero">
 		<div class="hero-section text-center mb-12" class:hero-visible={heroVisible}>
 			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
 				<span class="relative flex h-2 w-2">
@@ -145,6 +146,7 @@
 			<p class="text-[10px] mt-3 text-center" style="color: var(--text-faint);">
 				Screens against OFAC, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack and phishing lists, plus THORChain flow tracing. <a href="/methodology" style="color: var(--app-accent);">Methodology</a>
 			</p>
+		</div>
 		</div>
 
 		<!-- How it works — Architecture -->
@@ -281,7 +283,7 @@
 
 	{:else if phase === 'scanning'}
 		<!-- Scanning Phase -->
-		<div class="text-center mb-8">
+		<div class="page-hero page-hero-slim text-center mb-8">
 			<h2 class="text-xl font-bold mb-1" style="color: var(--text);">Screening in progress</h2>
 			<p class="text-xs font-mono" style="color: var(--text-muted);">{truncAddr(address)}</p>
 		</div>
@@ -318,7 +320,7 @@
 
 	{:else if phase === 'done' && result}
 		<!-- Certificate Phase -->
-		<div class="text-center mb-6">
+		<div class="page-hero page-hero-slim text-center mb-6">
 			<button onclick={reset} class="text-xs mb-4" style="color: var(--text-muted);">&#8592; Screen another address</button>
 		</div>
 

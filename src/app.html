@@ -1,8 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="redacted">
 	<head>
 		<meta charset="utf-8" />
-		<script>try{document.documentElement.className=localStorage.getItem('theme')||'win98'}catch(e){document.documentElement.className='win98'}</script>
+		<script>try{if(localStorage.getItem('theme')==='win98')document.documentElement.className='win98'}catch(e){}</script>
+		<meta name="theme-color" content="#f3f7fa" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="icon" type="image/png" href="%sveltekit.assets%/favicon.png" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/favicon.png" />

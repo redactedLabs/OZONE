@@ -45,10 +45,10 @@
 	<meta property="og:url" content="https://ozone.redacted.gg/open-source" />
 </svelte:head>
 
-<div class="mx-auto max-w-4xl px-4 pt-20 pb-16">
+<div class="page-shell mx-auto max-w-4xl px-4 pt-20 pb-16">
 
 	<!-- Hero -->
-	<div class="text-center mb-16" class:hero-visible={heroVisible}>
+	<div class="page-hero text-center mb-16" class:hero-visible={heroVisible}>
 		<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
 			<span class="relative flex h-2 w-2">
 				<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: #10b981;"></span>

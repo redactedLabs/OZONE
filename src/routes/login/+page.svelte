@@ -8,9 +8,6 @@
 	let error = $state('');
 	let loading = $state(false);
 
-	let GodRaysComponent: any = $state(null);
-	let mounted = $state(false);
-
 	onMount(async () => {
 		// Handle logout
 		const params = new URLSearchParams(window.location.search);
@@ -20,10 +17,6 @@
 			window.location.reload();
 			return;
 		}
-
-		const mod = await import('$lib/motion-core');
-		GodRaysComponent = mod.GodRays;
-		mounted = true;
 	});
 
 	async function handleSubmit(e: Event) {
@@ -53,26 +46,8 @@
 	<title>Login — Ozone</title>
 </svelte:head>
 
-<div class="relative flex min-h-screen items-center justify-center overflow-hidden" style="background: var(--bg);">
-	{#if mounted && GodRaysComponent}
-		<div class="absolute inset-0" style="pointer-events: none;">
-			<svelte:component
-				this={GodRaysComponent}
-				class="h-full w-full"
-				color={'#6366f1'}
-				backgroundColor={'#060610'}
-				intensity={0.25}
-				speed={0.5}
-				pulsating={true}
-				anchorX={0.5}
-				anchorY={0.3}
-				lightSpread={1.2}
-				rayLength={1.5}
-			/>
-		</div>
-	{:else}
-		<div class="absolute inset-0" style="background: var(--bg);"></div>
-	{/if}
+<div class="login-screen relative flex min-h-screen items-center justify-center overflow-hidden" style="background: var(--bg);">
+	<div class="absolute inset-0" style="background: var(--bg);"></div>
 
 	<div class="relative z-10 w-full max-w-md rounded-2xl p-8 shadow-2xl" style="background: var(--card-bg); border: 1px solid var(--card-border); backdrop-filter: blur(20px);" data-win-title="Login">
 		<div class="mb-8 text-center">

@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte';
+	import Ghost from '$lib/components/Ghost.svelte';
 
 	type GlobeMarker = { location: [number, number]; size?: number; color?: string; label?: string };
 
@@ -13,7 +14,6 @@
 	let toast = $state({ visible: false, message: '', variant: 'info' as const });
 	let GlobeComponent: any = $state(null);
 	let BlocksGlobeComponent: any = $state(null);
-	let GodRaysComponent: any = $state(null);
 	let mounted = $state(false);
 	// Sync state
 	let syncState = $state({
@@ -59,6 +59,8 @@
 	}
 
 	let globeArcs = $state(buildArcs());
+	// the arcs of the Redacted theme's globe (a light world), in the brand's blue
+	const globeArcsRedacted = $derived(globeArcs.map((a) => ({ ...a, color: '#1f8ff0' })));
 
 	const globeMarkers: GlobeMarker[] = NODES.map(n => ({
 		location: n.loc,
@@ -66,6 +68,18 @@
 		color: n.color,
 		label: n.name,
 	}));
+
+	// The scanner in the Redacted hero: addresses fly in, verdicts fly out (an illustration, not live data).
+	// Each pair shares its delay, so an address leaves as its own verdict.
+	const SCANS = [
+		{ chain: 'BTC', addr: 'bc1q…k7wz', flagged: false, note: '' },
+		{ chain: 'ETH', addr: '0x7f3a…19c2', flagged: true, note: 'Received from a listed hack via THORChain' },
+		{ chain: 'RUNE', addr: 'thor1…8m4q', flagged: false, note: '' },
+	];
+	const SCAN_SOURCES = ['OFAC', 'UK', 'EU', 'FBI', 'Tether', 'Circle', 'Hacks', 'Traces'];
+
+	// the Redacted globe: every marker in the brand's blue, labels as white chips
+	const globeMarkersRedacted: GlobeMarker[] = globeMarkers.map((m) => ({ ...m, color: '#1f8ff0' }));
 
 	type LiveTx = {
 		type: string;
@@ -144,7 +158,6 @@
 		import('$lib/motion-core').then((mod) => {
 			GlobeComponent = mod.Globe;
 			BlocksGlobeComponent = mod.BlocksGlobe;
-			GodRaysComponent = mod.GodRays;
 			mounted = true;
 		}).catch(() => {
 			mounted = true;
@@ -254,40 +267,47 @@
 	})}</script>`}
 </svelte:head>
 
-<!-- Page with GodRays bg -->
 <div class="relative min-h-screen overflow-hidden">
-	<!-- GodRays layer -->
-	{#if mounted && GodRaysComponent}
-		<div class="godrays-bg">
-			<svelte:component
-				this={GodRaysComponent}
-				class="h-full w-full"
-				color={'#6366f1'}
-				backgroundColor={'#060610'}
-				intensity={0.3}
-				speed={0.4}
-				anchorX={0.5}
-				anchorY={0.0}
-				lightSpread={2.0}
-				rayLength={2.5}
-				fadeDistance={0.5}
-				noiseAmount={0.15}
-			/>
-		</div>
-	{/if}
-
 	<!-- Content -->
-	<div class="relative z-10 mx-auto max-w-7xl px-4 pt-20 pb-16 sm:px-6">
+	<div class="page-shell relative z-10 mx-auto max-w-7xl px-4 pt-20 pb-16 sm:px-6">
 
+	<!-- Hero and the numbers: the page head (a night panel in the Redacted theme) -->
+	<div class="page-hero">
 	<!-- Hero -->
 	<div class="text-center mb-6 pt-4 sm:pt-8">
-		<h1 class="hero-title text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-3"><span style="color: var(--hero-title);">Redacted</span><span style="color: var(--hero-slash);">\</span><span style="color: var(--hero-sub);">Ozone</span></h1>
+		<h1 class="hero-title text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-3"><span style="color: var(--hero-title);">Redacted</span><span style="color: var(--hero-slash);">\</span><span class="rd-grad" style="color: var(--hero-sub);">Ozone</span></h1>
 		<p class="text-sm sm:text-base mb-4" style="color: var(--text-muted);">
 			On-chain compliance infrastructure for THORChain & Rujira
 		</p>
 		<div class="flex items-center justify-center gap-3">
 			<a href="/history" class="hero-cta-primary rounded-lg px-5 py-2 text-sm font-semibold text-white">Wallet Explorer</a>
 			<a href="/certificate" class="hero-cta-secondary rounded-lg px-5 py-2 text-sm font-medium">Proof of Innocence</a>
+		</div>
+	</div>
+
+	<!-- Redacted theme: the scanner, as redacted.gg's hero phone -->
+	<div class="rd-only scan-stage" aria-hidden="true">
+		<div class="scan-streams">
+			{#each SCANS as s, i (s.addr)}
+				<div class="scan-card scan-in" style="animation-delay: {i * -3}s;">
+					<span class="scan-coin">{s.chain}</span>
+					<span class="scan-card-text"><b>{s.chain === 'RUNE' ? 'THORChain' : s.chain === 'BTC' ? 'Bitcoin' : 'Ethereum'}</b><code>{s.addr}</code></span>
+					<span class="scan-pill">unchecked</span>
+				</div>
+				<div class="scan-card scan-out" class:scan-flagged={s.flagged} style="animation-delay: {i * -3}s;">
+					<span class="scan-coin">{s.chain}</span>
+					<span class="scan-card-text"><b>{s.flagged ? 'Flagged' : 'Clear'}</b><small>{s.flagged ? s.note : `Checked against ${data.stats.sources} lists`}</small></span>
+					<span class="scan-verdict">{s.flagged ? '!' : '✓'}</span>
+				</div>
+			{/each}
+		</div>
+		<div class="scan-device">
+			<span class="rd-tile scan-tile"><Ghost /></span>
+			<div class="scan-device-title">Screening</div>
+			<div class="scan-sources">
+				{#each SCAN_SOURCES as src, i (src)}<span style="animation-delay: {i * 0.35}s;">{src}</span>{/each}
+			</div>
+			<div class="scan-beam"></div>
 		</div>
 	</div>
 
@@ -334,14 +354,11 @@
 			<div class="stat-tip">thor1 accounts Ozone monitors (Rujira League, Midgard LPs, live transactions), screened directly and through their {data.stats.linkedL1.toLocaleString('en-US')} linked L1 addresses. "Flagged" counts those flagged themselves or linked to a listed L1 address (formerly "Flagged THORChain Users"; the old screener's 2 were fee collectors, both false positives).</div>
 		</a>
 	</div>
+	</div>
 
 	<!-- Line 2: Live TX + Globe -->
-	{#snippet markerTooltip(ctx: any)}
-		<div class="pointer-events-none relative rounded-sm px-2.5 py-1 font-mono text-[11px] font-bold tracking-wider whitespace-nowrap"
-			style="background: {ctx.marker.color || '#f1f5f9'}; color: #060610; opacity: {ctx.visibility};">
-			{ctx.marker.label || ''}
-			<span class="absolute top-[calc(100%-1px)] left-1/2 h-0 w-0 -translate-x-1/2 border-x-[4px] border-t-[4px] border-x-transparent" style="border-top-color: {ctx.marker.color || '#f1f5f9'};"></span>
-		</div>
+	{#snippet rdMarkerTooltip(ctx: any)}
+		<div class="rd-marker pointer-events-none" style="opacity: {ctx.visibility};">{ctx.marker.label || ''}</div>
 	{/snippet}
 
 	{#snippet win98MarkerTooltip(ctx: any)}
@@ -360,10 +377,10 @@
 			</div>
 			<div class="max-h-[400px] overflow-y-auto">
 				{#each liveTxs as tx, i (tx.key ?? (tx.txID || `tx-${i}`))}
-					{@const typeColor = tx.type === 'STREAM' ? '#a78bfa' : tx.type === 'SWAP' ? '#818cf8' : tx.type === 'ADD' ? '#10b981' : tx.type === 'WD' ? '#f59e0b' : tx.type === 'SEND' ? '#22d3ee' : tx.type === 'REFUND' ? '#ef4444' : '#64748b'}
+					{@const typeColor = tx.type === 'STREAM' ? 'var(--sky)' : tx.type === 'SWAP' ? 'var(--blue)' : tx.type === 'ADD' ? 'var(--success-text)' : tx.type === 'WD' ? 'var(--warning-text)' : tx.type === 'SEND' ? 'var(--sky)' : tx.type === 'REFUND' ? 'var(--danger-text)' : 'var(--mute)'}
 					<div class="tx-row px-3 py-1.5 text-[11px]" style="border-bottom: 1px solid var(--app-border-subtle);">
 						<div class="flex items-center gap-1.5 w-full">
-							<span class="shrink-0 w-14 text-center rounded px-1 py-0.5 text-[8px] font-bold" style="background: {typeColor}15; color: {typeColor};">{tx.type}</span>
+							<span class="shrink-0 w-14 text-center rounded px-1 py-0.5 text-[8px] font-bold" style="background: color-mix(in srgb, {typeColor} 12%, transparent); color: {typeColor};">{tx.type}</span>
 							<span class="font-mono flex-1 min-w-0" style="color: var(--text-secondary);">
 								<span class="tx-addr">{tx.from}</span>
 								<span style="color: #334155; margin: 0 2px;">→</span>
@@ -409,15 +426,16 @@
 					class="h-full w-full"
 					radius={3}
 					pointCount={20000}
-					landPointColor={'#1e1b4b'}
-					pointSize={0.035}
-					fresnelConfig={{ color: '#060610', rimColor: '#6366f1', rimPower: 5, rimIntensity: 2.0 }}
-					atmosphereConfig={{ color: '#6366f1', scale: 1.12, power: 10, coefficient: 0.85, intensity: 1.8 }}
-					markers={globeMarkers}
-					{markerTooltip}
+					landPointColor={'#1f8ff0'}
+					landBlending="normal"
+					pointSize={0.04}
+					fresnelConfig={{ color: '#f3f7fa', rimColor: '#29b4f2', rimPower: 2.5, rimIntensity: 0.55 }}
+					atmosphereConfig={{ color: '#29b4f2', scale: 1.12, power: 10, coefficient: 0.85, intensity: 0.9 }}
+					markers={globeMarkersRedacted}
+					markerTooltip={rdMarkerTooltip}
 					autoRotate={true}
 					lockedPolarAngle={false}
-					arcs={globeArcs}
+					arcs={globeArcsRedacted}
 				/>
 			{:else}
 				<div class="flex h-full items-center justify-center" style="min-height: 350px;">
@@ -619,17 +637,208 @@
 />
 
 <style>
-	.godrays-bg {
+	/* Redacted globe labels: white chips, as redacted.gg's pills */
+	.rd-marker {
+		padding: 3px 9px;
+		border-radius: 999px;
+		background: #fff;
+		color: #0a111c;
+		font: 600 11px/1.4 var(--font-mono);
+		letter-spacing: 0.02em;
+		white-space: nowrap;
+		box-shadow: inset 0 0 0 1px rgba(10, 17, 28, 0.08), 0 8px 20px -10px rgba(10, 17, 28, 0.35);
+	}
+	/* ── Redacted hero: the scanner (redacted.gg's card streams, fly-in / fly-out) ── */
+	.scan-stage {
+		position: relative;
+		height: 340px;
+		margin: 28px 0 36px;
+		display: grid;
+		place-items: center;
+	}
+	.scan-streams {
 		position: absolute;
-		top: 0;
+		inset: 0;
+		perspective: 1100px;
+		pointer-events: none;
+		display: none;
+	}
+	@media (min-width: 900px) {
+		.scan-streams {
+			display: block;
+		}
+	}
+	.scan-card {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 300px;
+		margin: -36px 0 0 -150px;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 14px;
+		border-radius: 18px;
+		background: rgba(255, 255, 255, 0.85);
+		border: 1px solid rgba(10, 17, 28, 0.06);
+		box-shadow: 0 20px 40px -24px rgba(10, 17, 28, 0.35);
+		text-align: left;
+		will-change: transform, opacity;
+	}
+	.scan-in {
+		animation: fly-in 9s linear infinite both;
+	}
+	.scan-out {
+		animation: fly-out 9s linear infinite both;
+		border: 1.5px solid transparent;
+		background: linear-gradient(#fff, #fff) padding-box, var(--grad) border-box;
+		box-shadow: 0 0 24px -4px rgba(41, 180, 242, 0.55), 0 20px 40px -24px rgba(10, 17, 28, 0.35);
+	}
+	.scan-out.scan-flagged {
+		background: linear-gradient(#fff, #fff) padding-box, linear-gradient(160deg, #f2545b, #f5b13d) border-box;
+		box-shadow: 0 0 24px -6px rgba(242, 84, 91, 0.55), 0 20px 40px -24px rgba(10, 17, 28, 0.35);
+	}
+	.scan-coin {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 44px;
+		height: 44px;
+		border-radius: 999px;
+		background: #0a111c;
+		color: #fff;
+		font: 700 10.5px/1 var(--font-mono);
+		letter-spacing: 0.02em;
+	}
+	.scan-card-text {
+		min-width: 0;
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	.scan-card-text b {
+		font-size: 16px;
+		font-weight: 600;
+		color: #0a111c;
+	}
+	.scan-card-text code,
+	.scan-card-text small {
+		font-size: 12px;
+		color: #6a7686;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.scan-pill {
+		flex: none;
+		padding: 2px 8px;
+		border-radius: 999px;
+		background: rgba(10, 17, 28, 0.05);
+		font-size: 10.5px;
+		font-weight: 500;
+		color: #6a7686;
+	}
+	.scan-verdict {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 26px;
+		height: 26px;
+		border-radius: 999px;
+		background: var(--grad);
+		color: #fff;
+		font-size: 13px;
+		font-weight: 700;
+	}
+	.scan-flagged .scan-verdict {
+		background: #f2545b;
+	}
+	.scan-device {
+		position: relative;
+		z-index: 2;
+		width: 248px;
+		padding: 26px 22px 24px;
+		overflow: hidden;
+		border-radius: 30px;
+		border: 1.5px solid transparent;
+		background: linear-gradient(#fff, #fff) padding-box, var(--grad) border-box;
+		box-shadow: 0 0 40px -8px rgba(41, 180, 242, 0.6), 0 30px 60px -30px rgba(10, 17, 28, 0.45);
+		text-align: center;
+	}
+	.scan-tile {
+		width: 64px;
+		height: 64px;
+		border-radius: 20px;
+		box-shadow: 0 18px 40px -10px rgba(41, 180, 242, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+	}
+	.scan-device-title {
+		margin-top: 14px;
+		font-size: 18px;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		color: #0a111c;
+	}
+	.scan-sources {
+		margin-top: 12px;
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 6px;
+	}
+	.scan-sources span {
+		padding: 3px 8px;
+		border-radius: 999px;
+		background: rgba(10, 17, 28, 0.04);
+		font: 500 11px/1.4 var(--font-mono);
+		color: #3c4757;
+		animation: scan-tick 2.8s ease-in-out infinite both;
+	}
+	.scan-beam {
+		position: absolute;
 		left: 0;
 		right: 0;
-		height: 100vh;
-		z-index: 0;
+		top: 0;
+		height: 26px;
+		background: linear-gradient(180deg, transparent, rgba(41, 180, 242, 0.22) 60%, rgba(41, 180, 242, 0.6) 100%);
+		border-bottom: 1.5px solid #29b4f2;
+		animation: scan-beam 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 		pointer-events: none;
-		overflow: hidden;
 	}
-	/* GodRays canvas keeps its background, globe canvas is transparent */
+	@keyframes scan-beam {
+		0% { transform: translateY(-30px); opacity: 0; }
+		12% { opacity: 1; }
+		88% { opacity: 1; }
+		100% { transform: translateY(250px); opacity: 0; }
+	}
+	@keyframes scan-tick {
+		0%, 70%, 100% { background: rgba(10, 17, 28, 0.04); color: #3c4757; }
+		20%, 45% { background: rgba(59, 216, 207, 0.18); color: #0a111c; }
+	}
+	@keyframes fly-in {
+		0% { transform: translate3d(-62vw, 0, 0) rotateY(28deg) scale(1); opacity: 0; filter: blur(0); }
+		8% { opacity: 1; }
+		62% { transform: translate3d(-24.8vw, 0, 0) rotateY(19.3deg) scale(0.76); opacity: 1; filter: blur(0); }
+		100% { transform: translate3d(-2vw, 0, 0) rotateY(14deg) scale(0.62); opacity: 0; filter: blur(6px); }
+	}
+	@keyframes fly-out {
+		0% { transform: translate3d(2vw, 0, 0) rotateY(-14deg) scale(0.62); opacity: 0; filter: blur(6px); }
+		12% { opacity: 1; }
+		32% { transform: translate3d(21.2vw, 0, 0) rotateY(-18.5deg) scale(0.74); filter: blur(0); }
+		90% { opacity: 1; }
+		100% { transform: translate3d(62vw, 0, 0) rotateY(-28deg) scale(1); opacity: 0; filter: blur(0); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.scan-streams {
+			display: none !important;
+		}
+		.scan-beam,
+		.scan-sources span {
+			animation: none;
+		}
+	}
+
+	/* the globe canvas is transparent */
 	.globe-container :global(canvas) {
 		background: transparent !important;
 	}

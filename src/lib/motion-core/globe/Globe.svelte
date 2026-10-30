@@ -37,6 +37,11 @@
 		 */
 		landPointColor?: SceneProps["landPointColor"];
 		/**
+		 * How land points blend: "additive" glows on a dark globe, "normal" stays visible on a light one.
+		 * @default "additive"
+		 */
+		landBlending?: SceneProps["landBlending"];
+		/**
 		 * Size of each point in world units.
 		 * @default 0.05
 		 */
@@ -81,6 +86,7 @@
 		atmosphereConfig,
 		pointCount,
 		landPointColor,
+		landBlending,
 		pointSize,
 		autoRotate = true,
 		lockedPolarAngle = true,
@@ -103,6 +109,7 @@
 				{atmosphereConfig}
 				{pointCount}
 				{landPointColor}
+				{landBlending}
 				{pointSize}
 				{autoRotate}
 				{lockedPolarAngle}

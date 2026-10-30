@@ -17,7 +17,7 @@
 	<title>{data.certId} — Ozone Certificate</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl px-4 pt-20 pb-16">
+<div class="page-plain mx-auto max-w-3xl px-4 pt-20 pb-16">
 	{#if data.legacy}
 		<!-- Legacy cert view: predates server-side signed verification (document IS NULL) — never rendered as verified/clean or as flagged -->
 		<div class="cert-card rounded-2xl overflow-hidden" style="border-color: rgba(234,179,8,0.3);" data-win-title="Certificate — Legacy">

@@ -96,8 +96,8 @@
 	<title>Sync Dashboard — Admin</title>
 </svelte:head>
 
-<div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
-	<div class="flex items-end justify-between mb-6">
+<div class="page-shell mx-auto max-w-7xl px-4 pt-20 pb-12">
+	<div class="page-hero page-hero-row flex items-end justify-between mb-6">
 		<div>
 			<h1 class="text-2xl font-bold" style="color: #f1f5f9;">Sync Dashboard</h1>
 			<p class="text-sm mt-1" style="color: #64748b;">Monitor sync status, trigger re-syncs, track L1 discovery progress</p>
@@ -266,7 +266,7 @@
 					<button
 						onclick={() => triggerSync(info.triggerType)}
 						disabled={loadingType !== null}
-						class="mt-3 w-full rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 transition-opacity"
+						class="run-btn mt-3 w-full rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 transition-opacity"
 						style="background: {info.color};"
 					>
 						{loadingType === info.triggerType ? 'Running...' : 'Run Now'}

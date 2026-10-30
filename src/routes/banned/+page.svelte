@@ -85,8 +85,8 @@
 	<meta property="og:url" content="https://ozone.redacted.gg/banned" />
 </svelte:head>
 
-<div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
-	<div class="mb-6">
+<div class="page-shell mx-auto max-w-7xl px-4 pt-20 pb-12">
+	<div class="page-hero page-hero-row mb-6">
 		<h1 class="text-2xl font-bold" style="color: var(--text);">Listed Addresses</h1>
 		<p class="text-sm mt-1" style="color: var(--text-muted);">
 			{data.totalAll.toLocaleString()} distinct addresses currently listed by at least one source.
@@ -105,7 +105,7 @@
 		{#each Object.entries(data.sourceCounts) as [src, cnt]}
 			<button onclick={() => setSource(src)}
 				class="source-tab" class:active={data.source === src}>
-				<span class="inline-block rounded px-1.5 py-0.5 text-[10px] mr-1" style={sourceColors[src] || ''}>{data.sourceNames[src] ?? src}</span>
+				<span class="src-chip inline-block rounded px-1.5 py-0.5 text-[10px] mr-1" style={sourceColors[src] || ''}>{data.sourceNames[src] ?? src}</span>
 				<span class="tab-count">{(cnt as number).toLocaleString()}</span><span class="tab-count-mobile">{compact(cnt as number)}</span>
 			</button>
 		{/each}
@@ -145,7 +145,7 @@
 				{#each data.entries as entry}
 					<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 						<td class="px-4 py-3">
-							<span class="inline-block rounded px-2 py-0.5 text-[10px] font-semibold" style={sourceColors[entry.source] || ''}>{entry.sourceName}</span>
+							<span class="src-chip inline-block rounded px-2 py-0.5 text-[10px] font-semibold" style={sourceColors[entry.source] || ''}>{entry.sourceName}</span>
 						</td>
 						<td class="px-4 py-3">
 							<button

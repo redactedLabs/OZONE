@@ -122,8 +122,8 @@
 	<title>Compliance Lists — Admin</title>
 </svelte:head>
 
-<div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
-	<div class="flex items-end justify-between mb-6">
+<div class="page-shell mx-auto max-w-7xl px-4 pt-20 pb-12">
+	<div class="page-hero page-hero-row flex items-end justify-between mb-6">
 		<div>
 			<h1 class="text-2xl font-bold" style="color: #f1f5f9;">Compliance Lists</h1>
 			<p class="text-sm mt-1" style="color: #64748b;">
@@ -236,7 +236,7 @@
 		{#each Object.entries(data.sourceCounts) as [src, count]}
 			<button onclick={() => setSource(src)}
 				class="source-tab" class:active={data.source === src}>
-				<span class="inline-block rounded px-1.5 py-0.5 text-[10px] mr-1" style={sourceColors[src] || ''}>{src}</span>
+				<span class="src-chip inline-block rounded px-1.5 py-0.5 text-[10px] mr-1" style={sourceColors[src] || ''}>{src}</span>
 				{count.toLocaleString()}
 			</button>
 		{/each}
@@ -270,7 +270,7 @@
 				{#each data.entries as entry}
 					<tr style="border-bottom: 1px solid var(--app-border-subtle);">
 						<td class="px-4 py-3">
-							<span class="inline-block rounded px-2 py-0.5 text-[10px] font-semibold" style={sourceColors[entry.source] || ''}>{entry.source}</span>
+							<span class="src-chip inline-block rounded px-2 py-0.5 text-[10px] font-semibold" style={sourceColors[entry.source] || ''}>{entry.source}</span>
 						</td>
 						<td class="px-4 py-3 font-mono text-xs" style="color: #f1f5f9;" title={entry.address}>
 							{truncate(entry.address, 24)}

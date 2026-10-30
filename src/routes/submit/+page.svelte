@@ -37,12 +37,14 @@
 	<meta name="description" content="Report a sanctioned, hacked or scam address with evidence, or appeal an Ozone flag you believe is wrong. No IP address or other request data is stored." />
 </svelte:head>
 
-<div class="mx-auto max-w-2xl px-4 pt-20 pb-16">
+<div class="page-shell mx-auto max-w-2xl px-4 pt-20 pb-16">
+	<div class="page-hero page-hero-row">
 	<h1 class="text-2xl font-bold mb-1" style="color: var(--text);">{kind === 'report' ? 'Report an address' : 'Appeal a flag'}</h1>
 	<p class="text-sm mb-6" style="color: var(--text-muted);">
 		Maintainers review every submission. Nothing about your request (IP address, browser) is stored — only what you type below.
 		See the <a href="/methodology#manual" style="color: var(--app-accent);">methodology</a> for how reports and appeals are handled.
 	</p>
+	</div>
 
 	<div class="flex gap-2 mb-4">
 		<button class="tab" class:active={kind === 'report'} onclick={() => (kind = 'report')}>Report an address</button>

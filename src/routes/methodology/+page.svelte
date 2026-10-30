@@ -36,8 +36,8 @@
 	<meta property="og:url" content="https://ozone.redacted.gg/methodology" />
 </svelte:head>
 
-<div class="mx-auto max-w-4xl px-4 pt-20 pb-16">
-	<div class="text-center mb-12" class:hero-visible={heroVisible}>
+<div class="page-shell mx-auto max-w-4xl px-4 pt-20 pb-16">
+	<div class="page-hero text-center mb-12" class:hero-visible={heroVisible}>
 		<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
 			<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Open data &middot; Signed &middot; Reproducible</span>
 		</div>

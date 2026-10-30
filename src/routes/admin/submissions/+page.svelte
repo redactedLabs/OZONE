@@ -24,8 +24,8 @@
 	<title>Submissions — Ozone admin</title>
 </svelte:head>
 
-<div class="mx-auto max-w-5xl px-4 pt-20 pb-16">
-	<h1 class="text-2xl font-bold mb-4" style="color: var(--text);">Reports & appeals</h1>
+<div class="page-shell mx-auto max-w-5xl px-4 pt-20 pb-16">
+	<div class="page-hero page-hero-row"><h1 class="text-2xl font-bold mb-4" style="color: var(--text);">Reports & appeals</h1></div>
 	<div class="flex gap-2 mb-4">
 		{#each ['open', 'accepted', 'rejected'] as s}
 			<a href="?status={s}" class="tab" class:active={data.status === s}>{s}</a>

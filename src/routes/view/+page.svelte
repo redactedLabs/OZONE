@@ -235,9 +235,9 @@
 
 {/snippet}
 
-<div class="mx-auto px-4 pt-20 pb-16" class:max-w-3xl={phase !== 'done'} class:max-w-5xl={phase === 'done'}>
+<div class="page-shell mx-auto px-4 pt-20 pb-16" class:max-w-3xl={phase !== 'done'} class:max-w-5xl={phase === 'done'}>
 	{#if phase !== 'done'}
-		<div class="hero-section text-center mb-10" class:hero-visible={heroVisible}>
+		<div class="page-hero hero-section text-center mb-10" class:hero-visible={heroVisible}>
 			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
 				<span class="relative inline-flex rounded-full h-2 w-2" style="background: #10b981;"></span>
 				<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Runs in your browser &middot; Read only</span>
@@ -306,7 +306,7 @@
 			</p>
 		</div>
 	{:else if phase === 'done' && model && model.kind === 'view_key'}
-		<div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
+		<div class="page-hero page-hero-row flex items-center justify-between gap-3 mb-5 flex-wrap">
 			<div>
 				<h1 class="text-2xl font-bold" style="color: var(--text);">View Key</h1>
 				<div class="text-[11px] font-mono mt-1" style="color: var(--text-faint);">
@@ -449,7 +449,7 @@
 			The view key never leaves this browser. Ozone receives only counterparty addresses.
 		</p>
 	{:else if phase === 'done' && model && model.kind === 'history'}
-		<div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
+		<div class="page-hero page-hero-row flex items-center justify-between gap-3 mb-5 flex-wrap">
 			<div>
 				<h1 class="text-2xl font-bold" style="color: var(--text);">History File</h1>
 				<div class="text-[11px] font-mono mt-1" style="color: var(--text-faint);">

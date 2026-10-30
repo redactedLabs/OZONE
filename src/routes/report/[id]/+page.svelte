@@ -117,9 +117,9 @@
 	<title>Report {data.reportId} — Ozone</title>
 </svelte:head>
 
-<div class="mx-auto max-w-5xl px-4 pt-20 pb-16">
+<div class="page-shell mx-auto max-w-5xl px-4 pt-20 pb-16">
 	<!-- Header -->
-	<div class="text-center mb-8">
+	<div class="page-hero text-center mb-8">
 		<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
 			<span class="text-[10px] font-mono" style="color: #22d3ee;">Shared Report</span>
 		</div>

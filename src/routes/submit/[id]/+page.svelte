@@ -8,7 +8,7 @@
 	<title>{s.publicId} — Ozone submission</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl px-4 pt-20 pb-16">
+<div class="page-plain mx-auto max-w-2xl px-4 pt-20 pb-16">
 	<div class="card api-card rounded-2xl p-6" data-win-title="Submission status">
 		<div class="text-[10px] font-mono mb-1" style="color: var(--text-faint);">{s.publicId}</div>
 		<h1 class="text-xl font-bold mb-3" style="color: var(--text);">{s.kind === 'appeal' ? 'Appeal' : 'Report'}: <span style="color: {color};">{s.status}</span></h1>

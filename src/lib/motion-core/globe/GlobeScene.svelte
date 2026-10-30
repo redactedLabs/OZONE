@@ -95,6 +95,11 @@
 		 */
 		landPointColor?: THREE.ColorRepresentation;
 		/**
+		 * How land points blend: "additive" glows on a dark globe, "normal" stays visible on a light one.
+		 * @default "additive"
+		 */
+		landBlending?: "additive" | "normal";
+		/**
 		 * Whether the globe should auto-rotate.
 		 * @default true
 		 */
@@ -170,6 +175,7 @@
 		pointCount = 15000,
 		pointSize = 0.05,
 		landPointColor = "#f77114",
+		landBlending = "additive",
 		autoRotate = true,
 		lockedPolarAngle = true,
 		markers = [],
@@ -604,7 +610,7 @@
 				<T.MeshBasicMaterial
 					color={landPointColor}
 					side={THREE.DoubleSide}
-					blending={THREE.AdditiveBlending}
+					blending={landBlending === "normal" ? THREE.NormalBlending : THREE.AdditiveBlending}
 					transparent
 					depthWrite={false}
 					toneMapped={false}

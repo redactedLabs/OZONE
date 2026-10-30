@@ -54,9 +54,10 @@
 	<meta property="og:description" content="Privacy-preserving wallets on THORChain. Track TVL, Private Reserve, and protocol stats." />
 </svelte:head>
 
-<div class="mx-auto max-w-7xl px-4 pt-24 pb-16 sm:px-6">
+<div class="page-shell mx-auto max-w-7xl px-4 pt-24 pb-16 sm:px-6">
 
-	<!-- Header -->
+	<!-- Header and the numbers: the page head -->
+	<div class="page-hero">
 	<div class="text-center mb-8">
 		<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style="color: var(--text);">Redacted Dashboard</h1>
 		<p class="text-sm" style="color: var(--text-muted);">
@@ -247,6 +248,7 @@
 			</div>
 		</div>
 
+	</div>
 	</div>
 
 	<!-- Architecture Flow Diagram -->

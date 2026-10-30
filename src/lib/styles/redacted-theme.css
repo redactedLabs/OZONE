@@ -1,0 +1,1022 @@
+/* ══════════════════════════════════════════
+   Redacted theme: the style of redacted.gg, scoped under html.redacted (the default).
+   Light pages on ice, night panels for the page heads, the menu and the footer, white cards,
+   the cyan → sky → blue gradient for primary actions, Figtree and JetBrains Mono.
+   The pages' own styles are the layer under both themes; this file and win98-theme.css restyle them.
+   ══════════════════════════════════════════ */
+
+/* Fonts are served by Ozone itself (/view allows font-src 'self' only). SIL Open Font License, static/fonts/LICENSE-*.txt */
+@font-face {
+	font-family: 'Figtree Variable';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 300 900;
+	src: url('/fonts/figtree-latin-ext-wght-normal.woff2') format('woff2-variations');
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+	font-family: 'Figtree Variable';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 300 900;
+	src: url('/fonts/figtree-latin-wght-normal.woff2') format('woff2-variations');
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: 'JetBrains Mono Variable';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 800;
+	src: url('/fonts/jetbrains-mono-latin-ext-wght-normal.woff2') format('woff2-variations');
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+	font-family: 'JetBrains Mono Variable';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 800;
+	src: url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations');
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Theme-only blocks: markup that exists for one theme only */
+html.win98 .rd-only { display: none !important; }
+html:not(.win98) .w98-only { display: none !important; }
+
+/* ══════════════════════════════════════════
+   Base
+   ══════════════════════════════════════════ */
+html.redacted {
+	--font-sans: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+	color-scheme: light;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+html.redacted body {
+	font-family: var(--font-sans);
+	overflow-x: clip;
+}
+
+/* Type: redacted.gg reads at 13–17px; the pages were set for a dense dashboard (9–12px), so every small size steps up */
+html.redacted {
+	--text-xs: 0.8125rem;
+	--text-xs--line-height: 1.5;
+	--text-sm: 0.9375rem;
+	--text-sm--line-height: 1.6;
+	--text-base: 1.0625rem;
+	--text-base--line-height: 1.65;
+	--text-lg: 1.1875rem;
+	--text-xl: 1.375rem;
+	--text-2xl: 1.625rem;
+}
+html.redacted .text-\[8px\] { font-size: 10.5px; }
+html.redacted .text-\[9px\] { font-size: 11.5px; }
+html.redacted .text-\[10px\] { font-size: 12.5px; }
+html.redacted .text-\[11px\] { font-size: 13px; }
+html.redacted .text-\[12px\] { font-size: 13.5px; }
+html.redacted ::selection {
+	background: #29b4f2;
+	color: #fff;
+}
+html.redacted :is(h1, h2, h3, h4) {
+	letter-spacing: -0.02em;
+}
+html.redacted :is(h1, h2) {
+	font-weight: 600;
+}
+html.redacted code,
+html.redacted pre,
+html.redacted kbd {
+	font-family: var(--font-mono);
+}
+html.redacted .text-grad,
+html.redacted .rd-grad,
+html.redacted .hero-gradient {
+	background: var(--grad);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	-webkit-text-fill-color: transparent;
+}
+
+/* ══════════════════════════════════════════
+   Night scope: the menu bar, the footer and the code samples.
+   Inside it the app's tokens turn light-on-night, so every inline var(--text…) follows.
+   ══════════════════════════════════════════ */
+html.redacted :is(.rd-footer, [data-slot='root'], .api-preview, .code-block) {
+	--text: #ffffff;
+	--text-secondary: rgba(255, 255, 255, 0.72);
+	--text-muted: rgba(255, 255, 255, 0.56);
+	--text-faint: rgba(255, 255, 255, 0.42);
+	--text-ghost: rgba(255, 255, 255, 0.26);
+	--bg-card: rgba(255, 255, 255, 0.06);
+	--bg-card-hover: rgba(255, 255, 255, 0.09);
+	--bg-code: #0b1119;
+	--card-bg: rgba(255, 255, 255, 0.05);
+	--card-border: rgba(255, 255, 255, 0.1);
+	--app-border: rgba(255, 255, 255, 0.1);
+	--app-border-subtle: rgba(255, 255, 255, 0.07);
+	--input-bg: rgba(255, 255, 255, 0.06);
+	--input-border: rgba(255, 255, 255, 0.15);
+	--input-placeholder: rgba(255, 255, 255, 0.35);
+	--tooltip-bg: #121a25;
+	--tooltip-border: rgba(255, 255, 255, 0.12);
+	--hero-title: #ffffff;
+	--hero-slash: rgba(255, 255, 255, 0.3);
+	--hero-sub: rgba(255, 255, 255, 0.6);
+	--app-accent: #29b4f2;
+	--stat-indigo: #29b4f2;
+	--danger-text: #f2545b;
+	--warning-text: #f5b13d;
+	--success-text: #3bd8cf;
+	--btn2-bg: rgba(255, 255, 255, 0.08);
+	--btn2-text: #ffffff;
+	--btn2-border: rgba(255, 255, 255, 0.15);
+	--chip-active-bg: #ffffff;
+	--chip-active-text: #0a111c;
+	color: var(--text);
+}
+html.redacted {
+	--btn2-bg: #ffffff;
+	--btn2-text: #0a111c;
+	--btn2-border: rgba(10, 17, 28, 0.1);
+	--chip-active-bg: #0a111c;
+	--chip-active-text: #ffffff;
+}
+
+/* ══════════════════════════════════════════
+   Menu bar (FloatingMenu): the floating night bar of redacted.gg
+   ══════════════════════════════════════════ */
+html.redacted [data-slot='root'] {
+	--color-background: rgba(11, 17, 25, 0.88);
+	--color-background-muted: rgba(255, 255, 255, 0.05);
+	--color-foreground: #ffffff;
+	--color-foreground-muted: rgba(255, 255, 255, 0.65);
+	--color-accent: #29b4f2;
+	--color-border: rgba(255, 255, 255, 0.1);
+	top: 12px;
+	border-radius: 16px;
+	border-color: rgba(255, 255, 255, 0.1);
+	box-shadow: 0 10px 40px -12px rgba(5, 8, 13, 0.55);
+	-webkit-backdrop-filter: blur(24px);
+	backdrop-filter: blur(24px);
+	font-family: var(--font-sans);
+}
+html.redacted [data-slot='overlay'] {
+	--color-background-inset: rgba(5, 8, 13, 0.4);
+	-webkit-backdrop-filter: blur(2px);
+	backdrop-filter: blur(2px);
+}
+/* logo left, the menu toggle right */
+html.redacted [data-slot='header'] {
+	flex-direction: row-reverse;
+	padding: 6px;
+	gap: 6px;
+}
+html.redacted [data-slot='actions'] {
+	flex: 1;
+	min-width: 0;
+	padding-right: 0;
+	gap: 6px;
+}
+html.redacted [data-slot='logo'] {
+	flex: 1;
+	min-width: 0;
+	margin-right: 0;
+}
+html.redacted [data-slot='toggle-button'] {
+	border-radius: 12px;
+}
+html.redacted [data-slot='toggle-button']:hover {
+	background: rgba(255, 255, 255, 0.06);
+}
+html.redacted [data-slot='toggle-button'] {
+	padding-right: 0;
+	width: 36px;
+	height: 36px;
+}
+html.redacted [data-slot='toggle-button'] > div {
+	width: 36px;
+	height: 36px;
+}
+/* two lines, no label: the menu button of redacted.gg */
+html.redacted [data-slot='toggle-button'] > span {
+	display: none;
+}
+html.redacted [data-slot='toggle-line'] {
+	height: 1.6px;
+	width: 18px;
+	border-radius: 999px;
+}
+html.redacted [data-slot='primary-button'] {
+	height: 36px;
+	border-radius: 12px;
+	background: #ffffff;
+	color: #0a111c;
+	font-size: 13px;
+	font-weight: 600;
+	padding: 0 14px;
+	white-space: nowrap;
+	transition: all 0.3s;
+}
+html.redacted [data-slot='primary-button']:hover {
+	background: var(--grad);
+	color: #fff;
+	box-shadow: 0 8px 24px -8px rgba(31, 143, 240, 0.8);
+}
+html.redacted [data-slot='menu-wrapper'] {
+	border-top-color: rgba(255, 255, 255, 0.1);
+}
+html.redacted [data-slot='grid'] {
+	gap: 10px;
+	padding: 12px;
+}
+html.redacted [data-slot='group'] {
+	border-radius: 18px;
+	padding: 18px 18px 20px;
+	gap: 0;
+}
+html.redacted [data-slot='group-title'] {
+	font-family: var(--font-sans);
+	font-size: 12.5px;
+	font-weight: 500;
+	letter-spacing: 0;
+	text-transform: none;
+	color: rgba(255, 255, 255, 0.4);
+}
+html.redacted [data-slot='group'] > div {
+	margin-top: 12px;
+	gap: 10px;
+}
+html.redacted [data-slot='link'] {
+	font-size: 20px;
+	font-weight: 500;
+	letter-spacing: -0.02em;
+	color: rgba(255, 255, 255, 0.7);
+}
+html.redacted [data-slot='link']:hover {
+	color: #fff;
+}
+html.redacted [data-slot='link-underline'] {
+	background: var(--grad);
+}
+html.redacted [data-slot='divider'] {
+	border-color: rgba(255, 255, 255, 0.07);
+}
+
+/* Logo: the app-icon tile and the name */
+.rd-logo {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	text-decoration: none;
+	color: #fff;
+}
+.rd-tile {
+	position: relative;
+	color: #fff;
+	display: inline-grid;
+	place-items: center;
+	flex: none;
+	width: 32px;
+	height: 32px;
+	border-radius: 10px;
+	background: var(--grad);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.rd-tile svg {
+	height: 62%;
+	width: auto;
+	opacity: 0.9;
+	filter: drop-shadow(0 2px 6px rgba(10, 60, 120, 0.25));
+}
+.rd-wordmark {
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	white-space: nowrap;
+}
+.rd-wordmark span {
+	color: rgba(255, 255, 255, 0.4);
+	font-weight: 500;
+}
+
+/* The bar's own links (redacted.gg: Docs, Blog), from md up */
+.rd-navlinks {
+	display: none;
+	margin-left: auto;
+	align-items: center;
+}
+@media (min-width: 768px) {
+	.rd-navlinks {
+		display: flex;
+	}
+}
+.rd-navlinks a {
+	padding: 6px 10px;
+	border-radius: 8px;
+	font-size: 13px;
+	color: rgba(255, 255, 255, 0.65);
+	text-decoration: none;
+	white-space: nowrap;
+	transition: color 0.3s;
+}
+.rd-navlinks a:hover {
+	color: #fff;
+}
+
+/* The look switch: one control, at the bottom of the opened menu */
+html.redacted [data-slot='menu-footer'] {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin: 0 12px;
+	padding: 12px 6px 14px;
+	border-top: 1px solid rgba(255, 255, 255, 0.07);
+	font-size: 12.5px;
+	color: rgba(255, 255, 255, 0.45);
+}
+.theme-choice {
+	display: inline-flex;
+	padding: 3px;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.06);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.theme-choice button {
+	padding: 5px 12px;
+	border-radius: 9px;
+	font-size: 12.5px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.65);
+	background: transparent;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+.theme-choice button:hover {
+	color: #fff;
+}
+.theme-choice button[aria-pressed='true'] {
+	background: #fff;
+	color: #0a111c;
+}
+/* ══════════════════════════════════════════
+   Page head: light, as redacted.gg's home hero (ink on ice over a sky/cyan glow).
+   .page-shell is the page's outer container, .page-hero its head; .page-hero-row a head with
+   the title and its controls in one row (data and admin pages).
+   ══════════════════════════════════════════ */
+html.redacted .page-shell {
+	padding-top: 0;
+}
+html.redacted .page-hero {
+	position: relative;
+	isolation: isolate;
+	padding-top: 112px;
+	margin-bottom: 40px;
+}
+html.redacted .page-hero > :last-child {
+	margin-bottom: 0;
+}
+html.redacted .page-hero::before {
+	content: '';
+	position: absolute;
+	z-index: -1;
+	left: 50%;
+	top: 62%;
+	width: min(1100px, 100vw);
+	height: 560px;
+	transform: translate(-50%, -50%);
+	border-radius: 999px;
+	background: radial-gradient(closest-side, rgba(41, 180, 242, 0.32), rgba(59, 216, 207, 0.16) 45%, transparent 75%);
+	filter: blur(40px);
+	pointer-events: none;
+}
+html.redacted .page-hero.page-hero-row {
+	padding-top: 100px;
+	margin-bottom: 28px;
+}
+html.redacted .page-hero.page-hero-row::before {
+	content: none;
+}
+@media (min-width: 768px) {
+	html.redacted .page-hero {
+		padding-top: 152px;
+		margin-bottom: 56px;
+	}
+	html.redacted .page-hero.page-hero-row {
+		padding-top: 124px;
+		margin-bottom: 32px;
+	}
+}
+html.redacted .page-hero h1,
+html.redacted .page-hero .hero-title {
+	color: var(--text);
+	font-weight: 600;
+	letter-spacing: -0.035em;
+	line-height: 1.03;
+	text-wrap: balance;
+	font-family: var(--font-sans);
+}
+html.redacted .page-hero:not(.page-hero-row) .hero-title,
+html.redacted .page-hero:not(.page-hero-row) h1 {
+	font-size: clamp(42px, 6.6vw, 76px);
+}
+html.redacted .page-hero.page-hero-row h1 {
+	font-size: clamp(28px, 4vw, 38px);
+	letter-spacing: -0.03em;
+}
+html.redacted .page-hero p {
+	text-wrap: pretty;
+}
+html.redacted .hero-badge {
+	background: rgba(255, 255, 255, 0.8) !important;
+	border: 0 !important;
+	box-shadow: inset 0 0 0 1px rgba(10, 17, 28, 0.08), 0 8px 20px -14px rgba(10, 17, 28, 0.3);
+	font-family: var(--font-mono);
+}
+html.redacted .hero-badge * {
+	color: #3c4757 !important;
+}
+html.redacted .hero-badge span[style*='background'] {
+	background: var(--grad) !important;
+}
+
+/* ══════════════════════════════════════════
+   Cards
+   ══════════════════════════════════════════ */
+html.redacted :is(.dash-box, .cert-card, .hist-card, .oss-card, .report-card, .rpt-card, .api-card, .vk-card, .card, .stats-card) {
+	background: var(--card-bg);
+	border: 1px solid var(--card-border);
+	box-shadow: none;
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+html.redacted :is(.oss-card, .report-card, .stats-card):hover {
+	border-color: rgba(41, 180, 242, 0.35);
+	box-shadow: 0 20px 40px -24px rgba(10, 17, 28, 0.35);
+}
+html.redacted .report-glow {
+	display: none;
+}
+html.redacted .cert-glow {
+	box-shadow: 0 0 40px -12px rgba(41, 180, 242, 0.45), 0 30px 60px -30px rgba(10, 17, 28, 0.3);
+}
+
+/* the code samples are night cards, as redacted.gg's docs */
+html.redacted :is(.api-preview, .code-block) {
+	background: #0b1119 !important;
+	border: 0 !important;
+	border-radius: 18px;
+	color: #e8eff5;
+}
+
+/* ══════════════════════════════════════════
+   Buttons
+   ══════════════════════════════════════════ */
+html.redacted :is(.hero-cta-primary, .report-btn-primary, .login-btn, .sync-btn, .vk-btn, .btn:not(.btn-secondary)) {
+	background: var(--grad);
+	color: #fff;
+	border: 0;
+	font-weight: 600;
+	box-shadow: 0 14px 34px -12px rgba(31, 143, 240, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+	transition: filter 0.2s, box-shadow 0.2s;
+}
+html.redacted :is(.hero-cta-primary, .report-btn-primary, .login-btn, .sync-btn, .vk-btn, .btn:not(.btn-secondary)):hover:not(:disabled) {
+	background: var(--grad);
+	filter: brightness(1.1);
+	box-shadow: 0 14px 34px -10px rgba(31, 143, 240, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+html.redacted :is(.hero-cta-secondary, .report-btn-secondary, .btn-secondary) {
+	background: var(--btn2-bg);
+	color: var(--btn2-text);
+	border: 1px solid var(--btn2-border);
+	box-shadow: none;
+	transition: all 0.2s;
+}
+html.redacted :is(.hero-cta-secondary, .report-btn-secondary, .btn-secondary):hover {
+	color: var(--btn2-text);
+	border-color: rgba(41, 180, 242, 0.6);
+}
+html.redacted .page-hero :is(.hero-cta-primary, .hero-cta-secondary) {
+	border-radius: 16px;
+	padding: 12px 22px;
+	font-size: 15px;
+}
+
+/* ══════════════════════════════════════════
+   Inputs
+   ══════════════════════════════════════════ */
+html.redacted :is(.cert-input, .hist-input, .vk-input, .login-input, .admin-input, .flagged-input, .banned-input, .test-input, .input, select) {
+	background: var(--input-bg);
+	border: 1px solid var(--input-border);
+	color: var(--text);
+	transition: border-color 0.2s, box-shadow 0.2s;
+}
+html.redacted :is(.cert-input, .hist-input, .vk-input, .login-input, .admin-input, .flagged-input, .banned-input, .test-input, .input, select):focus {
+	outline: none;
+	border-color: rgba(41, 180, 242, 0.7);
+	box-shadow: 0 0 0 4px rgba(41, 180, 242, 0.15);
+}
+html.redacted :is(.cert-input, .hist-input, .vk-input, .login-input, .admin-input, .flagged-input, .banned-input, .test-input, .input)::placeholder {
+	color: var(--input-placeholder);
+	font-family: var(--font-sans);
+}
+
+/* ══════════════════════════════════════════
+   Tabs, filter chips, pagers: redacted.gg's pills
+   ══════════════════════════════════════════ */
+html.redacted :is(.source-tab, .tab, .filter-chip, .sort-btn, .page-btn) {
+	border-radius: 999px;
+	border: 1px solid var(--app-border);
+	background: transparent;
+	color: var(--text-secondary);
+	transition: all 0.2s;
+}
+html.redacted :is(.source-tab, .tab, .filter-chip, .sort-btn, .page-btn):hover {
+	color: var(--text);
+	border-color: rgba(10, 17, 28, 0.2);
+	background: rgba(10, 17, 28, 0.03);
+}
+html.redacted :is(.source-tab, .tab, .filter-chip).active {
+	background: var(--chip-active-bg);
+	border-color: var(--chip-active-bg);
+	color: var(--chip-active-text);
+}
+html.redacted :is(.source-tab, .tab, .filter-chip).active * {
+	color: inherit;
+}
+
+/* Tables */
+html.redacted table {
+	font-variant-numeric: tabular-nums;
+}
+html.redacted thead tr,
+html.redacted thead th {
+	background: transparent;
+}
+html.redacted th {
+	color: var(--text-muted);
+	font-weight: 500;
+}
+html.redacted tbody tr:hover {
+	background: rgba(41, 180, 242, 0.04);
+}
+
+/* Hover tooltips of the stat boxes */
+html.redacted .stat-tip {
+	background: #ffffff;
+	border: 1px solid rgba(10, 17, 28, 0.08);
+	border-radius: 16px;
+	box-shadow: 0 20px 40px -20px rgba(10, 17, 28, 0.4);
+	color: #3c4757;
+	font-size: 12px;
+	padding: 10px 12px;
+}
+html.redacted .live-dot {
+	background: #3bd8cf !important;
+	box-shadow: 0 0 0 4px rgba(59, 216, 207, 0.18) !important;
+	animation: rd-pulse 2.4s ease-in-out infinite !important;
+}
+@keyframes rd-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.45; }
+}
+
+/* ══════════════════════════════════════════
+   The pages' fixed colours (from the old dark theme) → the redacted.gg palette.
+   Text goes through the tokens, so it reads on ice and in night panels alike.
+   ══════════════════════════════════════════ */
+html.redacted [style*='color: #f1f5f9'],
+html.redacted [style*='color: #e2e8f0'],
+html.redacted [style*='color: #0f172a'] { color: var(--text) !important; }
+html.redacted [style*='color: #94a3b8'] { color: var(--text-secondary) !important; }
+html.redacted [style*='color: #64748b'] { color: var(--text-muted) !important; }
+html.redacted [style*='color: #475569'],
+html.redacted [style*='color: #334155'],
+html.redacted [style*='color: #999'] { color: var(--text-faint) !important; }
+html.redacted [style*='color: #6366f1'],
+html.redacted [style*='color: #818cf8'],
+html.redacted [style*='color: #3b82f6'],
+html.redacted [style*='color: #a78bfa'],
+html.redacted [style*='color: #a855f7'],
+html.redacted [style*='color: #8b5cf6'],
+html.redacted [style*='color: #ec4899'],
+html.redacted [style*='color: #f472b6'],
+html.redacted [style*='color: #22d3ee'] { color: var(--app-accent) !important; }
+html.redacted [style*='color: #10b981'],
+html.redacted [style*='color: #22c55e'],
+html.redacted [style*='color: #6ee7b7'] { color: var(--success-text) !important; }
+html.redacted [style*='color: #ef4444'],
+html.redacted [style*='color: #dc2626'],
+html.redacted [style*='color: #f87171'],
+html.redacted [style*='color: #fca5a5'] { color: var(--danger-text) !important; }
+html.redacted [style*='color: #f59e0b'],
+html.redacted [style*='color: #fb923c'],
+html.redacted [style*='color: #f97316'],
+html.redacted [style*='color: #fbbf24'],
+html.redacted [style*='color: #eab308'],
+html.redacted [style*='color: #fcd34d'] { color: var(--warning-text) !important; }
+
+/* dark surfaces of the old theme → the card surface */
+html.redacted [style*='background: #0d0d1f'],
+html.redacted [style*='background:#0d0d1f'],
+html.redacted [style*='background: #060610'],
+html.redacted [style*='background:#060610'],
+html.redacted [style*='background: #13132f'],
+html.redacted [style*='background: #1e293b'],
+html.redacted [style*='background: rgba(13, 13, 31'],
+html.redacted [style*='background: rgba(15,23,42'],
+html.redacted [style*='background: rgba(15, 23, 42'] { background: var(--bg-card) !important; }
+html.redacted [style*='border: 1px solid #1e293b'],
+html.redacted [style*='border-bottom: 1px solid #1e293b'],
+html.redacted [style*='border: 1px solid #334155'] { border-color: var(--app-border) !important; }
+
+/* every gradient of the old theme → the brand gradient */
+html.redacted [style*='background: linear-gradient'] { background: var(--grad) !important; }
+
+/* filled buttons → the gradient; small filled dots → the matching palette colour.
+   Exact colours only (followed by ';' or the end): `#10b98115` is a tint, handled below. */
+html.redacted :is(a, button):is([style*='background: #6366f1;'], [style$='background: #6366f1'], [style*='background: #818cf8;'], [style$='background: #818cf8'], [style*='background: #a855f7;'], [style$='background: #a855f7'], [style*='background: #a78bfa;'], [style$='background: #a78bfa'], [style*='background: #8b5cf6;'], [style$='background: #8b5cf6'], [style*='background: #10b981;'], [style$='background: #10b981'], [style*='background: #22d3ee;'], [style$='background: #22d3ee'], [style*='background: var(--app-accent)']):not(.source-tab, .tab, .filter-chip) {
+	background: var(--grad) !important;
+	color: #fff !important;
+	border-color: transparent !important;
+	box-shadow: 0 10px 24px -12px rgba(31, 143, 240, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+html.redacted :is(a, button):is([style*='background: #ef4444;'], [style$='background: #ef4444'], [style*='background: #dc2626;'], [style$='background: #dc2626']) {
+	background: #f2545b !important;
+	color: #fff !important;
+}
+html.redacted :is(span, div):is([style*='background: #10b981;'], [style$='background: #10b981'], [style*='background: #22c55e;'], [style$='background: #22c55e']) { background: #3bd8cf !important; box-shadow: none !important; }
+html.redacted :is(span, div):is([style*='background: #ef4444;'], [style$='background: #ef4444'], [style*='background: #dc2626;'], [style$='background: #dc2626']) { background: #f2545b !important; box-shadow: none !important; }
+html.redacted :is(span, div):is([style*='background: #f59e0b;'], [style$='background: #f59e0b'], [style*='background: #eab308;'], [style$='background: #eab308'], [style*='background: #f97316;'], [style$='background: #f97316']) { background: #f5b13d !important; box-shadow: none !important; }
+html.redacted :is(span, div):is([style*='background: #6366f1;'], [style$='background: #6366f1'], [style*='background: #818cf8;'], [style$='background: #818cf8'], [style*='background: #a855f7;'], [style$='background: #a855f7'], [style*='background: #a78bfa;'], [style$='background: #a78bfa'], [style*='background: #8b5cf6;'], [style$='background: #8b5cf6']) { background: #1f8ff0 !important; box-shadow: none !important; }
+html.redacted :is(span, div):is([style*='background: #22d3ee;'], [style$='background: #22d3ee']) { background: #29b4f2 !important; box-shadow: none !important; }
+
+/* hex-alpha tints (`{color}15`, `{color}10`…) of the old colours → palette tints */
+html.redacted [style*='background: #10b9810'],
+html.redacted [style*='background: #10b9811'],
+html.redacted [style*='background: #10b9812'],
+html.redacted [style*='background: #22c55e0'],
+html.redacted [style*='background: #22c55e1'],
+html.redacted [style*='background: #22c55e2'] { background: rgba(59, 216, 207, 0.14) !important; }
+html.redacted [style*='background: #22d3ee0'],
+html.redacted [style*='background: #22d3ee1'],
+html.redacted [style*='background: #22d3ee2'] { background: rgba(41, 180, 242, 0.12) !important; }
+html.redacted [style*='background: #3b82f60'],
+html.redacted [style*='background: #3b82f61'],
+html.redacted [style*='background: #3b82f62'],
+html.redacted [style*='background: #6366f10'],
+html.redacted [style*='background: #6366f11'],
+html.redacted [style*='background: #6366f12'],
+html.redacted [style*='background: #818cf80'],
+html.redacted [style*='background: #818cf81'],
+html.redacted [style*='background: #818cf82'],
+html.redacted [style*='background: #8b5cf60'],
+html.redacted [style*='background: #8b5cf61'],
+html.redacted [style*='background: #8b5cf62'],
+html.redacted [style*='background: #a78bfa0'],
+html.redacted [style*='background: #a78bfa1'],
+html.redacted [style*='background: #a78bfa2'],
+html.redacted [style*='background: #a855f70'],
+html.redacted [style*='background: #a855f71'],
+html.redacted [style*='background: #a855f72'],
+html.redacted [style*='background: #f472b60'],
+html.redacted [style*='background: #f472b61'],
+html.redacted [style*='background: #f472b62'] { background: rgba(31, 143, 240, 0.1) !important; }
+html.redacted [style*='background: #64748b0'],
+html.redacted [style*='background: #64748b1'],
+html.redacted [style*='background: #64748b2'],
+html.redacted [style*='background: #94a3b80'],
+html.redacted [style*='background: #94a3b81'],
+html.redacted [style*='background: #94a3b82'] { background: rgba(10, 17, 28, 0.05) !important; }
+html.redacted [style*='background: #ef44440'],
+html.redacted [style*='background: #ef44441'],
+html.redacted [style*='background: #ef44442'] { background: rgba(242, 84, 91, 0.1) !important; }
+html.redacted [style*='background: #f59e0b0'],
+html.redacted [style*='background: #f59e0b1'],
+html.redacted [style*='background: #f59e0b2'],
+html.redacted [style*='background: #f973160'],
+html.redacted [style*='background: #f973161'],
+html.redacted [style*='background: #f973162'] { background: rgba(245, 177, 61, 0.16) !important; }
+
+/* tinted badges and banners */
+html.redacted [style*='background: rgba(16,185,129'],
+html.redacted [style*='background: rgba(16, 185, 129'],
+html.redacted [style*='background: rgba(34,197,94'] { background: rgba(59, 216, 207, 0.12) !important; }
+html.redacted [style*='background: rgba(99,102,241'],
+html.redacted [style*='background: rgba(99, 102, 241'],
+html.redacted [style*='background: rgba(59,130,246'],
+html.redacted [style*='background: rgba(167,139,250'],
+html.redacted [style*='background: rgba(168,85,247'],
+html.redacted [style*='background: rgba(236,72,153'],
+html.redacted [style*='background: rgba(34,211,238'] { background: rgba(31, 143, 240, 0.09) !important; }
+html.redacted [style*='background: rgba(239,68,68'],
+html.redacted [style*='background: rgba(239, 68, 68'],
+html.redacted [style*='background: rgba(220,38,38'] { background: rgba(242, 84, 91, 0.09) !important; }
+html.redacted [style*='background: rgba(245,158,11'],
+html.redacted [style*='background: rgba(245, 158, 11'],
+html.redacted [style*='background: rgba(251,146,60'],
+html.redacted [style*='background: rgba(234,179,8'] { background: rgba(245, 177, 61, 0.14) !important; }
+html.redacted [style*='solid rgba(16,185,129'],
+html.redacted [style*='solid rgba(16, 185, 129'],
+html.redacted [style*='solid rgba(34,197,94'] { border-color: rgba(59, 216, 207, 0.4) !important; }
+html.redacted [style*='solid rgba(99,102,241'],
+html.redacted [style*='solid rgba(99, 102, 241'],
+html.redacted [style*='solid rgba(59,130,246'],
+html.redacted [style*='solid rgba(167,139,250'],
+html.redacted [style*='solid rgba(168,85,247'],
+html.redacted [style*='solid rgba(236,72,153'],
+html.redacted [style*='solid rgba(34,211,238'] { border-color: rgba(31, 143, 240, 0.25) !important; }
+html.redacted [style*='solid rgba(239,68,68'],
+html.redacted [style*='solid rgba(239, 68, 68'],
+html.redacted [style*='solid rgba(220,38,38'] { border-color: rgba(242, 84, 91, 0.3) !important; }
+html.redacted [style*='solid rgba(245,158,11'],
+html.redacted [style*='solid rgba(245, 158, 11'],
+html.redacted [style*='solid rgba(251,146,60'],
+html.redacted [style*='solid rgba(234,179,8'] { border-color: rgba(245, 177, 61, 0.45) !important; }
+html.redacted [style*='solid #6366f1'],
+html.redacted [style*='solid #818cf8'],
+html.redacted [style*='solid #a78bfa'],
+html.redacted [style*='solid #a855f7'],
+html.redacted [style*='border-color: #6366f1'] { border-color: #1f8ff0 !important; }
+html.redacted [style*='solid #10b981'],
+html.redacted [style*='solid #22c55e'] { border-color: #3bd8cf !important; }
+html.redacted [style*='solid #22d3ee'] { border-color: #29b4f2 !important; }
+html.redacted [style*='solid #f59e0b'],
+html.redacted [style*='solid #eab308'] { border-color: #f5b13d !important; }
+html.redacted [style*='solid #ef4444'],
+html.redacted [style*='solid #dc2626'] { border-color: #f2545b !important; }
+html.redacted .flow-box { background: #fff !important; }
+
+/* ══════════════════════════════════════════
+   Footer
+   ══════════════════════════════════════════ */
+.rd-footer {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	margin-top: 96px;
+	background: #05080d;
+	color: #fff;
+	padding: 80px 20px 40px;
+}
+.rd-footer-ghost {
+	pointer-events: none;
+	position: absolute;
+	z-index: -1;
+	right: -96px;
+	top: 18%;
+	width: 280px;
+	transform: rotate(-14deg);
+}
+.rd-footer-ghost::before {
+	content: '';
+	position: absolute;
+	inset: 18%;
+	border-radius: 999px;
+	background: radial-gradient(closest-side, rgba(41, 180, 242, 0.16), transparent);
+	filter: blur(24px);
+}
+.rd-footer-ghost svg {
+	position: relative;
+	width: 100%;
+	height: auto;
+	opacity: 0.22;
+}
+@media (min-width: 768px) {
+	.rd-footer-ghost {
+		top: auto;
+		bottom: -96px;
+		right: 3%;
+		width: 440px;
+	}
+}
+.rd-footer-grid {
+	max-width: 72rem;
+	margin: 0 auto;
+	display: grid;
+	gap: 48px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.rd-footer-brand {
+	grid-column: 1 / -1;
+}
+@media (min-width: 768px) {
+	.rd-footer-grid {
+		grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr));
+	}
+	.rd-footer-brand {
+		grid-column: auto;
+	}
+}
+.rd-footer .rd-tile {
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+}
+.rd-footer .rd-wordmark {
+	font-size: 18px;
+}
+.rd-footer-about {
+	margin-top: 16px;
+	max-width: 20rem;
+	font-size: 14px;
+	line-height: 1.6;
+	color: rgba(255, 255, 255, 0.5);
+}
+.rd-footer-socials {
+	margin-top: 24px;
+	display: flex;
+	gap: 8px;
+}
+.rd-footer-socials a {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: rgba(255, 255, 255, 0.6);
+	transition: all 0.2s;
+}
+.rd-footer-socials a:hover {
+	color: #fff;
+	border-color: rgba(255, 255, 255, 0.25);
+}
+.rd-footer h3 {
+	font-size: 13px;
+	font-weight: 500;
+	letter-spacing: 0;
+	color: rgba(255, 255, 255, 0.35);
+}
+.rd-footer ul {
+	margin-top: 16px;
+	display: grid;
+	gap: 10px;
+}
+.rd-footer li a {
+	font-size: 14px;
+	color: rgba(255, 255, 255, 0.7);
+	text-decoration: none;
+	transition: color 0.2s;
+}
+.rd-footer li a:hover {
+	color: #fff;
+}
+.rd-footer-bottom {
+	max-width: 72rem;
+	margin: 80px auto 0;
+	padding-top: 24px;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 8px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.35);
+}
+@media (min-width: 640px) {
+	.rd-footer-bottom {
+		flex-direction: row;
+	}
+}
+
+/* ══════════════════════════════════════════
+   Page specifics
+   ══════════════════════════════════════════ */
+/* text set by the pages' own classes, at redacted.gg's reading sizes */
+html.redacted .stat-inset,
+html.redacted .change-pill {
+	font-size: 12px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.9);
+}
+html.redacted .info-chip-label { font-size: 11px; }
+html.redacted .info-chip-text { font-size: 13px; }
+html.redacted .label { font-size: 13px; }
+html.redacted :is(.filter-chip, .copy-btn) { font-size: 12.5px; }
+
+/* methodology: long-form text, as redacted.gg's docs */
+html.redacted .card .h2 {
+	font-size: 22px;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin-bottom: 14px;
+}
+html.redacted .card :is(.p, .list) {
+	font-size: 15.5px;
+	line-height: 1.7;
+	color: #3c4757;
+}
+html.redacted .card .list li + li {
+	margin-top: 0.35em;
+}
+html.redacted .card :is(.th, .td) {
+	font-size: 13.5px;
+}
+html.redacted .chip {
+	font-size: 13px;
+	padding: 6px 12px;
+	background: rgba(255, 255, 255, 0.8);
+	border: 0;
+	box-shadow: inset 0 0 0 1px rgba(10, 17, 28, 0.08);
+	color: #3c4757;
+}
+html.redacted .chip strong {
+	color: #0a111c;
+}
+html.redacted .card code,
+html.redacted .p code {
+	font-size: 0.86em;
+	color: #0a111c;
+	background: rgba(10, 17, 28, 0.06);
+	border-radius: 6px;
+	padding: 0.12em 0.36em;
+}
+
+/* pages without a head (a certificate, a submission): room under the menu bar */
+html.redacted .page-plain {
+	padding-top: 112px;
+}
+
+/* the footer stays at the bottom of short pages */
+html.redacted .site-root {
+	display: flex;
+	flex-direction: column;
+}
+html.redacted .site-root > main {
+	flex: 1;
+}
+
+/* segmented toggles (history: Private/Public, Snapshot/Live; addresses: Linked/Flagged/All) */
+html.redacted :is(.grid.grid-cols-2.rounded-lg, .flex.rounded-lg.overflow-hidden) {
+	padding: 3px;
+	gap: 3px;
+	border: 0 !important;
+	border-radius: 14px;
+	background: rgba(10, 17, 28, 0.05);
+}
+html.redacted :is(.grid.grid-cols-2.rounded-lg, .flex.rounded-lg.overflow-hidden) button {
+	border-radius: 11px;
+	border: 0 !important;
+	background: transparent !important;
+	color: #6a7686 !important;
+	box-shadow: none !important;
+}
+html.redacted :is(.grid.grid-cols-2.rounded-lg, .flex.rounded-lg.overflow-hidden) button[style*='background: var(--app-accent)'] {
+	background: #fff !important;
+	color: #0a111c !important;
+	box-shadow: 0 1px 2px rgba(10, 17, 28, 0.08), 0 6px 16px -10px rgba(10, 17, 28, 0.4) !important;
+}
+
+/* admin sync: one action style for every source (the source keeps its colour on its label) */
+html.redacted button.run-btn.run-btn {
+	background: #0a111c !important;
+	color: #fff !important;
+	border-radius: 12px;
+	box-shadow: none !important;
+}
+html.redacted button.run-btn.run-btn:hover:not(:disabled) {
+	background: var(--grad) !important;
+}
+
+/* Categories (transaction types, sources, list labels) are neutral chips, as on redacted.gg; colour stays
+   for status only (flagged, clear, warning) and for the primary action. A category chip is drawn by the
+   pages as `background: {colour}15; color: {colour}` (a hex-alpha tint of its own colour). */
+html.redacted :is([style*='15; color: #'], [style*='10; color: #'], [style*='20; color: #']):not([style*='rgba(']),
+html.redacted .tx-row span[style*='color-mix'] {
+	background: rgba(10, 17, 28, 0.05) !important;
+	color: #3c4757 !important;
+	border-color: rgba(10, 17, 28, 0.08) !important;
+	box-shadow: none !important;
+}
+html.redacted .flow-box {
+	border-color: rgba(10, 17, 28, 0.1) !important;
+}
+html.redacted .step-dot {
+	background: var(--grad) !important;
+}
+/* admin: the incident button is an action, not an alarm */
+html.redacted button[style*='background: #dc2626;'] {
+	background: #0a111c !important;
+}
+html.redacted .src-chip {
+	background: rgba(10, 17, 28, 0.05) !important;
+	color: #3c4757 !important;
+	border: 1px solid rgba(10, 17, 28, 0.08) !important;
+	border-radius: 999px;
+}
+html.redacted .hero-word {
+	background: var(--grad);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent !important;
+}
+/* admin settings: a team member's row wraps on a phone (the larger type no longer fits one line) */
+html.redacted .team-row {
+	flex-wrap: wrap;
+}

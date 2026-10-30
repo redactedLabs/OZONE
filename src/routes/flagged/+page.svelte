@@ -67,8 +67,8 @@
 	<meta property="og:url" content="https://ozone.redacted.gg/flagged" />
 </svelte:head>
 
-<div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
-	<div class="mb-6">
+<div class="page-shell mx-auto max-w-7xl px-4 pt-20 pb-12">
+	<div class="page-hero page-hero-row mb-6">
 		<h1 class="text-2xl font-bold" style="color: var(--text);">{data.list === 'thor' ? 'Flagged THORChain (thor1) Addresses' : 'Flagged Addresses'}</h1>
 		<p class="text-sm mt-1" style="color: var(--text-muted);">
 			{data.list === 'thor' ? data.definitions.flaggedThorAddresses : data.definitions.flaggedAddresses}

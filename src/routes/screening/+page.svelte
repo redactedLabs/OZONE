@@ -53,8 +53,8 @@
 	<title>Monitored thor1 Accounts — Screening | Ozone</title>
 </svelte:head>
 
-<div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
-	<div class="mb-6 flex items-center justify-between">
+<div class="page-shell mx-auto max-w-7xl px-4 pt-20 pb-12">
+	<div class="page-hero page-hero-row mb-6 flex items-center justify-between">
 		<div>
 			<h1 class="text-2xl font-bold text-[var(--text)]">Monitored thor1 Accounts</h1>
 			<p class="mt-1 text-sm text-[var(--text-muted)]">
@@ -147,7 +147,7 @@
 										<tr class="border-t border-[var(--app-border)]/50">
 											<td class="py-2">
 												<span
-													class="inline-block rounded border px-2 py-0.5 text-xs font-medium {sourceColors[match.source] || 'bg-gray-500/20 text-gray-400'}"
+													class="src-chip inline-block rounded border px-2 py-0.5 text-xs font-medium {sourceColors[match.source] || 'bg-gray-500/20 text-gray-400'}"
 												>
 													{match.source}
 												</span>

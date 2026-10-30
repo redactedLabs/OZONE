@@ -45,8 +45,8 @@
 	<title>Live Logs — Admin</title>
 </svelte:head>
 
-<div class="mx-auto max-w-7xl px-4 pt-20 pb-12">
-	<div class="flex items-end justify-between mb-6">
+<div class="page-shell mx-auto max-w-7xl px-4 pt-20 pb-12">
+	<div class="page-hero page-hero-row flex items-end justify-between mb-6">
 		<div>
 			<h1 class="text-2xl font-bold" style="color: #f1f5f9;">Live Logs</h1>
 			<p class="text-sm mt-1" style="color: #64748b;">

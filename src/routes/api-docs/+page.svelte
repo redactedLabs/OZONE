@@ -106,9 +106,9 @@ const v = oz.screen(address, 'BTC');      // → status, risk, reasons,
 	<meta property="og:url" content="https://ozone.redacted.gg/api-docs" />
 </svelte:head>
 
-<div class="mx-auto max-w-5xl px-4 pt-20 pb-16">
+<div class="page-shell mx-auto max-w-5xl px-4 pt-20 pb-16">
 	<!-- Hero -->
-	<div class="text-center mb-12">
+	<div class="page-hero text-center mb-12">
 		<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
 			<span class="inline-block h-2 w-2 rounded-full animate-pulse" style="background: #10b981;"></span>
 			<span class="text-xs font-mono" style="color: var(--stat-indigo);">v1 &middot; Public &middot; Free</span>

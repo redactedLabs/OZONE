@@ -2,7 +2,7 @@
  * The theme store (theme.svelte.ts) is loaded by the root layout, so every page of the site, /view included, needs it
  * to load. It must survive a browser that refuses site data: there, reading `localStorage` throws (SecurityError),
  * `getItem`/`setItem` can throw (QuotaExceededError), and Node 25's global `localStorage` without a storage file has
- * no `getItem` at all. The store then starts on win98 and still toggles and applies, for this page only.
+ * no `getItem` at all. The store then starts on the Redacted theme and still toggles and applies, for this page only.
  *
  * The real module is compiled with Svelte's own compiler (client output, as the browser gets it) and loaded fresh
  * for each case, so its top-level storage read runs again under each stub.
@@ -73,16 +73,16 @@ afterEach(() => {
 });
 
 describe('theme store without site data', () => {
-	it('loads, starts on win98, toggles and applies when reading localStorage throws (blocked site data)', async () => {
+	it('loads, starts on the Redacted theme, toggles and applies when reading localStorage throws (blocked site data)', async () => {
 		setStorage({ throws: securityError() });
 		const { theme, html } = await load();
-		expect(theme.current).toBe('win98');
+		expect(theme.current).toBe('redacted');
 		expect(() => theme.toggle()).not.toThrow();
-		expect(theme.current).toBe('dark');
-		expect(html.className).toBe('dark');
-		theme.toggle();
 		expect(theme.current).toBe('win98');
 		expect(html.className).toBe('win98');
+		theme.toggle();
+		expect(theme.current).toBe('redacted');
+		expect(html.className).toBe('redacted');
 	});
 
 	it('loads and toggles when getItem and setItem throw', async () => {
@@ -93,51 +93,60 @@ describe('theme store without site data', () => {
 			}
 		});
 		const { theme, html } = await load();
-		expect(theme.current).toBe('win98');
+		expect(theme.current).toBe('redacted');
 		expect(() => theme.toggle()).not.toThrow();
-		expect(theme.current).toBe('dark');
-		expect(html.className).toBe('dark');
+		expect(theme.current).toBe('win98');
+		expect(html.className).toBe('win98');
 	});
 
 	it('loads and toggles when localStorage has no Storage methods (Node 25 without a storage file)', async () => {
 		setStorage({ value: {} });
 		const { theme } = await load();
-		expect(theme.current).toBe('win98');
+		expect(theme.current).toBe('redacted');
 		expect(() => theme.toggle()).not.toThrow();
-		expect(theme.current).toBe('dark');
+		expect(theme.current).toBe('win98');
 	});
 
 	it('loads and toggles with no localStorage at all (the server)', async () => {
 		delete g.localStorage;
 		const { theme } = await load();
-		expect(theme.current).toBe('win98');
+		expect(theme.current).toBe('redacted');
 		expect(() => theme.toggle()).not.toThrow();
-		expect(theme.current).toBe('dark');
+		expect(theme.current).toBe('win98');
 	});
 });
 
 describe('theme store with site data', () => {
 	it('reads the stored theme and stores each toggle', async () => {
-		const s = memoryStorage({ theme: 'dark' });
+		const s = memoryStorage({ theme: 'win98' });
 		setStorage({ value: s });
 		const { theme, html } = await load();
-		expect(theme.current).toBe('dark');
-		theme.toggle();
 		expect(theme.current).toBe('win98');
+		theme.toggle();
+		expect(theme.current).toBe('redacted');
+		expect(s.map.get('theme')).toBe('redacted');
+		expect(html.className).toBe('redacted');
+		theme.toggle();
 		expect(s.map.get('theme')).toBe('win98');
 		expect(html.className).toBe('win98');
-		theme.toggle();
-		expect(s.map.get('theme')).toBe('dark');
 	});
 
-	it('starts on win98 when nothing is stored, and ignores a value that is no theme', async () => {
+	it("reads the old modern theme ('dark') as the Redacted theme", async () => {
+		setStorage({ value: memoryStorage({ theme: 'dark' }) });
+		const { theme, html } = await load();
+		expect(theme.current).toBe('redacted');
+		theme.apply();
+		expect(html.className).toBe('redacted');
+	});
+
+	it('starts on the Redacted theme when nothing is stored, and ignores a value that is no theme', async () => {
 		setStorage({ value: memoryStorage() });
-		expect((await load()).theme.current).toBe('win98');
+		expect((await load()).theme.current).toBe('redacted');
 		setStorage({ value: memoryStorage({ theme: 'neon' }) });
 		const { theme, html } = await load();
-		expect(theme.current).toBe('win98');
+		expect(theme.current).toBe('redacted');
 		theme.apply();
-		expect(html.className).toBe('win98');
+		expect(html.className).toBe('redacted');
 	});
 });
 

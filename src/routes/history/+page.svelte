@@ -220,10 +220,11 @@
 	<meta name="twitter:description" content="Full transaction history & tax CSV export. Free tool by Redacted." />
 </svelte:head>
 
-<div class="mx-auto px-4 pt-20 pb-16" class:max-w-6xl={phase === 'idle'} class:max-w-5xl={phase !== 'idle'}>
+<div class="page-shell mx-auto px-4 pt-20 pb-16" class:max-w-6xl={phase === 'idle'} class:max-w-5xl={phase !== 'idle'}>
 	{#if phase === 'idle'}
 
-		<!-- A. Hero Section -->
+		<!-- A. Hero Section and the input card: the page head -->
+		<div class="page-hero">
 		<div class="hero-section text-center mb-16" class:hero-visible={heroVisible}>
 			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
 				<span class="relative flex h-2 w-2">
@@ -309,6 +310,7 @@
 			{#if error}
 				<p class="text-xs mt-3 text-center" style="color: #ef4444;">{error}</p>
 			{/if}
+		</div>
 		</div>
 
 		<!-- B. Value Proposition Cards -->
@@ -478,7 +480,7 @@
 
 	{:else if phase === 'loading'}
 		<!-- Loading -->
-		<div class="text-center mb-8">
+		<div class="page-hero text-center mb-8">
 			<h2 class="text-xl font-bold mb-2" style="color: var(--text);">Fetching history</h2>
 			<p class="text-xs font-mono" style="color: var(--text-muted);">{truncAddr(address)}</p>
 		</div>
@@ -502,7 +504,7 @@
 
 	{:else if phase === 'done' && report}
 		<!-- Results -->
-		<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+		<div class="page-hero page-hero-row flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
 			<div>
 				<h1 class="text-2xl font-bold" style="color: var(--text);">Transaction Report</h1>
 				<p class="text-sm mt-1" style="color: var(--text-muted);">

@@ -128,12 +128,14 @@
 	<title>Settings — Admin</title>
 </svelte:head>
 
-<div class="mx-auto max-w-4xl px-4 pt-20 pb-12">
+<div class="page-shell mx-auto max-w-4xl px-4 pt-20 pb-12">
+	<div class="page-hero page-hero-row">
 	<h1 class="text-2xl font-bold mb-2" style="color: #f1f5f9;">Settings</h1>
 	<p class="text-sm mb-8" style="color: #64748b;">
 		Logged in as <strong style="color: #f1f5f9;">{data.user?.email}</strong>
 		<span class="ml-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase" style={roleColors[data.user?.role || 'admin']}>{data.user?.role || 'admin'}</span>
 	</p>
+	</div>
 
 	<!-- Change Password -->
 	<div class="rounded-xl p-6 mb-8" style="background: #0d0d1f; border: 1px solid #1e293b;" data-win-title="Change Password">
@@ -197,7 +199,7 @@
 		<h2 class="text-lg font-semibold mb-4" style="color: #f1f5f9;">Team ({data.adminUsers.length})</h2>
 		<div class="space-y-2">
 			{#each data.adminUsers as u}
-				<div class="flex items-center gap-3 rounded-lg px-4 py-3" style="background: #060610; border: 1px solid #1e293b;">
+				<div class="team-row flex items-center gap-3 rounded-lg px-4 py-3" style="background: #060610; border: 1px solid #1e293b;">
 					<span class="inline-block h-2.5 w-2.5 rounded-full" style="background: {u.role === 'owner' ? '#f59e0b' : '#10b981'};"></span>
 					<span class="text-sm font-medium" style="color: #f1f5f9;">{u.email}</span>
 					<span class="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase" style={roleColors[u.role]}>{u.role}</span>
