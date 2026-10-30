@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { statTip } from '$lib/utils/statTip';
 	import { getTokenLogoSync } from '$lib/utils/tokenLogos';
 
 	let { data } = $props();
@@ -67,7 +68,7 @@
 
 	<!-- Stats Cards -->
 	<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Volume">
+		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Volume" use:statTip>
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #f59e0b;">
 				{data.totalVolumeUsd > 0 ? fmtUsd(data.totalVolumeUsd) : '$0'}
 			</div>
@@ -125,7 +126,7 @@
 			</div>
 		</div>
 
-		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="TVL">
+		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="TVL" use:statTip>
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #10b981;">
 				{data.totalTVLUsd > 0 ? fmtUsd(data.totalTVLUsd) : '$0'}
 			</div>
@@ -176,7 +177,7 @@
 			</div>
 		</div>
 
-		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Wallets">
+		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Wallets" use:statTip>
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #a78bfa;">
 				{data.subWalletCount.toLocaleString('en-US')}
 			</div>
@@ -194,7 +195,7 @@
 			<div class="stat-tip">Number of sub-wallet contracts (code_id {data.codeIdSub}) instantiated from the proxy. Each user creates one Private Wallet via ZK proof.</div>
 		</div>
 
-		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Revenue">
+		<div class="dash-box stat-hover rounded-xl p-4 relative group flex flex-col" data-win-title="Revenue" use:statTip>
 			<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #22d3ee;">
 				{fmtUsd(data.feeBalanceUsd)}
 			</div>
@@ -463,8 +464,7 @@
 		box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 		pointer-events: none;
 	}
-	.stat-hover:hover .stat-tip { display: block; }
-	.stat-hover:hover { z-index: 30; }
+	/* the popup itself opens through statTip (src/lib/utils/statTip.ts), above everything */
 
 	.change-pill {
 		display: inline-flex;

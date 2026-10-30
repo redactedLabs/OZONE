@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { statTip } from '$lib/utils/statTip';
 	import Toast from '$lib/components/Toast.svelte';
 	import Clippy from '$lib/components/Clippy.svelte';
 	import { onMount } from 'svelte';
@@ -295,21 +296,21 @@
 
 	<!-- Line 1: Stats boxes (one meaning per number — see /methodology#numbers) -->
 	<div class="relative z-20 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-		<a href="/flagged" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
+		<a href="/flagged" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;" use:statTip>
 			<div class="flex items-baseline gap-2">
 				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedAddresses === null ? '—' : data.stats.flaggedAddresses.toLocaleString('en-US')}</div>
 			</div>
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Flagged Addresses · all chains</div>
 			<div class="stat-tip">Every address in the signed snapshot at risk "high" or above, on any chain: listed (sanctions, law enforcement, hacks, freezes, …, incl. the same key on sibling chains), traced through THORChain from a listed address, or a monitored thor1 account linked to one. Each address counts once. The list shows how each one is flagged. Click for the list.</div>
 		</a>
-		<a href="/flagged?list=thor" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
+		<a href="/flagged?list=thor" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;" use:statTip>
 			<div class="flex items-baseline gap-2">
 				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedThorAddresses === null ? '—' : data.stats.flaggedThorAddresses.toLocaleString('en-US')}</div>
 			</div>
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Flagged THORChain (thor1) Addresses</div>
 			<div class="stat-tip">The thor1 addresses among the flagged addresses: listed, traced through THORChain, or monitored accounts linked by their own signed actions to a listed L1 address. Click for the list.</div>
 		</a>
-		<a href="/banned" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
+		<a href="/banned" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;" use:statTip>
 			<div class="flex items-baseline gap-2">
 				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #f59e0b;">{data.stats.listedAddresses.toLocaleString('en-US')}</div>
 			</div>
@@ -322,7 +323,7 @@
 			{/if}
 			<div class="stat-tip">Distinct addresses currently on at least one of {data.stats.sources} lists: OFAC, UK and EU sanctions, FBI attributions, hack incidents, Tether and Circle freezes, hack clusters, exploiter and phishing lists, at any risk (medium-risk phishing entries are listed but not flagged). Delisted addresses are kept as history and no longer flag.</div>
 		</a>
-		<a href="/screening" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;">
+		<a href="/screening" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;" use:statTip>
 			<div class="flex items-baseline gap-2">
 				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: var(--stat-indigo);">{data.stats.monitoredThorAccounts.toLocaleString('en-US')}</div>
 			</div>
@@ -730,8 +731,7 @@
 		box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 		pointer-events: none;
 	}
-	.stat-hover:hover .stat-tip { display: block; }
-	.stat-hover:hover { z-index: 30; }
+	/* the popup itself opens through statTip (src/lib/utils/statTip.ts), above everything */
 	/* Daily new-adds inset box — top-right corner */
 	.stat-inset {
 		position: absolute;
