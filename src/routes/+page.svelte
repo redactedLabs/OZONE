@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte';
-	import Ghost from '$lib/components/Ghost.svelte';
+	import ScanHero from '$lib/components/ScanHero.svelte';
 
 	type GlobeMarker = { location: [number, number]; size?: number; color?: string; label?: string; logo?: string };
 
@@ -70,15 +70,6 @@
 		color: n.color,
 		label: n.name,
 	}));
-
-	// The scanner in the Redacted hero: addresses fly in, verdicts fly out (an illustration, not live data).
-	// Each pair shares its delay, so an address leaves as its own verdict.
-	const SCANS = [
-		{ chain: 'BTC', addr: 'bc1q…k7wz', flagged: false, note: '' },
-		{ chain: 'ETH', addr: '0x7f3a…19c2', flagged: true, note: 'Received from a listed hack via THORChain' },
-		{ chain: 'RUNE', addr: 'thor1…8m4q', flagged: false, note: '' },
-	];
-	const SCAN_SOURCES = ['OFAC', 'UK', 'EU', 'FBI', 'Tether', 'Circle', 'Hacks', 'Traces'];
 
 	// the Redacted globe: every node in the brand's blue, labels as white chips with the coin's logo
 	// (static/coins, from app.redacted.gg; GAIA is Cosmos: the ATOM logo)
@@ -299,31 +290,8 @@
 		</div>
 	</div>
 
-	<!-- Redacted theme: the scanner, as redacted.gg's hero phone -->
-	<div class="rd-only scan-stage" aria-hidden="true">
-		<div class="scan-streams">
-			{#each SCANS as s, i (s.addr)}
-				<div class="scan-card scan-in" style="animation-delay: {i * -3}s;">
-					<span class="scan-coin">{s.chain}</span>
-					<span class="scan-card-text"><b>{s.chain === 'RUNE' ? 'THORChain' : s.chain === 'BTC' ? 'Bitcoin' : 'Ethereum'}</b><code>{s.addr}</code></span>
-					<span class="scan-pill">unchecked</span>
-				</div>
-				<div class="scan-card scan-out" class:scan-flagged={s.flagged} style="animation-delay: {i * -3}s;">
-					<span class="scan-coin">{s.chain}</span>
-					<span class="scan-card-text"><b>{s.flagged ? 'Flagged' : 'Clear'}</b><small>{s.flagged ? s.note : `Checked against ${data.stats.sources} lists`}</small></span>
-					<span class="scan-verdict">{s.flagged ? '!' : '✓'}</span>
-				</div>
-			{/each}
-		</div>
-		<div class="scan-device">
-			<span class="rd-tile scan-tile"><Ghost /></span>
-			<div class="scan-device-title">Screening</div>
-			<div class="scan-sources">
-				{#each SCAN_SOURCES as src, i (src)}<span style="animation-delay: {i * 0.35}s;">{src}</span>{/each}
-			</div>
-			<div class="scan-beam"></div>
-		</div>
-	</div>
+	<!-- Redacted theme: the screening loop (an address in, every list checked, a verdict out) -->
+	<div class="rd-only"><ScanHero /></div>
 
 	<!-- Line 1: Stats boxes (one meaning per number — see /methodology#numbers) -->
 	<div class="relative z-20 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
@@ -660,244 +628,6 @@
 />
 
 <style>
-	/* ── Redacted hero: the scanner (redacted.gg's card streams, fly-in / fly-out) ── */
-	.scan-stage {
-		position: relative;
-		height: 340px;
-		margin: 28px 0 36px;
-		display: grid;
-		place-items: center;
-	}
-	.scan-streams {
-		position: absolute;
-		inset: 0;
-		perspective: 1100px;
-		pointer-events: none;
-	}
-	.scan-card {
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		width: 300px;
-		margin: -36px 0 0 -150px;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 14px;
-		border-radius: 18px;
-		background: rgba(255, 255, 255, 0.85);
-		border: 1px solid rgba(10, 17, 28, 0.06);
-		box-shadow: 0 20px 40px -24px rgba(10, 17, 28, 0.35);
-		text-align: left;
-		will-change: transform, opacity;
-	}
-	.scan-in {
-		animation: fly-in 9s linear infinite both;
-	}
-	.scan-out {
-		animation: fly-out 9s linear infinite both;
-		border: 1.5px solid transparent;
-		background: linear-gradient(#fff, #fff) padding-box, var(--grad) border-box;
-		box-shadow: 0 0 24px -4px rgba(41, 180, 242, 0.55), 0 20px 40px -24px rgba(10, 17, 28, 0.35);
-	}
-	.scan-out.scan-flagged {
-		background: linear-gradient(#fff, #fff) padding-box, linear-gradient(160deg, #f2545b, #f5b13d) border-box;
-		box-shadow: 0 0 24px -6px rgba(242, 84, 91, 0.55), 0 20px 40px -24px rgba(10, 17, 28, 0.35);
-	}
-	.scan-coin {
-		flex: none;
-		display: grid;
-		place-items: center;
-		width: 44px;
-		height: 44px;
-		border-radius: 999px;
-		background: #0a111c;
-		color: #fff;
-		font: 700 10.5px/1 var(--font-mono);
-		letter-spacing: 0.02em;
-	}
-	.scan-card-text {
-		min-width: 0;
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.scan-card-text b {
-		font-size: 16px;
-		font-weight: 600;
-		color: #0a111c;
-	}
-	.scan-card-text code,
-	.scan-card-text small {
-		font-size: 12px;
-		color: #6a7686;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.scan-pill {
-		flex: none;
-		padding: 2px 8px;
-		border-radius: 999px;
-		background: rgba(10, 17, 28, 0.05);
-		font-size: 10.5px;
-		font-weight: 500;
-		color: #6a7686;
-	}
-	.scan-verdict {
-		flex: none;
-		display: grid;
-		place-items: center;
-		width: 26px;
-		height: 26px;
-		border-radius: 999px;
-		background: var(--grad);
-		color: #fff;
-		font-size: 13px;
-		font-weight: 700;
-	}
-	.scan-flagged .scan-verdict {
-		background: #f2545b;
-	}
-	.scan-device {
-		position: relative;
-		z-index: 2;
-		width: 248px;
-		padding: 26px 22px 24px;
-		overflow: hidden;
-		border-radius: 30px;
-		border: 1.5px solid transparent;
-		background: linear-gradient(#fff, #fff) padding-box, var(--grad) border-box;
-		box-shadow: 0 0 40px -8px rgba(41, 180, 242, 0.6), 0 30px 60px -30px rgba(10, 17, 28, 0.45);
-		text-align: center;
-	}
-	.scan-tile {
-		width: 64px;
-		height: 64px;
-		border-radius: 20px;
-		box-shadow: 0 18px 40px -10px rgba(41, 180, 242, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-	}
-	.scan-device-title {
-		margin-top: 14px;
-		font-size: 18px;
-		font-weight: 600;
-		letter-spacing: -0.02em;
-		color: #0a111c;
-	}
-	.scan-sources {
-		margin-top: 12px;
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 6px;
-	}
-	.scan-sources span {
-		padding: 3px 8px;
-		border-radius: 999px;
-		background: rgba(10, 17, 28, 0.04);
-		font: 500 11px/1.4 var(--font-mono);
-		color: #3c4757;
-		animation: scan-tick 2.8s ease-in-out infinite both;
-	}
-	/* the band scans behind the device's content, not through the ghost */
-	.scan-device > :not(.scan-beam) {
-		position: relative;
-		z-index: 1;
-	}
-	.scan-beam {
-		position: absolute;
-		z-index: 0;
-		left: 0;
-		right: 0;
-		top: 0;
-		height: 26px;
-		background: linear-gradient(180deg, transparent, rgba(41, 180, 242, 0.22) 60%, rgba(41, 180, 242, 0.6) 100%);
-		border-bottom: 1.5px solid #29b4f2;
-		animation: scan-beam 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-		pointer-events: none;
-	}
-	@keyframes scan-beam {
-		0% { transform: translateY(-30px); opacity: 0; }
-		12% { opacity: 1; }
-		88% { opacity: 1; }
-		100% { transform: translateY(250px); opacity: 0; }
-	}
-	@keyframes scan-tick {
-		0%, 70%, 100% { background: rgba(10, 17, 28, 0.04); color: #3c4757; }
-		20%, 45% { background: rgba(59, 216, 207, 0.18); color: #0a111c; }
-	}
-	@keyframes fly-in {
-		0% { transform: translate3d(-62vw, 0, 0) rotateY(28deg) scale(1); opacity: 0; filter: blur(0); }
-		8% { opacity: 1; }
-		62% { transform: translate3d(-24.8vw, 0, 0) rotateY(19.3deg) scale(0.76); opacity: 1; filter: blur(0); }
-		100% { transform: translate3d(-2vw, 0, 0) rotateY(14deg) scale(0.62); opacity: 0; filter: blur(6px); }
-	}
-	@keyframes fly-out {
-		0% { transform: translate3d(2vw, 0, 0) rotateY(-14deg) scale(0.62); opacity: 0; filter: blur(6px); }
-		12% { opacity: 1; }
-		32% { transform: translate3d(21.2vw, 0, 0) rotateY(-18.5deg) scale(0.74); filter: blur(0); }
-		90% { opacity: 1; }
-		100% { transform: translate3d(62vw, 0, 0) rotateY(-28deg) scale(1); opacity: 0; filter: blur(0); }
-	}
-	/* below 1024 px (phones, tablets) the flow runs top to bottom: one address at a time drops into
-	   the scanner and leaves underneath as its verdict (each pair 3 s apart, as on desktop) */
-	@media (max-width: 1023px) {
-		.scan-stage {
-			--card-w: min(300px, calc(100vw - 56px));
-			height: 430px;
-			margin: 16px 0 28px;
-		}
-		.scan-streams {
-			perspective: none;
-		}
-		.scan-card {
-			width: var(--card-w);
-			margin-left: calc(var(--card-w) / -2);
-		}
-		.scan-in {
-			animation-name: drop-in;
-		}
-		.scan-out {
-			animation-name: drop-out;
-		}
-		.scan-device {
-			width: 220px;
-			padding: 18px 16px 16px;
-		}
-		.scan-tile {
-			width: 52px;
-			height: 52px;
-			border-radius: 16px;
-		}
-		.scan-device-title {
-			margin-top: 10px;
-			font-size: 16px;
-		}
-	}
-	@keyframes drop-in {
-		0% { transform: translateY(-190px); opacity: 0; filter: blur(0); }
-		4% { transform: translateY(-165px); opacity: 1; }
-		20% { transform: translateY(-165px); opacity: 1; filter: blur(0); }
-		31% { transform: translateY(-40px) scale(0.8); opacity: 0; filter: blur(4px); }
-		100% { transform: translateY(-40px) scale(0.8); opacity: 0; }
-	}
-	@keyframes drop-out {
-		0%, 30% { transform: translateY(40px) scale(0.8); opacity: 0; filter: blur(4px); }
-		40% { transform: translateY(165px) scale(1); opacity: 1; filter: blur(0); }
-		60% { transform: translateY(165px); opacity: 1; }
-		66%, 100% { transform: translateY(185px); opacity: 0; }
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.scan-streams {
-			display: none !important;
-		}
-		.scan-beam,
-		.scan-sources span {
-			animation: none;
-		}
-	}
-
 	/* the Redacted globe's chain labels: white chips, as redacted.gg's pills */
 	/* width: the label sits in a zero-width box (threlte's HTML), which would squeeze it to its narrowest */
 	.rd-marker {
