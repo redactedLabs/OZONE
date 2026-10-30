@@ -899,11 +899,13 @@
 	}
 
 	/* the Redacted globe's chain labels: white chips, as redacted.gg's pills */
+	/* width: the label sits in a zero-width box (threlte's HTML), which would squeeze it to its narrowest */
 	.rd-marker {
 		display: inline-flex;
+		width: max-content;
 		align-items: center;
 		gap: 5px;
-		padding: 3px 9px 3px 4px;
+		padding: 3px 7px;
 		border-radius: 999px;
 		background: #fff;
 		color: #0a111c;
@@ -913,6 +915,7 @@
 		box-shadow: inset 0 0 0 1px rgba(31, 143, 240, 0.25), 0 8px 20px -10px rgba(10, 17, 28, 0.35);
 	}
 	.rd-marker img {
+		flex: none;
 		width: 14px;
 		height: 14px;
 		border-radius: 999px;
@@ -920,7 +923,7 @@
 	@media (max-width: 639px) {
 		.rd-marker {
 			gap: 4px;
-			padding: 2px 7px 2px 3px;
+			padding: 2px 5px;
 			font-size: 10px;
 		}
 		.rd-marker img {
