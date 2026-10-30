@@ -556,47 +556,18 @@
 		</div>
 	</div>
 
-	<!-- Open Source (reversed layout) -->
+	<!-- Open Source: the text and its two links in one row -->
 	<div class="dash-box rounded-xl overflow-hidden mb-3" data-win-title="Open Source">
-		<div class="grid grid-cols-1 md:grid-cols-2">
-			<div class="p-4 sm:p-5 flex items-center justify-center md:order-1 order-2">
-				<div class="w-full max-w-xs">
-					<!-- Fake GitHub-style PR -->
-					<div class="rounded-xl overflow-hidden" style="background: var(--bg-code); border: 1px solid var(--app-border-subtle);">
-						<div class="px-3 py-2 flex items-center gap-2" style="border-bottom: 1px solid var(--app-border-subtle);">
-							<span class="inline-block w-3 h-3 rounded-full" style="background: #a855f7;"></span>
-							<span class="text-[10px] font-semibold" style="color: var(--text);">OZONE</span>
-						</div>
-						{#each [
-							{ title: 'feat: add Bybit Feb 2025 exploit addresses', label: 'HACK', color: '#f59e0b', time: '2d ago' },
-							{ title: 'feat: sync TRON Tether frozen list', label: 'TETHER', color: '#26a17b', time: '5d ago' },
-							{ title: 'feat: eth-labels 988 malicious addresses', label: 'ETH_LABELS', color: '#fb923c', time: '1w ago' },
-						] as pr}
-							<div class="px-3 py-2 flex items-start gap-2" style="border-bottom: 1px solid var(--app-border-subtle);">
-								<span class="shrink-0 mt-0.5" style="color: #a855f7;">
-									<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M7.177 3.073L9.573.677A.25.25 0 0110 .854v4.792a.25.25 0 01-.427.177L7.177 3.427a.25.25 0 010-.354zM3.75 2.5a.75.75 0 100 1.5.75.75 0 000-1.5zm-2.25.75a2.25 2.25 0 113 2.122v5.256a2.251 2.251 0 11-1.5 0V5.372A2.25 2.25 0 011.5 3.25zM11 2.5h-1V4h1a1 1 0 011 1v5.628a2.251 2.251 0 101.5 0V5A2.5 2.5 0 0011 2.5zm1 10.25a.75.75 0 111.5 0 .75.75 0 01-1.5 0zM3.75 12a.75.75 0 100 1.5.75.75 0 000-1.5z"/></svg>
-								</span>
-								<div class="min-w-0 flex-1">
-									<div class="text-[10px] leading-tight" style="color: var(--text);">{pr.title}</div>
-									<div class="flex items-center gap-2 mt-1">
-										<span class="text-[8px] px-1 py-0.5 rounded font-bold" style="background: {pr.color}15; color: {pr.color};">{pr.label}</span>
-										<span class="text-[8px]" style="color: var(--text-faint);">{pr.time}</span>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				</div>
-			</div>
-			<div class="p-5 sm:p-6 flex flex-col justify-center md:order-2 order-1">
+		<div class="p-5 sm:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+			<div>
 				<h3 class="text-lg sm:text-xl font-bold mb-2" style="color: var(--text);">Open Source</h3>
-				<p class="text-xs sm:text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
+				<p class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-muted);">
 					The data sources are public and the code is open source. Submit addresses or data sources, or open a PR.
 				</p>
-				<div class="flex flex-wrap gap-2">
-					<a href="/open-source" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all" style="background: #a855f7;">Contribute</a>
-					<a href="https://github.com/redactedLabs/OZONE" target="_blank" rel="noopener" class="rounded-lg px-4 py-2 text-xs font-medium transition-all hero-cta-secondary">GitHub</a>
-				</div>
+			</div>
+			<div class="flex flex-wrap gap-2 shrink-0">
+				<a href="/open-source" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all" style="background: #a855f7;">Contribute</a>
+				<a href="https://github.com/redactedLabs/OZONE" target="_blank" rel="noopener" class="rounded-lg px-4 py-2 text-xs font-medium transition-all hero-cta-secondary">GitHub</a>
 			</div>
 		</div>
 	</div>

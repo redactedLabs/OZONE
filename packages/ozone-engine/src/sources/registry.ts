@@ -72,7 +72,7 @@ export const SOURCES: SourceDef[] = [
 		kind: 'sanctions',
 		url: 'https://sanctionssearch.ofac.treas.gov/',
 		description:
-			'US Treasury Specially Designated Nationals list — every "Digital Currency Address" identifier, all tickers. Addresses that disappear from a complete download are marked delisted.',
+			'US Treasury Specially Designated Nationals list: every "Digital Currency Address" identifier, all tickers. Addresses that disappear from a complete download are marked delisted.',
 		intervalMs: 1 * H,
 		minEntries: 500,
 		maxDropRatio: 0.1,
