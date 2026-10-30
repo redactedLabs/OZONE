@@ -6,7 +6,7 @@
 	import { theme } from '$lib/stores/theme.svelte';
 	import Ghost from '$lib/components/Ghost.svelte';
 
-	type GlobeMarker = { location: [number, number]; size?: number; color?: string; label?: string };
+	type GlobeMarker = { location: [number, number]; size?: number; color?: string; label?: string; logo?: string };
 
 	let { data } = $props();
 
@@ -80,8 +80,14 @@
 	];
 	const SCAN_SOURCES = ['OFAC', 'UK', 'EU', 'FBI', 'Tether', 'Circle', 'Hacks', 'Traces'];
 
-	// the Redacted globe: every node in the brand's blue, labels as white chips
-	const globeMarkersRedacted: GlobeMarker[] = globeMarkers.map((m) => ({ ...m, color: '#1f8ff0' }));
+	// the Redacted globe: every node in the brand's blue, labels as white chips with the coin's logo
+	// (static/coins, from app.redacted.gg; GAIA is Cosmos: the ATOM logo)
+	const COIN_LOGOS: Record<string, string> = { BTC: 'btc', ETH: 'eth', RUNE: 'rune', SOL: 'sol', USDT: 'usdt', AVAX: 'avax', DOGE: 'doge', GAIA: 'atom', TRX: 'trx' };
+	const globeMarkersRedacted: GlobeMarker[] = globeMarkers.map((m) => ({
+		...m,
+		color: '#1f8ff0',
+		logo: m.label && COIN_LOGOS[m.label] ? `/coins/${COIN_LOGOS[m.label]}.webp` : undefined
+	}));
 
 	type LiveTx = {
 		type: string;
@@ -366,7 +372,9 @@
 
 	<!-- Line 2: Live TX + Globe -->
 	{#snippet rdMarkerTooltip(ctx: any)}
-		<div class="rd-marker pointer-events-none" style="opacity: {ctx.visibility};">{ctx.marker.label || ''}</div>
+		<div class="rd-marker pointer-events-none" style="opacity: {ctx.visibility};">
+			{#if ctx.marker.logo}<img src={ctx.marker.logo} alt="" width="14" height="14" />{/if}{ctx.marker.label || ''}
+		</div>
 	{/snippet}
 
 	{#snippet win98MarkerTooltip(ctx: any)}
@@ -892,7 +900,10 @@
 
 	/* the Redacted globe's chain labels: white chips, as redacted.gg's pills */
 	.rd-marker {
-		padding: 3px 9px;
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 3px 9px 3px 4px;
 		border-radius: 999px;
 		background: #fff;
 		color: #0a111c;
@@ -901,10 +912,20 @@
 		white-space: nowrap;
 		box-shadow: inset 0 0 0 1px rgba(31, 143, 240, 0.25), 0 8px 20px -10px rgba(10, 17, 28, 0.35);
 	}
+	.rd-marker img {
+		width: 14px;
+		height: 14px;
+		border-radius: 999px;
+	}
 	@media (max-width: 639px) {
 		.rd-marker {
-			padding: 2px 7px;
+			gap: 4px;
+			padding: 2px 7px 2px 3px;
 			font-size: 10px;
+		}
+		.rd-marker img {
+			width: 12px;
+			height: 12px;
 		}
 	}
 	/* the Redacted globe: its own box; on a phone the "Tracing live" pill sits under it, not over it */
