@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>{s.publicId} — Ozone submission</title>
+	<title>{s.publicId}: Ozone submission</title>
 </svelte:head>
 
 <div class="page-plain mx-auto max-w-2xl px-4 pt-20 pb-16">

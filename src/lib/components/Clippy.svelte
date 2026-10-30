@@ -6,22 +6,22 @@
 
 	const tips = [
 		// Tax / Koinly / Export (heavily weighted)
-		"Tax season? Export your full THORChain & Rujira history as Koinly-compatible CSV — one click in the Wallet Explorer!",
-		"Did you know? Ozone generates Koinly-ready CSVs for THORChain & Rujira. Swaps, LPs, sends — all labeled. Your tax consultant will love you.",
+		"Tax season? Export your full THORChain & Rujira history as Koinly-compatible CSV. One click in the Wallet Explorer!",
+		"Did you know? Ozone generates Koinly-ready CSVs for THORChain & Rujira. Swaps, LPs and sends, all labeled. Your tax consultant will love you.",
 		"Need a THORChain & Rujira tax report? Enter your thor address in the Wallet Explorer, hit Export, and import straight into Koinly!",
-		"Hey! Your THORChain & Rujira swaps, LP adds, and withdrawals are all exportable. Koinly, CoinTracker, or raw CSV — we got you.",
+		"Hey! Your THORChain & Rujira swaps, LP adds, and withdrawals are all exportable. Koinly, CoinTracker or raw CSV: we got you.",
 		"Pro tip: Export your THORChain & Rujira transaction history BEFORE tax deadline. Ozone pulls every swap, send, and LP action automatically.",
-		"Don't forget — you can export your full THORChain & Rujira tx history as CSV for tax reporting anytime.",
-		"Fun fact: Ozone labels every THORChain & Rujira transaction type — swaps, streams, LPs, refunds. Perfect for Koinly import!",
+		"Don't forget: you can export your full THORChain & Rujira tx history as CSV for tax reporting anytime.",
+		"Fun fact: Ozone labels every THORChain & Rujira transaction type: swaps, streams, LPs, refunds. Perfect for Koinly import!",
 		// Compliance
 		"It looks like you're checking compliance! Need to screen a wallet? Try the Wallet Explorer!",
-		"Did you know? Ozone screens against OFAC, EU sanctions, Tether frozen lists, and more — all free!",
+		"Did you know? Ozone screens against OFAC, EU sanctions, Tether frozen lists and more, all free!",
 		"Want a Proof of Innocence? Get a verifiable compliance certificate for any THORChain & Rujira address!",
 		// Features
 		"Trade privately on Rujira! Check out the Redacted Dashboard to learn how.",
-		"Ozone API is free — no auth required. One endpoint, every sanctions list. Check the docs!",
+		"Ozone API is free, no auth required. One endpoint, every sanctions list. Check the docs!",
 		"Fun fact: Ozone auto-syncs compliance lists every 30 minutes. Always up to date!",
-		"Need to check an address? The API is just /api/screen?address=thor1... — try it!",
+		"Need to check an address? The API is just /api/screen?address=thor1... Try it!",
 		"Contribute to compliance! Submit flagged addresses on our Open Source page.",
 	];
 

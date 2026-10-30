@@ -193,7 +193,6 @@
 		</div>
 		<div class="rd-footer-bottom">
 			<span>© {new Date().getFullYear()} Redacted</span>
-			<span>Every list and every rule is public.</span>
 		</div>
 	</footer>
 </div>

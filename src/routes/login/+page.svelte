@@ -43,7 +43,7 @@
 </script>
 
 <svelte:head>
-	<title>Login — Ozone</title>
+	<title>Login | Ozone</title>
 </svelte:head>
 
 <div class="login-screen relative flex min-h-screen items-center justify-center overflow-hidden" style="background: var(--bg);">

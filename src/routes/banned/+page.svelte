@@ -78,10 +78,10 @@
 </script>
 
 <svelte:head>
-	<title>Listed Addresses — OFAC, UK, EU, FBI, Tether, Circle | Ozone</title>
+	<title>Listed Addresses: OFAC, UK, EU, FBI, Tether, Circle | Ozone</title>
 	<meta name="description" content="Every address Ozone lists, with its source and provenance: OFAC SDN, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack clusters, exploiter and phishing lists. Delisted addresses kept as history." />
-	<meta property="og:title" content="Listed Crypto Addresses — Ozone" />
-	<meta property="og:description" content="Sanctions, law-enforcement attributions, stablecoin freezes and hack lists — with provenance for every entry." />
+	<meta property="og:title" content="Listed Crypto Addresses | Ozone" />
+	<meta property="og:description" content="Sanctions, law-enforcement attributions, stablecoin freezes and hack lists, with provenance for every entry." />
 	<meta property="og:url" content="https://ozone.redacted.gg/banned" />
 </svelte:head>
 
@@ -91,7 +91,7 @@
 		<p class="text-sm mt-1" style="color: var(--text-muted);">
 			{data.totalAll.toLocaleString()} distinct addresses currently listed by at least one source.
 			{#if data.history}Showing <strong>history</strong>: delisted / unfrozen entries, which no longer flag.{/if}
-			Addresses flagged by THORChain tracing are not listed here — screen them on the <a href="/certificate" style="color: var(--app-accent);">certificate page</a> or via the <a href="/api-docs" style="color: var(--app-accent);">API</a>.
+			Addresses flagged by THORChain tracing are not on this list. Screen them on the <a href="/certificate" style="color: var(--app-accent);">certificate page</a> or via the <a href="/api-docs" style="color: var(--app-accent);">API</a>.
 			<a href="/methodology" style="color: var(--app-accent);">Methodology</a>.
 		</p>
 	</div>

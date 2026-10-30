@@ -253,18 +253,18 @@
 </script>
 
 <svelte:head>
-	<title>Ozone — On-chain Compliance for THORChain & Rujira</title>
-	<meta name="description" content="Free compliance infrastructure for THORChain & Rujira. Screen wallets against OFAC, EU sanctions, Tether frozen lists. Export transaction history for tax reporting. Proof of innocence certificates." />
-	<meta property="og:title" content="Ozone — On-chain Compliance for THORChain & Rujira" />
-	<meta property="og:description" content="Screen wallets, export tax history, get compliance certificates. OFAC, EU, Tether, hack databases. Free & open source." />
+	<title>Ozone: On-chain Compliance for THORChain & Rujira</title>
+	<meta name="description" content="Free on-chain compliance for THORChain & Rujira. Screen wallets against OFAC, EU sanctions and Tether frozen lists, export transaction history for tax reporting and get proof of innocence certificates." />
+	<meta property="og:title" content="Ozone: On-chain Compliance for THORChain & Rujira" />
+	<meta property="og:description" content="Screen wallets against OFAC, EU, Tether and hack lists, export tax history and get compliance certificates. Free and open source." />
 	<meta property="og:url" content="https://ozone.redacted.gg" />
-	<meta name="twitter:title" content="Ozone — On-chain Compliance for THORChain & Rujira" />
-	<meta name="twitter:description" content="Screen wallets, export tax history, get compliance certificates. Free & open source." />
+	<meta name="twitter:title" content="Ozone: On-chain Compliance for THORChain & Rujira" />
+	<meta name="twitter:description" content="Screen wallets, export tax history and get compliance certificates. Free and open source." />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		"@context": "https://schema.org",
 		"@type": "WebApplication",
 		"name": "Ozone",
-		"description": "Free on-chain compliance infrastructure for THORChain & Rujira. Wallet screening, tax export, compliance certificates.",
+		"description": "Free on-chain compliance for THORChain & Rujira: wallet screening, tax export and compliance certificates.",
 		"url": "https://ozone.redacted.gg",
 		"applicationCategory": "FinanceApplication",
 		"operatingSystem": "Web",
@@ -283,7 +283,7 @@
 	<div class="text-center mb-6 pt-4 sm:pt-8">
 		<h1 class="hero-title text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-3"><span style="color: var(--hero-title);">Redacted</span><span style="color: var(--hero-slash);">\</span><span class="rd-grad" style="color: var(--hero-sub);">Ozone</span></h1>
 		<p class="text-sm sm:text-base mb-4" style="color: var(--text-muted);">
-			On-chain compliance infrastructure for THORChain & Rujira
+			On-chain compliance for THORChain & Rujira
 		</p>
 		<div class="flex items-center justify-center gap-3">
 			<a href="/history" class="hero-cta-primary rounded-lg px-5 py-2 text-sm font-semibold text-white">Wallet Explorer</a>
@@ -301,7 +301,7 @@
 				<div class="text-2xl sm:text-3xl font-bold font-mono" style="color: #ef4444;">{data.stats.flaggedAddresses === null ? '—' : data.stats.flaggedAddresses.toLocaleString('en-US')}</div>
 			</div>
 			<div class="text-[10px] sm:text-xs mt-1" style="color: var(--text-muted);">Flagged Addresses · all chains</div>
-			<div class="stat-tip">Every address in the signed snapshot at risk "high" or above, on any chain: listed (sanctions, law enforcement, hacks, freezes, …, incl. the same key on sibling chains), traced through THORChain from a listed address, or a monitored thor1 account linked to one. Each address counts once. The list shows how each one is flagged. Click for the list.</div>
+			<div class="stat-tip">Every address in the signed snapshot at risk "high" or above, on any chain: listed, controlled by the same key as a listing, traced through THORChain from a listed address, or a monitored thor1 account linked to one. Each address counts once. Click for the list.</div>
 		</a>
 		<a href="/flagged?list=thor" class="dash-box stat-hover rounded-xl p-4 relative group block" style="text-decoration: none; color: inherit;" use:statTip>
 			<div class="flex items-baseline gap-2">
@@ -334,7 +334,7 @@
 					<span class="today-label" style="color: var(--text-faint);">1d</span>
 				</div>
 			{/if}
-			<div class="stat-tip">thor1 accounts Ozone monitors (Rujira League, Midgard LPs, live transactions), screened directly and through their {data.stats.linkedL1.toLocaleString('en-US')} linked L1 addresses. "Flagged" counts those flagged themselves or linked to a listed L1 address (formerly "Flagged THORChain Users"; the old screener's 2 were fee collectors, both false positives).</div>
+			<div class="stat-tip">thor1 accounts Ozone monitors (Rujira League, Midgard LPs, live transactions), screened directly and through their {data.stats.linkedL1.toLocaleString('en-US')} linked L1 addresses. "Flagged" counts those flagged themselves or linked to a listed L1 address (formerly "Flagged THORChain Users").</div>
 		</a>
 	</div>
 	</div>
@@ -450,7 +450,7 @@
 	<!-- Sync status bar -->
 	<div class="dash-box rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3" data-win-title="Sync Status">
 		<p class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-secondary);">
-			Addresses on every THORChain chain are screened against OFAC, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack and phishing lists — and traced through THORChain.
+			Addresses on every THORChain chain are screened against OFAC, UK and EU sanctions, FBI attributions, Tether and Circle freezes, hack and phishing lists, and traced through THORChain.
 			<a href="/methodology" style="color: var(--app-accent); text-decoration: none;"> Methodology &#8599;</a>
 		</p>
 		<div class="flex items-center gap-3 shrink-0">
@@ -470,13 +470,9 @@
 	<div class="dash-box rounded-xl overflow-hidden mb-3" data-win-title="Proof of Innocence">
 		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="p-5 sm:p-6 flex flex-col justify-center">
-				<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
-					<span class="inline-block h-1.5 w-1.5 rounded-full" style="background: #10b981;"></span>
-					<span class="text-[10px] font-mono" style="color: #10b981;">Verifiable &middot; Shareable</span>
-				</div>
 				<h3 class="text-lg sm:text-xl font-bold mb-2" style="color: var(--text);">Proof of Innocence</h3>
 				<p class="text-xs sm:text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
-					Screen any THORChain address against every compliance database and receive a verifiable certificate. Each certificate gets a permanent ID — shareable with counterparties, auditors, or regulators.
+					Screen any THORChain address against all of Ozone's lists and get a verifiable certificate with a permanent ID to share.
 				</p>
 				<a href="/certificate" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all w-fit" style="background: #10b981;">Get Certificate</a>
 			</div>
@@ -532,12 +528,9 @@
 				</div>
 			</div>
 			<div class="p-5 sm:p-6 flex flex-col justify-center md:order-2 order-1">
-				<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
-					<span class="text-[10px] font-mono" style="color: #22d3ee;">Private &middot; Exportable</span>
-				</div>
 				<h3 class="text-lg sm:text-xl font-bold mb-2" style="color: var(--text);">Transaction History</h3>
 				<p class="text-xs sm:text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
-					Pull your full THORChain history. Export as CSV for your tax consultant or share via anonymous link — your address stays private. Perfect for tax reporting and audit trails.
+					Pull your full THORChain history. Export it as CSV for your tax consultant, or share it through an anonymous link that keeps your address private.
 				</p>
 				<a href="/history" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all w-fit" style="background: #22d3ee; color: #0f172a;">Generate Report</a>
 			</div>
@@ -548,12 +541,9 @@
 	<div class="dash-box rounded-xl overflow-hidden mb-3" data-win-title="Ozone API">
 		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="p-5 sm:p-6 flex flex-col justify-center">
-				<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
-					<span class="text-[10px] font-mono" style="color: #6366f1;">Free &middot; No auth required</span>
-				</div>
 				<h3 class="text-lg sm:text-xl font-bold mb-2" style="color: var(--text);">Ozone API</h3>
 				<p class="text-xs sm:text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
-					Batch-screen any address on any THORChain chain. Every answer is signed and names its sources and the THORChain transactions behind a trace — or download the signed snapshot and screen locally.
+					Batch-screen any address on any THORChain chain, free and without auth. Each answer is signed and names its sources and, for a trace, the THORChain transactions behind it. You can also download the signed snapshot and screen locally.
 				</p>
 				<div class="flex flex-wrap gap-2">
 					<a href="/api-docs" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all" style="background: var(--app-accent);">Documentation</a>
@@ -599,12 +589,9 @@
 				</div>
 			</div>
 			<div class="p-5 sm:p-6 flex flex-col justify-center md:order-2 order-1">
-				<div class="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3 w-fit" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
-					<span class="text-[10px] font-mono" style="color: #a855f7;">Community-powered</span>
-				</div>
 				<h3 class="text-lg sm:text-xl font-bold mb-2" style="color: var(--text);">Open Source</h3>
 				<p class="text-xs sm:text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
-					Every data source is public. Every screening rule is transparent. Submit flagged addresses, contribute new data sources, or open a PR.
+					The data sources are public and the code is open source. Submit addresses or data sources, or open a PR.
 				</p>
 				<div class="flex flex-wrap gap-2">
 					<a href="/open-source" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all" style="background: #a855f7;">Contribute</a>

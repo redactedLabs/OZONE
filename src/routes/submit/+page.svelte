@@ -41,7 +41,7 @@
 	<div class="page-hero page-hero-row">
 	<h1 class="text-2xl font-bold mb-1" style="color: var(--text);">{kind === 'report' ? 'Report an address' : 'Appeal a flag'}</h1>
 	<p class="text-sm mb-6" style="color: var(--text-muted);">
-		Maintainers review every submission. Nothing about your request (IP address, browser) is stored — only what you type below.
+		Maintainers review every submission. Only what you type below is stored; your IP address and browser are not.
 		See the <a href="/methodology#manual" style="color: var(--app-accent);">methodology</a> for how reports and appeals are handled.
 	</p>
 	</div>
@@ -65,7 +65,7 @@
 				<input type="text" class="input font-mono" bind:value={address} required maxlength="128" placeholder="0x…, bc1…, thor1…, T…" />
 			</label>
 			<label class="block">
-				<span class="label">Chain (optional — detected from the format)</span>
+				<span class="label">Chain (optional, detected from the format)</span>
 				<select class="input" bind:value={chain}>
 					<option value="">auto-detect</option>
 					{#each ['THOR', 'BTC', 'ETH', 'BSC', 'BASE', 'AVAX', 'GAIA', 'LTC', 'BCH', 'DOGE', 'TRON', 'XRP', 'SOL'] as c}
@@ -82,7 +82,7 @@
 				<textarea class="input" rows="3" bind:value={evidence} maxlength="2000"></textarea>
 			</label>
 			<label class="block">
-				<span class="label">Contact (optional — only if you want an answer beyond the status page)</span>
+				<span class="label">Contact (optional, if you want an answer beyond the status page)</span>
 				<input type="text" class="input" bind:value={contact} maxlength="200" />
 			</label>
 			<input class="hp" tabindex="-1" autocomplete="off" bind:value={website} aria-hidden="true" />

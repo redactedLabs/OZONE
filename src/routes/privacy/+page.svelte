@@ -49,10 +49,10 @@
 </script>
 
 <svelte:head>
-	<title>Redacted Private Wallets — Privacy Dashboard | Ozone</title>
-	<meta name="description" content="Track the Redacted Private Wallet protocol — TVL, Private Reserve balance, sub-wallet count, and protocol fee. Privacy-preserving wallets on THORChain." />
-	<meta property="og:title" content="Redacted Private Wallets — Privacy Dashboard" />
-	<meta property="og:description" content="Privacy-preserving wallets on THORChain. Track TVL, Private Reserve, and protocol stats." />
+	<title>Redacted Private Wallets: Privacy Dashboard | Ozone</title>
+	<meta name="description" content="Track the Redacted Private Wallet protocol on THORChain: TVL, Private Reserve balance, sub-wallet count and protocol fee." />
+	<meta property="og:title" content="Redacted Private Wallets: Privacy Dashboard" />
+	<meta property="og:description" content="Track TVL, Private Reserve and protocol stats for Redacted Private Wallets on THORChain." />
 </svelte:head>
 
 <div class="page-shell mx-auto max-w-7xl px-4 pt-24 pb-16 sm:px-6">
@@ -62,7 +62,7 @@
 	<div class="text-center mb-8">
 		<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style="color: var(--text);">Redacted Dashboard</h1>
 		<p class="text-sm" style="color: var(--text-muted);">
-			Privacy-preserving wallets on Rujira & THORChain — deposit, interact, transact, withdraw without revealing your identity.
+			Private wallets on Rujira & THORChain: use DeFi without revealing your identity.
 		</p>
 	</div>
 
@@ -243,7 +243,7 @@
 						<span>{fmtUsd(data.feeBalanceUsd)}</span>
 					</div>
 					<div class="text-[9px] mt-1" style="color: var(--text-faint);">
-						Cumulative incoming transfers to the fee address — persists after sweeps.
+						Cumulative incoming transfers to the fee address, kept after sweeps.
 					</div>
 				</div>
 			</div>
@@ -358,7 +358,7 @@
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Create Private Wallet</h3>
 			<p class="text-xs leading-relaxed" style="color: var(--text-muted);">
-				Generate a ZK proof to create a Private Wallet. Your identity is now hidden from this point forward. The link between your public address and private wallet is broken.
+				Generate a ZK proof to create a Private Wallet. This breaks the link between your public address and the Private Wallet.
 			</p>
 		</div>
 
@@ -369,7 +369,7 @@
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Use in DeFi</h3>
 			<p class="text-xs leading-relaxed" style="color: var(--text-muted);">
-				Your Private Wallet can trade on FIN, borrow on Ghost, LP on BOW, and more. Transaction amounts are visible on-chain, but your identity is not.
+				Your Private Wallet can trade on FIN, borrow on Ghost, LP on BOW and more. Transaction amounts are visible on-chain.
 			</p>
 		</div>
 
@@ -380,7 +380,7 @@
 			</div>
 			<h3 class="text-sm font-bold mb-1.5" style="color: var(--text);">Withdraw</h3>
 			<p class="text-xs leading-relaxed" style="color: var(--text-muted);">
-				Move funds back to Private Reserve, then withdraw to your original public address. ZK proof required. Same address in, same address out.
+				Move funds back to Private Reserve, then withdraw to your original public address. ZK proof required.
 			</p>
 		</div>
 	</div>

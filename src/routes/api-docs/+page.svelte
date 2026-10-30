@@ -99,7 +99,7 @@ const v = oz.screen(address, 'BTC');      // → status, risk, reasons,
 
 
 <svelte:head>
-	<title>Screening API — Signed Verdicts, Snapshots | Ozone</title>
+	<title>Screening API: Signed Verdicts, Snapshots | Ozone</title>
 	<meta name="description" content="Batch-screen addresses on every THORChain chain. Signed verdicts with sources, provenance and THORChain trace evidence; signed snapshots for node-local screening. Free, no auth." />
 	<meta property="og:title" content="Ozone Screening API" />
 	<meta property="og:description" content="Signed verdicts with provenance, THORChain flow tracing and downloadable signed snapshots." />
@@ -111,11 +111,11 @@ const v = oz.screen(address, 'BTC');      // → status, risk, reasons,
 	<div class="page-hero text-center mb-12">
 		<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
 			<span class="inline-block h-2 w-2 rounded-full animate-pulse" style="background: #10b981;"></span>
-			<span class="text-xs font-mono" style="color: var(--stat-indigo);">v1 &middot; Public &middot; Free</span>
+			<span class="text-xs font-mono" style="color: var(--stat-indigo);">v1</span>
 		</div>
 		<h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-3" style="color: var(--text);">Ozone Screening API</h1>
 		<p class="text-sm sm:text-base max-w-2xl mx-auto" style="color: var(--text-muted);">
-			Batch-screen addresses on every THORChain chain. Each verdict names its sources, provenance and — for traces — the THORChain transactions, and every answer is signed with Ozone's Ed25519 key. Nodes can instead download the signed snapshot and screen locally. No auth, nothing about the request is stored.
+			Batch-screen addresses on every THORChain chain. Each verdict names its sources and provenance, and for traces the THORChain transactions. Every answer is signed with Ozone's Ed25519 key. Nodes can instead download the signed snapshot and screen locally. No auth; nothing about the request is stored.
 		</p>
 	</div>
 
@@ -137,7 +137,7 @@ const v = oz.screen(address, 'BTC');      // → status, risk, reasons,
 						['GET /api/v1/address/<address>', 'Everything about one address: verdict, every listing with provenance (history included), THORChain flows received and sent, and the small transfers (each under $50) that count toward a TRACE_SMALL_TRANSFERS total.'],
 						['GET /api/v1/snapshot', 'Newest signed snapshot manifest (version, build time, SHA-256 of the payload).'],
 						['GET /api/v1/snapshot/<version>', 'Snapshot payload (gzip JSON of every listed and traced address with its reasons).'],
-						['GET /api/v1/keys', 'Public keys that sign snapshots and answers — pin them.'],
+						['GET /api/v1/keys', 'Public keys that sign snapshots and answers. Pin them.'],
 						['GET /api/health', 'Database, snapshot age, per-source sync state, real-time trace cursor.'],
 						['POST /api/v1/submissions', 'Report an address or appeal a flag ({kind, address, chain?, message, evidence?, contact?}).'],
 						['GET /api/flagged', 'The flagged counters: all flagged addresses, flagged thor1 addresses, monitored thor1 accounts flagged (+ breakdown).'],

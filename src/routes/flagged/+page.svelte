@@ -63,7 +63,7 @@
 
 <svelte:head>
 	<title>{data.list === 'thor' ? 'Flagged THORChain Addresses' : 'Flagged Addresses'} | Ozone</title>
-	<meta name="description" content="Every address Ozone flags (risk high or above) in its signed snapshot, on every chain, and the THORChain (thor1) addresses among them — with risk, reason codes, sources and incident." />
+	<meta name="description" content="Every address Ozone flags (risk high or above) in its signed snapshot, on every chain, and the THORChain (thor1) addresses among them, with risk, reason codes, sources and incident." />
 	<meta property="og:url" content="https://ozone.redacted.gg/flagged" />
 </svelte:head>
 

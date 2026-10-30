@@ -1,14 +1,14 @@
-# Ozone — On-chain Compliance by Redacted
+# Ozone: On-chain Compliance by Redacted
 
-> Ozone is the free, open-source compliance infrastructure for THORChain and Rujira. It screens wallet addresses against OFAC SDN, EU sanctions, Tether frozen lists, known hack databases, ScamSniffer, and eth-labels.
+> Ozone is free, open-source compliance screening for THORChain and Rujira. It screens wallet addresses against OFAC SDN, EU sanctions, Tether frozen lists, known hack databases, ScamSniffer, and eth-labels.
 
 ## What Ozone Does
 
-- **Wallet Screening**: Check any THORChain/Rujira address against 7+ compliance databases in real-time
-- **Proof of Innocence**: Generate verifiable compliance certificates with permanent IDs — shareable with auditors, regulators, or counterparties
+- **Wallet Screening**: Check any THORChain/Rujira address against 7+ compliance databases
+- **Proof of Innocence**: Generate verifiable compliance certificates with permanent IDs that you can share
 - **Wallet Explorer**: Pull full THORChain transaction history including swaps, liquidity, lending (Ghost), DCA, and Rujira trades. Export as CSV for tax reporting
 - **Sanctioned Address Database**: Aggregated list of 5,000+ flagged addresses from OFAC, EU, Tether, hack exploits, ScamSniffer, and community reports
-- **Free API**: Screen any address via REST API — no auth, no cost
+- **Free API**: Screen any address via REST API, free and without auth
 - **View Key**: Open a Redacted view key in your own browser: the account's history, with every counterparty checked against Ozone's lists. The view key never leaves the browser; Ozone receives only counterparty addresses
 
 ## Key Pages

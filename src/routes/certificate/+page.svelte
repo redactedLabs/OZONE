@@ -88,12 +88,12 @@
 </script>
 
 <svelte:head>
-	<title>Proof of Innocence — THORChain Compliance Certificate | Ozone</title>
-	<meta name="description" content="Screen any THORChain or Rujira address against OFAC, EU sanctions, Tether frozen, known hacks, and more. Get a verifiable compliance certificate with a permanent ID — shareable with auditors, regulators, or counterparties." />
-	<meta property="og:title" content="Proof of Innocence — Compliance Certificate | Ozone" />
-	<meta property="og:description" content="Verifiable compliance certificate for THORChain & Rujira: sanctions, law-enforcement attributions, stablecoin freezes, hack and phishing lists, THORChain flow traces. Signed, permanent and shareable." />
+	<title>Proof of Innocence: THORChain Compliance Certificate | Ozone</title>
+	<meta name="description" content="Screen any THORChain or Rujira address against OFAC, EU sanctions, Tether frozen lists, known hacks and more. Get a verifiable compliance certificate with a permanent ID." />
+	<meta property="og:title" content="Proof of Innocence: Compliance Certificate | Ozone" />
+	<meta property="og:description" content="Verifiable compliance certificate for THORChain & Rujira: sanctions, law-enforcement attributions, stablecoin freezes, hack and phishing lists, THORChain flow traces. Signed, with a permanent link." />
 	<meta property="og:url" content="https://ozone.redacted.gg/certificate" />
-	<meta name="twitter:title" content="Proof of Innocence — Ozone" />
+	<meta name="twitter:title" content="Proof of Innocence | Ozone" />
 	<meta name="twitter:description" content="Get a verifiable compliance certificate for any THORChain address. Free." />
 </svelte:head>
 
@@ -104,23 +104,15 @@
 		<!-- Hero and the input card: the page head -->
 		<div class="page-hero">
 		<div class="hero-section text-center mb-12" class:hero-visible={heroVisible}>
-			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
-				<span class="relative flex h-2 w-2">
-					<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: #10b981;"></span>
-					<span class="relative inline-flex rounded-full h-2 w-2" style="background: #10b981;"></span>
-				</span>
-				<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Verifiable &middot; Shareable &middot; Permanent</span>
-			</div>
-
 			<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4">
 				<span class="hero-gradient">Proof of Innocence</span>
 			</h1>
 
 			<p class="text-base sm:text-lg max-w-2xl mx-auto mb-2" style="color: var(--text-muted);">
-				Screen any address on a THORChain chain against every Ozone source — sanctions, FBI attributions, stablecoin freezes, hack and phishing lists, THORChain flow traces — and get a signed certificate you can share with anyone.
+				Screen any address on a THORChain chain against every Ozone source and get a signed certificate with a permanent link.
 			</p>
 			<p class="text-sm max-w-xl mx-auto" style="color: var(--text-faint);">
-				No account needed. Permanent record with shareable link.
+				No account needed.
 			</p>
 		</div>
 
@@ -130,7 +122,7 @@
 				<input
 					type="text"
 					bind:value={address}
-					placeholder="thor1…, bc1…, 0x…, T…, r… — any THORChain chain"
+					placeholder="thor1…, bc1…, 0x…, T…, r… (any THORChain chain)"
 					class="cert-input flex-1 rounded-xl px-4 py-3 text-sm font-mono"
 					onkeydown={(e) => { if (e.key === 'Enter') startScan(); }}
 				/>
@@ -155,9 +147,9 @@
 			<div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
 				{#each [
 					{ num: '01', title: 'Enter Address', desc: 'Paste any address on a THORChain chain. Its format and checksum decide the chain.' },
-					{ num: '02', title: 'Screen', desc: 'Checked against every list Ozone ingests and against THORChain flow tracing — the same signed snapshot relayer nodes use.' },
-					{ num: '03', title: 'Issue Certificate', desc: 'Ozone signs the verdict. If flagged, you see every reason with its source and evidence — and can appeal.' },
-					{ num: '04', title: 'Share', desc: 'Every certificate gets a permanent link you can share with anyone — tax advisor, lawyer, counterparty, or regulator.' },
+					{ num: '02', title: 'Screen', desc: 'Checked against every list Ozone ingests and against THORChain flow tracing, using the same signed snapshot relayer nodes use.' },
+					{ num: '03', title: 'Issue Certificate', desc: 'Ozone signs the verdict. A flagged result lists every reason with its source and evidence, and you can appeal it.' },
+					{ num: '04', title: 'Share', desc: 'Every certificate gets a permanent link you can share.' },
 				] as step}
 					<div class="cert-card rounded-xl p-5">
 						<div class="text-2xl font-bold font-mono mb-3" style="color: #10b981; opacity: 0.5;">{step.num}</div>
@@ -258,7 +250,7 @@
 						</div>
 						<h3 class="text-sm font-semibold" style="color: var(--text);">DeFi Users</h3>
 					</div>
-					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Prove your address is clean before interacting with protocols, OTC desks, or counterparties that require compliance checks.</p>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Prove your address is clean to a counterparty that requires a compliance check.</p>
 				</div>
 				<div class="cert-card rounded-xl p-5">
 					<div class="flex items-center gap-2 mb-3">
@@ -267,7 +259,7 @@
 						</div>
 						<h3 class="text-sm font-semibold" style="color: var(--text);">Tax & Legal</h3>
 					</div>
-					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Share the certificate link with your tax advisor or lawyer as evidence that your wallet has no sanctions or compliance flags.</p>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Share the certificate link with your tax advisor or lawyer as evidence that your wallet is not flagged.</p>
 				</div>
 				<div class="cert-card rounded-xl p-5">
 					<div class="flex items-center gap-2 mb-3">
@@ -276,7 +268,7 @@
 						</div>
 						<h3 class="text-sm font-semibold" style="color: var(--text);">Projects & DAOs</h3>
 					</div>
-					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Require contributors or treasury signers to provide a Proof of Innocence certificate before interacting with project funds.</p>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Ask contributors or treasury signers for a certificate before they handle project funds.</p>
 				</div>
 			</div>
 		</div>
@@ -340,7 +332,7 @@
 					<h2 class="text-xl font-bold mb-1" style="color: #ef4444;">Address Flagged</h2>
 					<p class="text-xs font-mono mb-4" style="color: var(--text-muted);">{address}</p>
 					<p class="text-sm mb-6" style="color: var(--text-secondary);">
-						Risk <strong>{result.risk}</strong> — {result.matches.length} {result.matches.length === 1 ? 'reason' : 'reasons'}. The certificate {certId} records this result.
+						Risk <strong>{result.risk}</strong>: {result.matches.length} {result.matches.length === 1 ? 'reason' : 'reasons'}. The certificate {certId} records this result.
 						All evidence: <a href="/api/v1/address/{encodeURIComponent(address)}" target="_blank" rel="noopener" style="color: var(--app-accent);">listings and THORChain flows</a>.
 						If you believe this is wrong, <a href="/submit?kind=appeal&address={encodeURIComponent(address)}" style="color: var(--app-accent);">file an appeal</a>.
 					</p>
@@ -391,7 +383,7 @@
 							has been screened against every list and THORChain trace in Ozone snapshot v{result.snapshot?.version}
 							and <span style="color: #10b981; font-weight: 600;">nothing at risk "high" or above was found</span> as of the date below.
 							{#if result.matches.length}<br /><span style="color: var(--text-muted);">Lower-risk notes: {result.matches.map((m: any) => m.reason).join(' · ')}</span>{/if}
-							{#if result.signed}<br /><span style="color: var(--text-faint);">Signed with Ozone's key — verify via /api/certificate?id={certId}.</span>{/if}
+							{#if result.signed}<br /><span style="color: var(--text-faint);">Signed with Ozone's key. Verify via /api/certificate?id={certId}.</span>{/if}
 						</p>
 					</div>
 
@@ -507,17 +499,6 @@
 		opacity: 1;
 		transform: translateY(0);
 	}
-	.hero-badge {
-		background: rgba(16,185,129,0.08);
-		border: 1px solid rgba(16,185,129,0.15);
-		opacity: 0;
-		transform: translateY(8px);
-		transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
-	}
-	.hero-visible .hero-badge {
-		opacity: 1;
-		transform: translateY(0);
-	}
 	.hero-gradient {
 		background: linear-gradient(135deg, #10b981, #6366f1, #a78bfa);
 		-webkit-background-clip: text;
@@ -530,8 +511,5 @@
 			transform: scale(2);
 			opacity: 0;
 		}
-	}
-	.animate-ping {
-		animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 	}
 </style>

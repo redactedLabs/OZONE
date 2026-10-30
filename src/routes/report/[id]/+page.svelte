@@ -114,7 +114,7 @@
 </script>
 
 <svelte:head>
-	<title>Report {data.reportId} — Ozone</title>
+	<title>Report {data.reportId} | Ozone</title>
 </svelte:head>
 
 <div class="page-shell mx-auto max-w-5xl px-4 pt-20 pb-16">
@@ -134,7 +134,7 @@
 				<span>&middot;</span>
 				<span>
 					{#if dateFromFmt && dateToFmt}
-						{dateFromFmt} — {dateToFmt}
+						{dateFromFmt} to {dateToFmt}
 					{:else if dateFromFmt}
 						From {dateFromFmt}
 					{:else if dateToFmt}
@@ -164,9 +164,9 @@
 						It shows THORChain transaction history without revealing the source address.
 					{/if}
 					{#if data.includeNew}
-						This is a <strong style="color: #22d3ee;">live report</strong> — it automatically includes new transactions each time you view it.
+						This is a <strong style="color: #22d3ee;">live report</strong>. It includes new transactions each time you view it.
 					{:else}
-						This is a <strong style="color: var(--text);">snapshot</strong> — it shows transactions as of the date it was generated.
+						This is a <strong style="color: var(--text);">snapshot</strong>. It shows transactions as of the date it was generated.
 					{/if}
 				</p>
 			</div>

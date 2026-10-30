@@ -211,12 +211,12 @@
 </script>
 
 <svelte:head>
-	<title>THORChain Wallet Explorer & Tax Export — Rujira History | Ozone</title>
-	<meta name="description" content="Explore any THORChain or Rujira wallet. Full transaction history: swaps, liquidity, Ghost lending, DCA, FIN trades. Export as Koinly CSV for tax reporting. Share privately — no account needed." />
-	<meta property="og:title" content="THORChain Wallet Explorer & Tax Export — Ozone" />
+	<title>THORChain Wallet Explorer & Tax Export: Rujira History | Ozone</title>
+	<meta name="description" content="Explore any THORChain or Rujira wallet: swaps, liquidity, Ghost lending, DCA and FIN trades. Export a Koinly CSV for tax reporting or share a private link. No account needed." />
+	<meta property="og:title" content="THORChain Wallet Explorer & Tax Export | Ozone" />
 	<meta property="og:description" content="Full THORChain & Rujira history. Export CSV for tax. Swaps, LP, Ghost, DCA, FIN trades." />
 	<meta property="og:url" content="https://ozone.redacted.gg/history" />
-	<meta name="twitter:title" content="THORChain & Rujira Wallet Explorer — Ozone" />
+	<meta name="twitter:title" content="THORChain & Rujira Wallet Explorer | Ozone" />
 	<meta name="twitter:description" content="Full transaction history & tax CSV export. Free tool by Redacted." />
 </svelte:head>
 
@@ -226,20 +226,12 @@
 		<!-- A. Hero Section and the input card: the page head -->
 		<div class="page-hero">
 		<div class="hero-section text-center mb-16" class:hero-visible={heroVisible}>
-			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
-				<span class="relative flex h-2 w-2">
-					<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: #22d3ee;"></span>
-					<span class="relative inline-flex rounded-full h-2 w-2" style="background: #22d3ee;"></span>
-				</span>
-				<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Exportable &middot; Shareable &middot; Private</span>
-			</div>
-
 			<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4">
 				Explore your<br class="sm:hidden" /> {#key heroWordIndex}<span class="hero-word" class:hero-gradient={!heroWordColors[heroWords[heroWordIndex]]} style="{heroWordColors[heroWords[heroWordIndex]] ? `-webkit-text-fill-color: ${heroWordColors[heroWords[heroWordIndex]]};` : ''}">{heroWords[heroWordIndex]}</span>{/key} wallet history
 			</h1>
 
 			<p class="text-base sm:text-lg max-w-2xl mx-auto" style="color: var(--text-muted);">
-				Full transaction history for any THORChain address. Export as CSV, share privately with your tax advisor, lawyer, or anyone.
+				Full transaction history for any THORChain address. Export it as CSV or share it through a private link.
 			</p>
 		</div>
 
@@ -323,12 +315,8 @@
 					<h3 class="text-sm font-semibold" style="color: var(--text);">CSV Export</h3>
 				</div>
 				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
-					One-click Koinly CSV with labeled swaps, LP events, fees, and ISO timestamps. Or export raw CSV for any spreadsheet or tax tool.
+					Koinly CSV with labeled swaps, LP events, fees and ISO timestamps, or raw CSV for any spreadsheet or tax tool.
 				</p>
-				<div class="flex flex-wrap gap-1.5">
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(34,211,238,0.08); color: #22d3ee; border: 1px solid rgba(34,211,238,0.15);">Koinly</span>
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(34,211,238,0.08); color: #22d3ee; border: 1px solid rgba(34,211,238,0.15);">Raw CSV</span>
-				</div>
 			</div>
 
 			<div class="hist-card rounded-xl p-5 flex flex-col" data-win-title="Anonymous Sharing">
@@ -339,28 +327,20 @@
 					<h3 class="text-sm font-semibold" style="color: var(--text);">Anonymous Sharing</h3>
 				</div>
 				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
-					Share reports with your tax advisor, lawyer, or anyone via a unique link. Wallet address hidden by default. No login required.
+					Share a report through a unique link. The wallet address is hidden by default. No login required.
 				</p>
-				<div class="flex flex-wrap gap-1.5">
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(168,85,247,0.08); color: #a855f7; border: 1px solid rgba(168,85,247,0.15);">Private links</span>
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(168,85,247,0.08); color: #a855f7; border: 1px solid rgba(168,85,247,0.15);">No login</span>
-				</div>
 			</div>
 
-			<div class="hist-card rounded-xl p-5 flex flex-col" data-win-title="Tax Season Ready">
+			<div class="hist-card rounded-xl p-5 flex flex-col" data-win-title="Tax Year Filter">
 				<div class="flex items-center gap-2 mb-3">
 					<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
 					</div>
-					<h3 class="text-sm font-semibold" style="color: var(--text);">Tax Season Ready</h3>
+					<h3 class="text-sm font-semibold" style="color: var(--text);">Tax Year Filter</h3>
 				</div>
 				<p class="text-xs leading-relaxed mb-3" style="color: var(--text-muted);">
-					Swaps, LP adds, withdrawals, and sends — all categorized and labeled. Filter by date range to match your tax year.
+					Swaps, LP adds, withdrawals and sends are categorized and labeled. Filter by date range to match your tax year.
 				</p>
-				<div class="flex flex-wrap gap-1.5">
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Date filtering</span>
-					<span class="text-[9px] font-medium px-2 py-0.5 rounded-full" style="background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.15);">Categorized</span>
-				</div>
 			</div>
 		</div>
 
@@ -407,55 +387,6 @@
 			</div>
 		</div>
 
-		<!-- D. Audience Segments -->
-		<div class="mb-16">
-			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">Who is this for?</h2>
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<div class="hist-card rounded-xl p-6" style="border-color: rgba(99,102,241,0.15);">
-					<div class="flex items-center gap-2 mb-3">
-						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-						</div>
-						<h3 class="text-sm font-semibold" style="color: var(--text);">For Everyone</h3>
-					</div>
-					<ul class="space-y-2">
-						{#each [
-							'Paste any thor1... address — no account needed',
-							'Export CSV for tax tools or spreadsheets',
-							'Share privately with tax advisor, lawyer, or anyone',
-							'Address hidden by default for privacy',
-						] as item}
-							<li class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
-								<span class="shrink-0 text-xs leading-none" style="color: #6366f1;">+</span>
-								<span class="leading-none">{item}</span>
-							</li>
-						{/each}
-					</ul>
-				</div>
-				<div class="hist-card rounded-xl p-6" style="border-color: rgba(168,85,247,0.15);">
-					<div class="flex items-center gap-2 mb-3">
-						<div class="flex items-center justify-center w-8 h-8 rounded-lg" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-						</div>
-						<h3 class="text-sm font-semibold" style="color: var(--text);">For Redacted Members</h3>
-					</div>
-					<ul class="space-y-2">
-						{#each [
-							'Private accounts with full trade history',
-							'Share reports with externals securely',
-							'Compliance-ready transaction records',
-							'Batch export coming soon',
-						] as item}
-							<li class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
-								<span class="shrink-0 text-xs leading-none" style="color: #a855f7;">+</span>
-								<span class="leading-none">{item}</span>
-							</li>
-						{/each}
-					</ul>
-				</div>
-			</div>
-		</div>
-
 		<!-- E. How It Works -->
 		<div class="mb-16">
 			<h2 class="text-lg font-bold mb-6 text-center" style="color: var(--text);">How it works</h2>
@@ -463,7 +394,7 @@
 				<div class="hist-card rounded-xl p-5">
 					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">01</div>
 					<div class="text-sm font-semibold mb-1" style="color: var(--text);">Enter Address</div>
-					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Paste your <code class="text-[10px] px-1 py-0.5 rounded" style="background: var(--bg-code);">thor1...</code> address. We query Midgard directly — no data is stored on our servers.</p>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Paste your <code class="text-[10px] px-1 py-0.5 rounded" style="background: var(--bg-code);">thor1...</code> address. We query Midgard directly.</p>
 				</div>
 				<div class="hist-card rounded-xl p-5">
 					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">02</div>
@@ -473,7 +404,7 @@
 				<div class="hist-card rounded-xl p-5">
 					<div class="text-2xl font-bold font-mono mb-3" style="color: var(--app-accent); opacity: 0.5;">03</div>
 					<div class="text-sm font-semibold mb-1" style="color: var(--text);">Export or Share</div>
-					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Download CSV for tax tools, or share via private link with your advisor, lawyer, or team. Choose public or private mode.</p>
+					<p class="text-xs leading-relaxed" style="color: var(--text-muted);">Download CSV for tax tools, or share a private link. Choose public or private mode.</p>
 				</div>
 			</div>
 		</div>
@@ -746,17 +677,6 @@
 		opacity: 1;
 		transform: translateY(0);
 	}
-	.hero-badge {
-		background: rgba(34,211,238,0.08);
-		border: 1px solid rgba(34,211,238,0.15);
-		opacity: 0;
-		transform: translateY(8px);
-		transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
-	}
-	.hero-visible .hero-badge {
-		opacity: 1;
-		transform: translateY(0);
-	}
 	.hero-gradient {
 		background: linear-gradient(135deg, #22d3ee, #6366f1, #a78bfa);
 		-webkit-background-clip: text;
@@ -777,8 +697,5 @@
 			transform: scale(2);
 			opacity: 0;
 		}
-	}
-	.animate-ping {
-		animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 	}
 </style>

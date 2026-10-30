@@ -14,31 +14,31 @@
 </script>
 
 <svelte:head>
-	<title>{data.certId} — Ozone Certificate</title>
+	<title>{data.certId}: Ozone Certificate</title>
 </svelte:head>
 
 <div class="page-plain mx-auto max-w-3xl px-4 pt-20 pb-16">
 	{#if data.legacy}
 		<!-- Legacy cert view: predates server-side signed verification (document IS NULL) — never rendered as verified/clean or as flagged -->
-		<div class="cert-card rounded-2xl overflow-hidden" style="border-color: rgba(234,179,8,0.3);" data-win-title="Certificate — Legacy">
+		<div class="cert-card rounded-2xl overflow-hidden" style="border-color: rgba(234,179,8,0.3);" data-win-title="Certificate: Legacy">
 			<div class="p-1" style="background: linear-gradient(90deg, #eab308, #ca8a04);"></div>
 			<div class="p-6 sm:p-8 text-center">
 				<div class="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style="background: rgba(234,179,8,0.1); border: 2px solid rgba(234,179,8,0.3);">
 					<span class="text-3xl" style="color: #eab308;">?</span>
 				</div>
-				<h2 class="text-xl font-bold mb-1" style="color: #eab308;">Legacy Certificate — Not Verifiable</h2>
+				<h2 class="text-xl font-bold mb-1" style="color: #eab308;">Legacy Certificate: Not Verifiable</h2>
 				<p class="text-xs font-mono mb-2" style="color: var(--text-muted);">{data.address}</p>
 				{#if data.chain}<p class="text-[10px] font-mono mb-2" style="color: var(--text-faint);">Chain: {data.chain}</p>{/if}
 				<p class="text-xs font-mono mb-4" style="color: var(--text-faint);">Certificate {data.certId}</p>
 				<p class="text-sm max-w-md mx-auto" style="color: var(--text-secondary);">
 					This certificate predates Ozone's signed, server-computed verification and carries no verdict that can be cryptographically checked.
-					It is neither confirmed clean nor confirmed flagged — re-screen this address on the <a href="/certificate" style="color: var(--app-accent);">certificate page</a> for a current, verifiable result.
+					It is neither confirmed clean nor confirmed flagged. Re-screen this address on the <a href="/certificate" style="color: var(--app-accent);">certificate page</a> for a current, verifiable result.
 				</p>
 			</div>
 		</div>
 	{:else if data.flagged}
 		<!-- Flagged cert view -->
-		<div class="cert-card rounded-2xl overflow-hidden" style="border-color: rgba(239,68,68,0.3);" data-win-title="Certificate — Flagged">
+		<div class="cert-card rounded-2xl overflow-hidden" style="border-color: rgba(239,68,68,0.3);" data-win-title="Certificate: Flagged">
 			<div class="p-1" style="background: linear-gradient(90deg, #ef4444, #dc2626);"></div>
 			<div class="p-6 sm:p-8 text-center">
 				<div class="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3);">

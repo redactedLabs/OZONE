@@ -167,7 +167,7 @@
 </script>
 
 <svelte:head>
-	<title>View Key — Ozone</title>
+	<title>View Key | Ozone</title>
 	<meta name="description" content="Open a Redacted view key or history file in your own browser: the account's history, with every counterparty checked against Ozone's lists. The file never leaves your browser." />
 	<meta name="robots" content="index, follow" />
 	<link rel="canonical" href="https://ozone.redacted.gg/view" />
@@ -240,7 +240,7 @@
 		<div class="page-hero hero-section text-center mb-10" class:hero-visible={heroVisible}>
 			<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
 				<span class="relative inline-flex rounded-full h-2 w-2" style="background: #10b981;"></span>
-				<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Runs in your browser &middot; Read only</span>
+				<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Read only</span>
 			</div>
 			<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4"><span class="hero-gradient">View Key</span></h1>
 			<p class="text-base sm:text-lg max-w-2xl mx-auto" style="color: var(--text-muted);">

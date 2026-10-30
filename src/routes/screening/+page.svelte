@@ -50,7 +50,7 @@
 </script>
 
 <svelte:head>
-	<title>Monitored thor1 Accounts — Screening | Ozone</title>
+	<title>Monitored thor1 Accounts: Screening | Ozone</title>
 </svelte:head>
 
 <div class="page-shell mx-auto max-w-7xl px-4 pt-20 pb-12">

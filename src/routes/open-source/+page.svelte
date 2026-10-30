@@ -12,7 +12,7 @@
 		{ name: 'UK Sanctions List', org: 'FCDO', url: 'https://www.gov.uk/government/publications/the-uk-sanctions-list', desc: 'Wallet addresses in designation texts, checksum-validated', type: 'Government' },
 		{ name: 'EU Sanctions', org: 'European Union', url: 'https://data.europa.eu/data/datasets/consolidated-list-of-persons-groups-and-entities-subject-to-eu-financial-sanctions', desc: 'EU Financial Sanctions Files, with the listing regulation as provenance', type: 'Government' },
 		{ name: 'FBI / IC3', org: 'FBI', url: 'https://www.ic3.gov/PSA/2025/PSA250226', desc: 'DPRK (TraderTraitor / Lazarus) laundering addresses, e.g. the Bybit PSA', type: 'Government' },
-		{ name: 'Sanctions oracle', org: 'Chainalysis (on-chain)', url: 'https://etherscan.io/address/0x40C57923924B5c5c5455c48D93317139ADDaC8fb', desc: 'Oracle events incl. delistings (Tornado Cash, 2025-03-21) — no API key', type: 'On-chain' },
+		{ name: 'Sanctions oracle', org: 'Chainalysis (on-chain)', url: 'https://etherscan.io/address/0x40C57923924B5c5c5455c48D93317139ADDaC8fb', desc: 'Oracle events incl. delistings (Tornado Cash, 2025-03-21); no API key', type: 'On-chain' },
 		{ name: 'Tether & Circle', org: 'Stablecoin issuers (on-chain)', url: 'https://etherscan.io/address/0xdac17f958d2ee523a2206206994597c13d831ec7', desc: 'USDT freezes (ETH, TRON, AVAX) and USDC blacklist (ETH, BASE, AVAX), freeze and unfreeze', type: 'On-chain' },
 		{ name: 'Labelled exploiters', org: 'eth-labels', url: 'https://github.com/dawsbot/eth-labels', desc: 'Etherscan exploiter / heist / phishing labels (stale OFAC tags and victims excluded)', type: 'Community' },
 		{ name: 'ScamSniffer', org: 'ScamSniffer', url: 'https://github.com/scamsniffer/scam-database', desc: 'Phishing and wallet-drainer addresses', type: 'Community' },
@@ -38,10 +38,10 @@
 </script>
 
 <svelte:head>
-	<title>Open Source Compliance for DeFi — Contribute | Ozone</title>
-	<meta name="description" content="Ozone is the open-source compliance layer for THORChain, Rujira, and DeFi. Report sanctioned or hacked wallets, submit data sources, and help build transparent on-chain compliance." />
-	<meta property="og:title" content="Open Source Compliance — Ozone" />
-	<meta property="og:description" content="Community-powered compliance for DeFi. Report wallets, contribute data, open PRs." />
+	<title>Open Source Compliance for DeFi: Contribute | Ozone</title>
+	<meta name="description" content="Ozone is open-source compliance screening for THORChain and Rujira. Report sanctioned or hacked wallets and submit data sources." />
+	<meta property="og:title" content="Open Source Compliance | Ozone" />
+	<meta property="og:description" content="Open-source compliance screening for THORChain and Rujira. Report wallets or data sources, or open a PR." />
 	<meta property="og:url" content="https://ozone.redacted.gg/open-source" />
 </svelte:head>
 
@@ -49,23 +49,12 @@
 
 	<!-- Hero -->
 	<div class="page-hero text-center mb-16" class:hero-visible={heroVisible}>
-		<div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 hero-badge">
-			<span class="relative flex h-2 w-2">
-				<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: #10b981;"></span>
-				<span class="relative inline-flex rounded-full h-2 w-2" style="background: #10b981;"></span>
-			</span>
-			<span class="text-[10px] font-mono tracking-wider uppercase" style="color: var(--text-muted);">Open source &middot; Community powered</span>
-		</div>
-
 		<h1 class="hero-title text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-			Shape a <span class="hero-gradient">safer future</span>
+			Contribute to <span class="hero-gradient">Ozone</span>
 		</h1>
 
 		<p class="text-base sm:text-lg max-w-2xl mx-auto mb-2" style="color: var(--text-muted);">
-			Ozone is the compliance layer for decentralized finance.
-		</p>
-		<p class="text-sm max-w-xl mx-auto" style="color: var(--text-faint);">
-			Transparent screening. Open data. Community-driven protection for THORChain & Rujira.
+			Ozone is open source. Report a wallet, add a data source or open a PR.
 		</p>
 	</div>
 
@@ -80,17 +69,17 @@
 				<h2 class="text-xl sm:text-2xl font-bold" style="color: var(--text);">Report a Wallet</h2>
 			</div>
 			<p class="text-sm leading-relaxed mb-6 max-w-xl" style="color: var(--text-muted);">
-				Know of a hacked, sanctioned, or malicious wallet? Help protect the ecosystem by submitting it for review. Every verified report strengthens screening for all Rujira users.
+				Know of a hacked, sanctioned or malicious wallet? Submit it for review.
 			</p>
 
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
 				<div class="info-chip">
 					<span class="info-chip-label">Required</span>
-					<span class="info-chip-text">Wallet address &middot; Chain &middot; Category</span>
+					<span class="info-chip-text">Wallet address, chain, category</span>
 				</div>
 				<div class="info-chip">
 					<span class="info-chip-label">Evidence</span>
-					<span class="info-chip-text">TX hashes &middot; Articles &middot; Reports</span>
+					<span class="info-chip-text">TX hashes, articles, reports</span>
 				</div>
 			</div>
 
@@ -122,7 +111,7 @@
 	<!-- Data Sources -->
 	<h2 class="text-lg font-bold mb-2" style="color: var(--text);">Data Sources</h2>
 	<p class="text-sm mb-6" style="color: var(--text-muted);">
-		Every address screened by Ozone is checked against these sources. Government sanctions lists, on-chain blacklists, and community-curated databases — covering thousands of flagged entities.
+		Every address screened by Ozone is checked against these sources.
 	</p>
 
 	<div class="space-y-3 mb-16">
@@ -163,14 +152,14 @@
 			<div>
 				<h2 class="text-lg font-bold mb-2" style="color: var(--text);">Contribute</h2>
 				<p class="text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
-					Ozone is fully open source. The codebase, data sources, and screening logic are transparent and auditable. Contributions strengthen the entire ecosystem.
+					Ozone is fully open source, including its data sources and screening logic.
 				</p>
 				<div class="flex flex-wrap gap-2">
 					<a href="https://github.com/redactedLabs/OZONE" target="_blank" rel="noopener" class="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all" style="background: var(--app-accent);">
-						OZONE — Frontend & API
+						OZONE: Frontend & API
 					</a>
 					<a href="https://github.com/redactedLabs/OZONE-WORKER" target="_blank" rel="noopener" class="rounded-lg px-4 py-2 text-xs font-medium transition-all" style="border: 1px solid var(--app-border); color: var(--text-muted);">
-						OZONE-WORKER — Data sync
+						OZONE-WORKER: Data sync
 					</a>
 				</div>
 			</div>
@@ -197,7 +186,7 @@
 	<!-- Disclaimer -->
 	<div class="oss-card rounded-xl p-5 text-center">
 		<p class="text-xs leading-relaxed" style="color: var(--text-muted);">
-			Ozone is provided as-is for informational purposes. It aggregates public data and does not constitute legal advice. False positives and negatives are possible — always verify critical compliance decisions independently. If you believe an address is incorrectly flagged, please <a href="https://github.com/redactedLabs/OZONE/issues" target="_blank" rel="noopener" style="color: var(--app-accent); text-decoration: underline;">open an issue</a>.
+			Ozone is provided as-is for informational purposes. It aggregates public data and does not constitute legal advice. False positives and negatives are possible. Always verify critical compliance decisions independently. If you believe an address is incorrectly flagged, please <a href="https://github.com/redactedLabs/OZONE/issues" target="_blank" rel="noopener" style="color: var(--app-accent); text-decoration: underline;">open an issue</a>.
 		</p>
 	</div>
 </div>
@@ -220,17 +209,6 @@
 		transition: opacity 0.6s ease, transform 0.6s ease;
 	}
 	.hero-visible .hero-title {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	.hero-badge {
-		background: rgba(99,102,241,0.08);
-		border: 1px solid rgba(99,102,241,0.15);
-		opacity: 0;
-		transform: translateY(8px);
-		transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s;
-	}
-	.hero-visible .hero-badge {
 		opacity: 1;
 		transform: translateY(0);
 	}
@@ -325,8 +303,5 @@
 			transform: scale(2);
 			opacity: 0;
 		}
-	}
-	.animate-ping {
-		animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 	}
 </style>
