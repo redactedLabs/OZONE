@@ -110,6 +110,21 @@
 		 */
 		arcBlending?: "additive" | "normal";
 		/**
+		 * Radius of the arcs as tubes (world units); 0 draws 1 px lines.
+		 * @default 0
+		 */
+		arcThickness?: number;
+		/**
+		 * Radius of the arcs' moving heads.
+		 * @default 0.025
+		 */
+		arcHeadSize?: number;
+		/**
+		 * Opacity of the arcs.
+		 * @default 0.6
+		 */
+		arcOpacity?: number;
+		/**
 		 * Whether the globe should auto-rotate.
 		 * @default true
 		 */
@@ -188,6 +203,9 @@
 		landBlending = "additive",
 		landOpacity = 1,
 		arcBlending = "additive",
+		arcThickness = 0,
+		arcHeadSize = 0.025,
+		arcOpacity = 0.6,
 		autoRotate = true,
 		lockedPolarAngle = true,
 		markers = [],
@@ -656,6 +674,9 @@
 			transient={arc.transient || false}
 			onfinish={arc.onfinish}
 			blending={arcBlending}
+			thickness={arcThickness}
+			headSize={arcHeadSize}
+			opacity={arcOpacity}
 		/>
 	{/each}
 </T.Group>

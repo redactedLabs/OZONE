@@ -439,6 +439,9 @@
 						landBlending="normal"
 						landOpacity={0.6}
 						arcBlending="normal"
+						arcThickness={0.03}
+						arcHeadSize={0.065}
+						arcOpacity={0.95}
 						pointSize={0.04}
 						fresnelConfig={{ color: '#e8eff5', rimColor: '#29b4f2', rimPower: 1.6, rimIntensity: 0.9 }}
 						atmosphereConfig={{ color: '#29b4f2', scale: 1.12, power: 10, coefficient: 0.85, intensity: 0.9 }}

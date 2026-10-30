@@ -51,6 +51,12 @@
 		 * @default "additive"
 		 */
 		arcBlending?: SceneProps["arcBlending"];
+		/** Radius of the arcs as tubes (world units); 0 draws 1 px lines. @default 0 */
+		arcThickness?: SceneProps["arcThickness"];
+		/** Radius of the arcs' moving heads. @default 0.025 */
+		arcHeadSize?: SceneProps["arcHeadSize"];
+		/** Opacity of the arcs. @default 0.6 */
+		arcOpacity?: SceneProps["arcOpacity"];
 		/**
 		 * Size of each point in world units.
 		 * @default 0.05
@@ -99,6 +105,9 @@
 		landBlending,
 		landOpacity,
 		arcBlending,
+		arcThickness,
+		arcHeadSize,
+		arcOpacity,
 		pointSize,
 		autoRotate = true,
 		lockedPolarAngle = true,
@@ -124,6 +133,9 @@
 				{landBlending}
 				{landOpacity}
 				{arcBlending}
+				{arcThickness}
+				{arcHeadSize}
+				{arcOpacity}
 				{pointSize}
 				{autoRotate}
 				{lockedPolarAngle}

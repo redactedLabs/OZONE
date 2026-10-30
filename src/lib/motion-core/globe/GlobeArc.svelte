@@ -15,6 +15,10 @@
 		onfinish?: () => void;
 		/** "additive" glows on a dark globe, "normal" keeps the colour on a light one */
 		blending?: "additive" | "normal";
+		/** Radius of the trail as a tube, in world units; 0 draws a 1 px line (WebGL ignores line widths) */
+		thickness?: number;
+		/** Radius of the moving head */
+		headSize?: number;
 	}
 
 	let {
@@ -27,6 +31,8 @@
 		transient = false,
 		onfinish,
 		blending = "additive",
+		thickness = 0,
+		headSize = 0.025,
 	}: Props = $props();
 
 	const blendMode = $derived(blending === "normal" ? THREE.NormalBlending : THREE.AdditiveBlending);
@@ -96,7 +102,13 @@
 
 		const visible = curvePoints.slice(start, end);
 		if (visible.length < 2) return null;
+		if (thickness > 0) return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(visible), visible.length * 2, thickness, 6, false);
 		return new THREE.BufferGeometry().setFromPoints(visible);
+	});
+	// a new geometry every frame: free the one it replaces
+	$effect(() => {
+		const g = arcGeometry;
+		return () => g?.dispose();
 	});
 
 	const headPos = $derived(
@@ -106,7 +118,18 @@
 	);
 </script>
 
-{#if arcGeometry && !finished}
+{#if arcGeometry && !finished && thickness > 0}
+	<T.Mesh geometry={arcGeometry}>
+		<T.MeshBasicMaterial
+			{color}
+			transparent
+			{opacity}
+			blending={blendMode}
+			depthWrite={false}
+			toneMapped={false}
+		/>
+	</T.Mesh>
+{:else if arcGeometry && !finished}
 	<T.Line geometry={arcGeometry}>
 		<T.LineBasicMaterial
 			{color}
@@ -121,7 +144,7 @@
 
 {#if headPos && !finished}
 	<T.Mesh position={[headPos.x, headPos.y, headPos.z]}>
-		<T.SphereGeometry args={[0.025, 6, 6]} />
+		<T.SphereGeometry args={[headSize, 12, 12]} />
 		<T.MeshBasicMaterial
 			{color}
 			transparent
