@@ -13,6 +13,8 @@
 		transient?: boolean;
 		/** Called when a transient arc finishes */
 		onfinish?: () => void;
+		/** "additive" glows on a dark globe, "normal" keeps the colour on a light one */
+		blending?: "additive" | "normal";
 	}
 
 	let {
@@ -24,7 +26,10 @@
 		speed = 1.0,
 		transient = false,
 		onfinish,
+		blending = "additive",
 	}: Props = $props();
+
+	const blendMode = $derived(blending === "normal" ? THREE.NormalBlending : THREE.AdditiveBlending);
 
 	const DEG2RAD = Math.PI / 180;
 
@@ -107,7 +112,7 @@
 			{color}
 			transparent
 			{opacity}
-			blending={THREE.AdditiveBlending}
+			blending={blendMode}
 			depthWrite={false}
 			toneMapped={false}
 		/>
@@ -121,7 +126,7 @@
 			{color}
 			transparent
 			opacity={0.9}
-			blending={THREE.AdditiveBlending}
+			blending={blendMode}
 			toneMapped={false}
 		/>
 	</T.Mesh>

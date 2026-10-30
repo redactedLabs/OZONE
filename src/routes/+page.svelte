@@ -80,7 +80,7 @@
 	];
 	const SCAN_SOURCES = ['OFAC', 'UK', 'EU', 'FBI', 'Tether', 'Circle', 'Hacks', 'Traces'];
 
-	// the Redacted globe: every node in the brand's blue
+	// the Redacted globe: every node in the brand's blue, labels as white chips
 	const globeMarkersRedacted: GlobeMarker[] = globeMarkers.map((m) => ({ ...m, color: '#1f8ff0' }));
 
 	type LiveTx = {
@@ -365,8 +365,9 @@
 	</div>
 
 	<!-- Line 2: Live TX + Globe -->
-	<!-- the Redacted globe shows nodes and arcs only: a chain has no place on the map, so no labels -->
-	{#snippet rdMarkerTooltip(_ctx: any)}{/snippet}
+	{#snippet rdMarkerTooltip(ctx: any)}
+		<div class="rd-marker pointer-events-none" style="opacity: {ctx.visibility};">{ctx.marker.label || ''}</div>
+	{/snippet}
 
 	{#snippet win98MarkerTooltip(ctx: any)}
 		<div class="win98-face-label pointer-events-none" style="opacity: {ctx.visibility};">
@@ -437,6 +438,7 @@
 						landPointColor={'#29b4f2'}
 						landBlending="normal"
 						landOpacity={0.6}
+						arcBlending="normal"
 						pointSize={0.04}
 						fresnelConfig={{ color: '#e8eff5', rimColor: '#29b4f2', rimPower: 1.6, rimIntensity: 0.9 }}
 						atmosphereConfig={{ color: '#29b4f2', scale: 1.12, power: 10, coefficient: 0.85, intensity: 0.9 }}
@@ -885,6 +887,23 @@
 		}
 	}
 
+	/* the Redacted globe's chain labels: white chips, as redacted.gg's pills */
+	.rd-marker {
+		padding: 3px 9px;
+		border-radius: 999px;
+		background: #fff;
+		color: #0a111c;
+		font: 600 11px/1.4 var(--font-mono);
+		letter-spacing: 0.02em;
+		white-space: nowrap;
+		box-shadow: inset 0 0 0 1px rgba(31, 143, 240, 0.25), 0 8px 20px -10px rgba(10, 17, 28, 0.35);
+	}
+	@media (max-width: 639px) {
+		.rd-marker {
+			padding: 2px 7px;
+			font-size: 10px;
+		}
+	}
 	/* the Redacted globe: its own box; on a phone the "Tracing live" pill sits under it, not over it */
 	.rd-globe {
 		position: relative;

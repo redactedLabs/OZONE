@@ -105,6 +105,11 @@
 		 */
 		landOpacity?: number;
 		/**
+		 * How the arcs and their moving heads blend: "additive" glows on a dark globe, "normal" stays visible on a light one.
+		 * @default "additive"
+		 */
+		arcBlending?: "additive" | "normal";
+		/**
 		 * Whether the globe should auto-rotate.
 		 * @default true
 		 */
@@ -182,6 +187,7 @@
 		landPointColor = "#f77114",
 		landBlending = "additive",
 		landOpacity = 1,
+		arcBlending = "additive",
 		autoRotate = true,
 		lockedPolarAngle = true,
 		markers = [],
@@ -649,6 +655,7 @@
 			speed={arc.speed || 1.0}
 			transient={arc.transient || false}
 			onfinish={arc.onfinish}
+			blending={arcBlending}
 		/>
 	{/each}
 </T.Group>

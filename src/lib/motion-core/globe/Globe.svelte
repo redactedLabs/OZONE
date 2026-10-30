@@ -47,6 +47,11 @@
 		 */
 		landOpacity?: SceneProps["landOpacity"];
 		/**
+		 * How the arcs and their moving heads blend: "additive" glows on a dark globe, "normal" stays visible on a light one.
+		 * @default "additive"
+		 */
+		arcBlending?: SceneProps["arcBlending"];
+		/**
 		 * Size of each point in world units.
 		 * @default 0.05
 		 */
@@ -93,6 +98,7 @@
 		landPointColor,
 		landBlending,
 		landOpacity,
+		arcBlending,
 		pointSize,
 		autoRotate = true,
 		lockedPolarAngle = true,
@@ -117,6 +123,7 @@
 				{landPointColor}
 				{landBlending}
 				{landOpacity}
+				{arcBlending}
 				{pointSize}
 				{autoRotate}
 				{lockedPolarAngle}
