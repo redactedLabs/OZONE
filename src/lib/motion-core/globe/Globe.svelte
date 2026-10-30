@@ -42,6 +42,11 @@
 		 */
 		landBlending?: SceneProps["landBlending"];
 		/**
+		 * Opacity of the land points.
+		 * @default 1
+		 */
+		landOpacity?: SceneProps["landOpacity"];
+		/**
 		 * Size of each point in world units.
 		 * @default 0.05
 		 */
@@ -87,6 +92,7 @@
 		pointCount,
 		landPointColor,
 		landBlending,
+		landOpacity,
 		pointSize,
 		autoRotate = true,
 		lockedPolarAngle = true,
@@ -110,6 +116,7 @@
 				{pointCount}
 				{landPointColor}
 				{landBlending}
+				{landOpacity}
 				{pointSize}
 				{autoRotate}
 				{lockedPolarAngle}

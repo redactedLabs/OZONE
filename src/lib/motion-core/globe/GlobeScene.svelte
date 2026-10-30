@@ -100,6 +100,11 @@
 		 */
 		landBlending?: "additive" | "normal";
 		/**
+		 * Opacity of the land points.
+		 * @default 1
+		 */
+		landOpacity?: number;
+		/**
 		 * Whether the globe should auto-rotate.
 		 * @default true
 		 */
@@ -176,6 +181,7 @@
 		pointSize = 0.05,
 		landPointColor = "#f77114",
 		landBlending = "additive",
+		landOpacity = 1,
 		autoRotate = true,
 		lockedPolarAngle = true,
 		markers = [],
@@ -611,6 +617,7 @@
 					color={landPointColor}
 					side={THREE.DoubleSide}
 					blending={landBlending === "normal" ? THREE.NormalBlending : THREE.AdditiveBlending}
+					opacity={landOpacity}
 					transparent
 					depthWrite={false}
 					toneMapped={false}

@@ -303,13 +303,14 @@ html.redacted [data-slot='divider'] {
 	font-weight: 500;
 }
 
-/* The bar's own links (redacted.gg: Docs, Blog), from md up */
+/* The bar's own links (redacted.gg: Docs, Blog) */
 .rd-navlinks {
 	display: none;
 	margin-left: auto;
 	align-items: center;
 }
-@media (min-width: 768px) {
+/* from 1180 px: below that the bar has no room for them (they are all in the menu) */
+@media (min-width: 1180px) {
 	.rd-navlinks {
 		display: flex;
 	}

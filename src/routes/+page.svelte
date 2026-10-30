@@ -15,6 +15,8 @@
 	let GlobeComponent: any = $state(null);
 	let BlocksGlobeComponent: any = $state(null);
 	let mounted = $state(false);
+	// a phone: the Redacted globe is drawn smaller so it fits its card
+	let narrow = $state(false);
 	// Sync state
 	let syncState = $state({
 		active: false,
@@ -78,7 +80,7 @@
 	];
 	const SCAN_SOURCES = ['OFAC', 'UK', 'EU', 'FBI', 'Tether', 'Circle', 'Hacks', 'Traces'];
 
-	// the Redacted globe: every marker in the brand's blue, labels as white chips
+	// the Redacted globe: every node in the brand's blue
 	const globeMarkersRedacted: GlobeMarker[] = globeMarkers.map((m) => ({ ...m, color: '#1f8ff0' }));
 
 	type LiveTx = {
@@ -151,6 +153,11 @@
 	}
 
 	onMount(() => {
+		const phone = window.matchMedia('(max-width: 639px)');
+		const onPhone = () => (narrow = phone.matches);
+		onPhone();
+		phone.addEventListener('change', onPhone);
+
 		pollLiveTxs();
 		const txInterval = setInterval(pollLiveTxs, 8000);
 		const dripInterval = setInterval(dripNext, 1200);
@@ -164,6 +171,7 @@
 		});
 
 		return () => {
+			phone.removeEventListener('change', onPhone);
 			clearInterval(txInterval);
 			clearInterval(dripInterval);
 		};
@@ -357,9 +365,8 @@
 	</div>
 
 	<!-- Line 2: Live TX + Globe -->
-	{#snippet rdMarkerTooltip(ctx: any)}
-		<div class="rd-marker pointer-events-none" style="opacity: {ctx.visibility};">{ctx.marker.label || ''}</div>
-	{/snippet}
+	<!-- the Redacted globe shows nodes and arcs only: a chain has no place on the map, so no labels -->
+	{#snippet rdMarkerTooltip(_ctx: any)}{/snippet}
 
 	{#snippet win98MarkerTooltip(ctx: any)}
 		<div class="win98-face-label pointer-events-none" style="opacity: {ctx.visibility};">
@@ -421,22 +428,25 @@
 					</div>
 				{/if}
 			{:else if mounted && GlobeComponent}
-				<svelte:component
-					this={GlobeComponent}
-					class="h-full w-full"
-					radius={3}
-					pointCount={20000}
-					landPointColor={'#1f8ff0'}
-					landBlending="normal"
-					pointSize={0.04}
-					fresnelConfig={{ color: '#f3f7fa', rimColor: '#29b4f2', rimPower: 2.5, rimIntensity: 0.55 }}
-					atmosphereConfig={{ color: '#29b4f2', scale: 1.12, power: 10, coefficient: 0.85, intensity: 0.9 }}
-					markers={globeMarkersRedacted}
-					markerTooltip={rdMarkerTooltip}
-					autoRotate={true}
-					lockedPolarAngle={false}
-					arcs={globeArcsRedacted}
-				/>
+				<div class="rd-globe">
+					<svelte:component
+						this={GlobeComponent}
+						class="h-full w-full"
+						radius={narrow ? 2.5 : 3}
+						pointCount={20000}
+						landPointColor={'#29b4f2'}
+						landBlending="normal"
+						landOpacity={0.6}
+						pointSize={0.04}
+						fresnelConfig={{ color: '#e8eff5', rimColor: '#29b4f2', rimPower: 1.6, rimIntensity: 0.9 }}
+						atmosphereConfig={{ color: '#29b4f2', scale: 1.12, power: 10, coefficient: 0.85, intensity: 0.9 }}
+						markers={globeMarkersRedacted}
+						markerTooltip={rdMarkerTooltip}
+						autoRotate={true}
+						lockedPolarAngle={false}
+						arcs={globeArcsRedacted}
+					/>
+				</div>
 			{:else}
 				<div class="flex h-full items-center justify-center" style="min-height: 350px;">
 					<div class="mx-auto h-16 w-16 animate-pulse rounded-full" style="background: rgba(99,102,241,0.15);"></div>
@@ -445,7 +455,7 @@
 
 			<!-- Bottom pill: the real-time follower (the counts are in the boxes above, once each) -->
 			{#if data.stats.follower}
-				<a href="/api/health" class="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5 whitespace-nowrap" style="background: var(--globe-pill-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); text-decoration: none;" title="The newest THORChain block Ozone's real-time follower has traced; amber when it is more than 15 minutes behind">
+				<a href="/api/health" class="health-pill absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5 whitespace-nowrap" style="background: var(--globe-pill-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); text-decoration: none;" title="The newest THORChain block Ozone's real-time follower has traced; amber when it is more than 15 minutes behind">
 					<span class="inline-block h-2 w-2 rounded-full {data.stats.follower.live ? 'animate-pulse' : ''}" style="background: {data.stats.follower.live ? '#10b981' : '#f59e0b'};"></span>
 					<span class="text-[10px]" style="color: var(--text-muted);">{data.stats.follower.live ? 'Tracing live' : 'Tracing stalled'}</span>
 					<span class="text-[10px]" style="color: var(--text-ghost);">·</span>
@@ -637,17 +647,6 @@
 />
 
 <style>
-	/* Redacted globe labels: white chips, as redacted.gg's pills */
-	.rd-marker {
-		padding: 3px 9px;
-		border-radius: 999px;
-		background: #fff;
-		color: #0a111c;
-		font: 600 11px/1.4 var(--font-mono);
-		letter-spacing: 0.02em;
-		white-space: nowrap;
-		box-shadow: inset 0 0 0 1px rgba(10, 17, 28, 0.08), 0 8px 20px -10px rgba(10, 17, 28, 0.35);
-	}
 	/* ── Redacted hero: the scanner (redacted.gg's card streams, fly-in / fly-out) ── */
 	.scan-stage {
 		position: relative;
@@ -661,12 +660,6 @@
 		inset: 0;
 		perspective: 1100px;
 		pointer-events: none;
-		display: none;
-	}
-	@media (min-width: 900px) {
-		.scan-streams {
-			display: block;
-		}
 	}
 	.scan-card {
 		position: absolute;
@@ -794,8 +787,14 @@
 		color: #3c4757;
 		animation: scan-tick 2.8s ease-in-out infinite both;
 	}
+	/* the band scans behind the device's content, not through the ghost */
+	.scan-device > :not(.scan-beam) {
+		position: relative;
+		z-index: 1;
+	}
 	.scan-beam {
 		position: absolute;
+		z-index: 0;
 		left: 0;
 		right: 0;
 		top: 0;
@@ -828,6 +827,54 @@
 		90% { opacity: 1; }
 		100% { transform: translate3d(62vw, 0, 0) rotateY(-28deg) scale(1); opacity: 0; filter: blur(0); }
 	}
+	/* below 1024 px (phones, tablets) the flow runs top to bottom: one address at a time drops into
+	   the scanner and leaves underneath as its verdict (each pair 3 s apart, as on desktop) */
+	@media (max-width: 1023px) {
+		.scan-stage {
+			--card-w: min(300px, calc(100vw - 56px));
+			height: 430px;
+			margin: 16px 0 28px;
+		}
+		.scan-streams {
+			perspective: none;
+		}
+		.scan-card {
+			width: var(--card-w);
+			margin-left: calc(var(--card-w) / -2);
+		}
+		.scan-in {
+			animation-name: drop-in;
+		}
+		.scan-out {
+			animation-name: drop-out;
+		}
+		.scan-device {
+			width: 220px;
+			padding: 18px 16px 16px;
+		}
+		.scan-tile {
+			width: 52px;
+			height: 52px;
+			border-radius: 16px;
+		}
+		.scan-device-title {
+			margin-top: 10px;
+			font-size: 16px;
+		}
+	}
+	@keyframes drop-in {
+		0% { transform: translateY(-190px); opacity: 0; filter: blur(0); }
+		4% { transform: translateY(-165px); opacity: 1; }
+		20% { transform: translateY(-165px); opacity: 1; filter: blur(0); }
+		31% { transform: translateY(-40px) scale(0.8); opacity: 0; filter: blur(4px); }
+		100% { transform: translateY(-40px) scale(0.8); opacity: 0; }
+	}
+	@keyframes drop-out {
+		0%, 30% { transform: translateY(40px) scale(0.8); opacity: 0; filter: blur(4px); }
+		40% { transform: translateY(165px) scale(1); opacity: 1; filter: blur(0); }
+		60% { transform: translateY(165px); opacity: 1; }
+		66%, 100% { transform: translateY(185px); opacity: 0; }
+	}
 	@media (prefers-reduced-motion: reduce) {
 		.scan-streams {
 			display: none !important;
@@ -835,6 +882,38 @@
 		.scan-beam,
 		.scan-sources span {
 			animation: none;
+		}
+	}
+
+	/* the Redacted globe: its own box; on a phone the "Tracing live" pill sits under it, not over it */
+	.rd-globe {
+		position: relative;
+		height: 320px;
+	}
+	@media (min-width: 768px) {
+		.rd-globe {
+			position: absolute;
+			inset: 0;
+			height: auto;
+		}
+	}
+	@media (max-width: 767px) {
+		:global(html.redacted) .health-pill {
+			position: static;
+			translate: none;
+			width: fit-content;
+			margin: 0 auto 16px;
+		}
+	}
+	/* the live list: one line per row, the address shortened, the amount never on top of it */
+	:global(html.redacted) .tx-row .font-mono.flex-1 {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	@media (max-width: 480px) {
+		:global(html.redacted) .tx-addr + span {
+			display: none;
 		}
 	}
 
