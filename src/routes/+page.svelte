@@ -393,7 +393,7 @@
 								<span style="color: #334155; margin: 0 2px;">→</span>
 								<span class="tx-addr">{tx.to}</span>
 							</span>
-							<span class="shrink-0 text-[9px] font-mono text-right whitespace-nowrap" style="color: var(--text-faint);">{#if tx.amount}<span style="color: var(--text);">{tx.amount}</span>&nbsp;{/if}{tx.assetIn}{#if tx.assetOut && tx.assetOut !== tx.assetIn}&nbsp;→&nbsp;{tx.assetOut}{/if}</span>
+							<span class="shrink-0 text-[9px] font-mono text-right whitespace-nowrap" style="color: var(--text-faint);">{#if tx.amount}<span style="color: var(--text);">{tx.amount}</span>&nbsp;{/if}{tx.assetIn}{#if tx.assetOut && tx.assetOut !== tx.assetIn}<span class="tx-out">&nbsp;→&nbsp;{tx.assetOut}</span>{/if}</span>
 							<span class="shrink-0 w-7 text-right text-[9px] font-mono" style="color: var(--text-ghost);">{txAge(tx.time)}</span>
 							{#if tx.txID && !placeholderTx(tx.txID)}
 								<a href="https://runescan.io/tx/{tx.txID}" target="_blank" rel="noopener" class="shrink-0 tx-link" title="View on RuneScan">&#8599;</a>
@@ -912,7 +912,9 @@
 		text-overflow: ellipsis;
 	}
 	@media (max-width: 480px) {
-		:global(html.redacted) .tx-addr + span {
+		/* on a phone: no recipient and no target asset, so the sender's (already shortened) address fits whole */
+		:global(html.redacted) .tx-addr + span,
+		:global(html.redacted) .tx-out {
 			display: none;
 		}
 	}
