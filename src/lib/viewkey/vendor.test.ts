@@ -1,6 +1,6 @@
 /**
- * The vendored client (src/lib/vendor/vault-sdk, from a clean `git archive` export of hops integration
- * 6e41c95): the files are the ones SHA256SUMS names, the module is the pinned 9a945b79…, the glue ships no
+ * The vendored client (src/lib/vendor/vault-sdk, from a clean `git archive` export of hops release/b-merge
+ * 4442ac5): the files are the ones SHA256SUMS names, the module is the pinned 489b92fa…, the glue ships no
  * test helper, the open bindings take the file as the page passes it; and the page's own code has no network
  * in the Worker, logs nothing, and stores only the history files' window seeds (seed.ts).
  */
@@ -25,14 +25,14 @@ describe('vendored client module', () => {
 		}
 	});
 
-	it('the module is the pinned client 9a945b79…, 4,286,819 bytes, with the glue of integration 6e41c95', () => {
-		expect(CORE_WASM_SHA256).toBe('9a945b792dd4f777973d2416307e5341ceae69229fb284c871f5676ab9ae3ec0');
-		expect(CORE_WASM_BYTES).toBe(4286819);
+	it('the module is the pinned client 489b92fa…, 4,402,804 bytes, with the glue of release/b-merge 4442ac5', () => {
+		expect(CORE_WASM_SHA256).toBe('489b92fae80e5479bab7d477e200ea6a850e652c7d1947f2098f5d9deb3ae1f6');
+		expect(CORE_WASM_BYTES).toBe(4402804);
 		expect(sha(VENDOR + 'wasm/vault_core_bg.wasm')).toBe(CORE_WASM_SHA256);
 		expect(readFileSync(VENDOR + 'wasm/vault_core_bg.wasm').length).toBe(CORE_WASM_BYTES);
-		// INTEGRATION.md §1 (row "every device run-2 to run-5", b7d2600) and §5.1: the glue the module was cut with
-		expect(sha(VENDOR + 'wasm/vault_core.js')).toBe('cb54e979153e61416f904f269d81ba6e62443769461c0da281e3072a38809cbd');
-		expect(readFileSync(VENDOR + 'wasm/vault_core.js').length).toBe(288980);
+		// the glue the module was cut with, the same bytes the live Strict app vendors (VENDOR.json, release/b-merge 4442ac5)
+		expect(sha(VENDOR + 'wasm/vault_core.js')).toBe('c214a557b88cfd3c6d76145f12173c9dd86933c2a99177f2ee85eda970a5d055');
+		expect(readFileSync(VENDOR + 'wasm/vault_core.js').length).toBe(293062);
 	});
 
 	it('openViewKey and openHistory take the file as a string, by value (wiped in the module), as the viewer passes it', () => {

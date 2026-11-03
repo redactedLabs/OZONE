@@ -6,7 +6,9 @@
 // and nothing here prepares, signs, proves or builds a message: `VIEWER_METHODS` is its whole API, and
 // `dispatchViewer` serves only those. A view key cannot be revoked (E-66 (8)): hand the file only to whom the
 // owner means to.
-import { core, asVaultError, VaultError, cutBlockHashes, utf8Over, VIEW_KEY_MAX_BYTES, HISTORY_MAX_BYTES } from "./core.js";
+import { core, asVaultError, VaultError, cutBlockHashes, randomBelow32, utf8Over, washStack, VIEW_KEY_MAX_BYTES, HISTORY_MAX_BYTES } from "./core.js";
+/** Errata E-78 (6): the mean pause between two reads of `addressBalances` (each pause uniform in [0, 2 · mean]). */
+export const ADDRESS_READ_SPREAD_MS = 1_500;
 /**
  * Errata E-68 (14) R3-J3: the heights `[lo, hi]` a reader with `seedHex` asks for a cut (vault-core's
  * `history::cut_window`: `x = SHA-256(seed ‖ u64(cut))`, width `8 + u32(x[0..4]) mod 17`, the cut's place
@@ -57,6 +59,10 @@ function call(f) {
     }
     catch (e) {
         throw asVaultError(e);
+    }
+    finally {
+        // errata E-78 (78): as in core.ts: overwrite what the call left on the wasm stack
+        washStack();
     }
 }
 export class ViewerService {
@@ -141,19 +147,39 @@ export class ViewerService {
      * The L1 balances of the listed Spending and exit addresses (public chain data; needs `env.l1Account`), each with
      * what establishes it as the account's (errata E-66 fix): a Spending account `established` only when its record
      * carries the key's slot tree (after a sync; else `not_established` or `not_on_chain`); an exit address is
-     * always `claimed_by_file`: nothing public ties it to the account.
+     * always `claimed_by_file`: nothing public ties it to the account. Errata E-78 (6): read in random order with a random
+     * pause before every read after the first (mean `opts.spreadMs`, default 1.5 s), the two lists through different readers
+     * when the platform gives several (`env.l1Accounts`). Mitigated, not closed: a reader can still group what it reads from
+     * one client; only a bulk or local read would close it. The answer keeps the file's order.
      */
-    async addressBalances() {
-        if (!this.env.l1Account)
+    async addressBalances(opts = {}) {
+        const env = this.env;
+        const l1 = env.l1Account;
+        const readers = env.l1Accounts?.length ? env.l1Accounts : l1 ? [(address) => l1.call(env, address)] : [];
+        if (readers.length === 0)
             throw new VaultError("UNSUPPORTED", "the platform reads no L1 accounts (env.l1Account)");
-        const out = [];
         const accounts = this.accounts();
-        for (const { address } of this.spendingAccounts()) {
-            const owner = accounts.find((a) => a.address === address)?.owner ?? "not_established";
-            out.push({ address, kind: "spending", owner, balances: (await this.env.l1Account(address)).balances });
-        }
+        const out = [];
+        for (const { address } of this.spendingAccounts())
+            out.push({ address, kind: "spending", owner: accounts.find((a) => a.address === address)?.owner ?? "not_established", balances: [] });
         for (const address of this.exitAddresses())
-            out.push({ address, kind: "exit", owner: "claimed_by_file", balances: (await this.env.l1Account(address)).balances });
+            out.push({ address, kind: "exit", owner: "claimed_by_file", balances: [] });
+        const order = out.map((_, i) => i);
+        for (let i = order.length - 1; i > 0; i--) {
+            const j = randomBelow32(i + 1);
+            [order[i], order[j]] = [order[j], order[i]];
+        }
+        const spread = opts.spreadMs ?? ADDRESS_READ_SPREAD_MS;
+        const pause = env.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+        let reads = 0;
+        for (const i of order) {
+            if (reads++ > 0 && spread > 0)
+                await pause(randomBelow32(2 * spread + 1));
+            // close() stops the rest
+            this.need();
+            const row = out[i];
+            row.balances = (await readers[row.kind === "exit" ? readers.length - 1 : 0](row.address)).balances;
+        }
         return out;
     }
     /** The warnings: first, always, that the file is not authenticated (no proof of funds); then the last sync's (one source, an unconfirmed `nk`, notes under numbers the file does not name, the replay's own). */
@@ -161,7 +187,8 @@ export class ViewerService {
         return JSON.parse(call(() => this.need().warnings()));
     }
     close() {
-        this.s?.free?.();
+        // errata E-78 (78): through `call`, which washes the stack (the session wipes its keys in place)
+        call(() => this.s?.free?.());
         this.s = null;
     }
     // ---- history files (errata E-68 (4)): read only; nothing after the cut is read or shown
@@ -224,7 +251,7 @@ export class ViewerService {
         return JSON.parse(call(() => opened(this.h).warnings()));
     }
     closeHistory() {
-        this.h?.free?.();
+        call(() => this.h?.free?.());
         this.h = null;
     }
 }

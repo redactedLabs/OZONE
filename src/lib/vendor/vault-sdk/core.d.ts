@@ -7,6 +7,8 @@ export interface WasmModule {
     default?(arg?: unknown): Promise<unknown>;
     version(): string;
     selftest(): void;
+    /** Errata E-78 (78, 81): overwrite the popped frames of the wasm shadow stack. */
+    stackWash(): void;
     phraseCheck(text: string): void;
     classifySecret(s: string): string;
     canonicalAddress(text: string, hrp: string): string;
@@ -20,6 +22,9 @@ export interface WasmModule {
     lintEdge(a: string, height: bigint, inflows: string, window: bigint): string;
     exitTiming(now: bigint, maxExpiryDelta: bigint, sendNow: boolean): string;
     exitPartExpiry(timingJson: string, now: bigint, maxExpiryDelta: bigint): bigint;
+    heldPartTiming(now: bigint, maxExpiryDelta: bigint): string;
+    unheldExpiryDelta(maxExpiryDelta: bigint): bigint;
+    unheldHoldBlocks(maxExpiryDelta: bigint): bigint;
     registeredCount(attestRootJson: string, attestationExpiry: bigint, now: bigint): number;
     walletMessage(scheme: string, origin: string, deploymentJson: string, address: string): string;
     walletHome(scheme: string, deploymentJson: string, address: string): string;
@@ -74,6 +79,7 @@ export declare function utf8Over(text: string, max: number): boolean;
  * `HISTORY_CUT_MARGIN`), so the block-hash window never has the cut as its top and never reaches above the tip.
  */
 export declare const HISTORY_CUT_MARGIN = 24;
+export declare function randomBelow32(n: number): number;
 /**
  * Errata E-68 (12) L-4, (13) R2-L6, (14) R3-J3: the header hash of the block at `cut` from each source `read` asks, read
  * inside the window `[lo, hi]` of 8 to 24 consecutive heights fixed by a seed (the vault's `historyWindow`, from its own
@@ -81,6 +87,11 @@ export declare const HISTORY_CUT_MARGIN = 24;
  * repeats do not narrow it, and the cut is not its top. Residual: the window contains the cut.
  */
 export declare function cutBlockHashes(read: (height: number) => Promise<string[]>, cut: number, window: [number, number]): Promise<string[]>;
+/**
+ * Errata E-78 (78, 81): overwrite what the calls into the module left on its shadow stack (part of linear memory): moved
+ * copies of keys, HKDF's key block and midstates, a signing nonce. Never throws: it runs in a `finally`.
+ */
+export declare function washStack(): void;
 export interface InitOptions {
     /**
      * The expected SHA-256 of `wasm` as 64 hex characters; default: the pinned production module
@@ -134,6 +145,20 @@ export declare const util: {
      * throws `STATE` before the part's `submit_at`, so a client-held part is never proved early.
      */
     exitPartExpiry: (timing: ExitTiming, now: number, maxExpiryDelta: number) => number;
+    /**
+     * Errata E-75 (c4): a part a node holds while the browser is closed (a swap's held part): `expiry_offset` drawn per part,
+     * uniform in `[⌈mde/2⌉, mde]`, and `node_hold_blocks = expiry_offset − 10` (cap it by the node's `max_hold_blocks`).
+     * Prove it with `exitPartExpiry(timing, now, maxExpiryDelta)` or `expiry_height`.
+     */
+    heldPartTiming: (now: number, maxExpiryDelta: number) => ExitTiming;
+    /**
+     * Errata E-75 (c1), §9.3 C2: the expiry offset of an action not meant to be held, `min(maxExpiryDelta, 600)`
+     * (fundings, merges, plain withdrawals, signed calls, returns, sweeps). Only a part held on purpose goes up to
+     * `maxExpiryDelta` (`exitPartExpiry`).
+     */
+    unheldExpiryDelta: (maxExpiryDelta: number) => number;
+    /** Errata E-75 (c1): the node hold such an action asks for at most: 590 at launch. */
+    unheldHoldBlocks: (maxExpiryDelta: number) => number;
     /**
      * Errata E-28: would the proxy admit a third-party return of `slots` under the per-denomination ceilings?
      * The running total of the return's slots per denomination plus the chain's `liability` and the admission
@@ -471,6 +496,11 @@ export declare class Vault {
      * the notes a history file's holder can follow (merge those first, `historyMovePlan`).
      */
     selectFundingInputs(dep: string, denom: string, amount: string): string[];
+    /**
+     * Errata E-78 (38): the pair an automatic merge takes: the two smallest free notes of one generation, never a note under
+     * an own SLOW request; `STATE` when there is none.
+     */
+    selectMergeInputs(dep: string, denom: string): string[];
     prepareSpend(dep: string, inputs: string[], amount: string, kind: SpendKind, opts: SpendOptions): SpendPlan;
     /** The proof job with the witness: only for the vault's prover Worker. */
     proofJob(actionId: number): ProofJob;
@@ -511,19 +541,32 @@ export declare class Vault {
      */
     beginWithdrawal(dep: string, denom: string, parts: [string, string][], fee: FeeTerms, expiryHeight: number, timings?: ExitTiming[] | null): WithdrawalPlan;
     cancelWithdrawal(withdrawalId: number): void;
+    /**
+     * The open split withdrawals. Errata E-75 (c11): `part_inputs`, one per part: the note handles a part that came back goes with
+     * (`null`: any notes). A part with handles is never sent with others: prove those again, for any node.
+     */
     withdrawals(): {
         withdrawal_id: number;
         card: ReviewCard;
         released: boolean[];
         confirmed_by: string | null;
         timings?: (ExitTiming | null)[];
+        part_inputs?: (string[] | null)[];
     }[];
     authorizations(): AuthorizationRecord[];
     pendingActions(): unknown[];
     newAccount(dep: string, scope: unknown, policy?: Policy, loosenDelay?: number): any;
     accountForTask(dep: string, task: string): any;
-    /** Errata E-70 (7): account `n`'s creation was refused `SafeKeyInUse`: retire it (the next allocation takes the next index). */
+    /**
+     * Errata E-70 (7), E-75 (c3): whether a two-source read retired account `n` (it shows an account under its safe key at
+     * another address; the next allocation takes the next index). Throws `STATE` otherwise: a node's `SafeKeyInUse` alone
+     * is an ordinary refusal: sync from two sources and ask another node.
+     */
     accountSquatted(dep: string, n: number): void;
+    /**
+     * `create_account { params }` for account `n`. Errata E-75: `params.pop_safe` is the safe key's proof of possession,
+     * signed in this call (an SLH-DSA-128s signature: it takes a moment); the proxy refuses a creation without it.
+     */
     createAccountMsg(dep: string, n: number): ExecuteMsg;
     /**
      * A signed Spending call. Errata E-39: under an opted-in confirmation policy a full-key call that moves
@@ -728,7 +771,11 @@ export declare class Vault {
      * Errata E-69 (R3-E1, R4-E1): keep the rescue's consent (both answers, verified now); then set the rescue as usual.
      */
     setRescueConsent(consent: RescueConsent): void;
-    /** Lock: every secret is dropped; afterwards every call answers `LOCKED`. */
+    /**
+     * Lock: the session's whole block and the proof jobs are wiped where they are and the stack is washed (errata E-78 (78)); afterwards every
+     * call answers `LOCKED`. Not covered here: a job already handed to a prover Worker lives in that Worker's module until the
+     * Worker stops (stop it on lock), and JS strings (a job's text, a phrase shown) are the engine's to drop.
+     */
     lock(): void;
 }
 /** The agent side: an agent key and its delegation. Never `S` or `d`. */
@@ -744,13 +791,13 @@ export declare class Agent {
     check(calls: Call[], relayerFee: Coin | null, now: number): unknown;
     execute(calls: Call[], fees: CallFees, now: number): ExecuteMsg;
     pay(destId: string, denom: string, amount: string, fees: CallFees, now: number): ExecuteMsg;
-    /** A THORChain swap back to the account itself (D16). */
+    /** A THORChain swap back to the account itself (D16). Errata E-78 (41): `minOut` is required, above zero. */
     swapToSelf(denom: string, asset: {
         chain: string;
         symbol: string;
         ticker: string;
         secured: boolean;
-    }, amount: string, toAsset: string, minOut: string | null, fees: CallFees, now: number): ExecuteMsg;
+    }, amount: string, toAsset: string, minOut: string, fees: CallFees, now: number): ExecuteMsg;
     revokeSelf(now: number): ExecuteMsg;
     agentReturn(coins: Coin[], now: number): ExecuteMsg;
 }

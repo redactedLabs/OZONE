@@ -59,7 +59,7 @@ export function utf8Over(text, max) {
  * `HISTORY_CUT_MARGIN`), so the block-hash window never has the cut as its top and never reaches above the tip.
  */
 export const HISTORY_CUT_MARGIN = 24;
-function randomBelow32(n) {
+export function randomBelow32(n) {
     const r = new Uint32Array(1);
     globalThis.crypto.getRandomValues(r);
     return r[0] % n;
@@ -104,12 +104,28 @@ const LOCKED_HANDLE = new Proxy({}, {
 function syncOptionsJson(opts) {
     return JSON.stringify({ deep: opts.deep ?? false, ...(opts.min_height === undefined ? {} : { min_height: opts.min_height }) });
 }
+/**
+ * Errata E-78 (78, 81): overwrite what the calls into the module left on its shadow stack (part of linear memory): moved
+ * copies of keys, HKDF's key block and midstates, a signing nonce. Never throws: it runs in a `finally`.
+ */
+export function washStack() {
+    try {
+        mod?.stackWash();
+    }
+    catch {
+        // a module that trapped answers nothing more: the caller's own error stands
+    }
+}
 function call(f) {
     try {
         return f();
     }
     catch (e) {
         throw asVaultError(e);
+    }
+    finally {
+        // no wasm frame is live here, so this reaches everything the call left on the stack
+        washStack();
     }
 }
 const big = (n) => BigInt(n);
@@ -171,7 +187,7 @@ export function core() {
 export const util = {
     version: () => core().version(),
     phraseCheck: (text) => call(() => core().phraseCheck(text)),
-    classifySecret: (s) => core().classifySecret(s),
+    classifySecret: (s) => call(() => core().classifySecret(s)),
     canonicalAddress: (a, hrp = "thor") => call(() => core().canonicalAddress(a, hrp)),
     deployment: (chainId, proxy, opts = {}) => JSON.parse(call(() => core().newDeployment(chainId, proxy, opts.hrp ?? "thor", opts.localnetFast ?? false, opts.accountCodeChecksum ?? null))),
     /** 1 PRF, 2 passphrase or PIN, 3 PRF and PIN, 4 the wallet and a passphrase (errata E-72 (3)). */
@@ -188,6 +204,20 @@ export const util = {
      * throws `STATE` before the part's `submit_at`, so a client-held part is never proved early.
      */
     exitPartExpiry: (timing, now, maxExpiryDelta) => Number(call(() => core().exitPartExpiry(JSON.stringify(timing), big(now), big(maxExpiryDelta)))),
+    /**
+     * Errata E-75 (c4): a part a node holds while the browser is closed (a swap's held part): `expiry_offset` drawn per part,
+     * uniform in `[⌈mde/2⌉, mde]`, and `node_hold_blocks = expiry_offset − 10` (cap it by the node's `max_hold_blocks`).
+     * Prove it with `exitPartExpiry(timing, now, maxExpiryDelta)` or `expiry_height`.
+     */
+    heldPartTiming: (now, maxExpiryDelta) => JSON.parse(call(() => core().heldPartTiming(big(now), big(maxExpiryDelta)))),
+    /**
+     * Errata E-75 (c1), §9.3 C2: the expiry offset of an action not meant to be held, `min(maxExpiryDelta, 600)`
+     * (fundings, merges, plain withdrawals, signed calls, returns, sweeps). Only a part held on purpose goes up to
+     * `maxExpiryDelta` (`exitPartExpiry`).
+     */
+    unheldExpiryDelta: (maxExpiryDelta) => Number(call(() => core().unheldExpiryDelta(big(maxExpiryDelta)))),
+    /** Errata E-75 (c1): the node hold such an action asks for at most: 590 at launch. */
+    unheldHoldBlocks: (maxExpiryDelta) => Number(call(() => core().unheldHoldBlocks(big(maxExpiryDelta)))),
     /**
      * Errata E-28: would the proxy admit a third-party return of `slots` under the per-denomination ceilings?
      * The running total of the return's slots per denomination plus the chain's `liability` and the admission
@@ -611,6 +641,13 @@ export class Vault {
     selectFundingInputs(dep, denom, amount) {
         return JSON.parse(call(() => this.w.selectFundingInputs(dep, denom, amount)));
     }
+    /**
+     * Errata E-78 (38): the pair an automatic merge takes: the two smallest free notes of one generation, never a note under
+     * an own SLOW request; `STATE` when there is none.
+     */
+    selectMergeInputs(dep, denom) {
+        return JSON.parse(call(() => this.w.selectMergeInputs(dep, denom)));
+    }
     prepareSpend(dep, inputs, amount, kind, opts) {
         return JSON.parse(call(() => this.w.prepareSpend(dep, JSON.stringify(inputs), amount, JSON.stringify(kind), JSON.stringify(opts))));
     }
@@ -683,6 +720,10 @@ export class Vault {
     cancelWithdrawal(withdrawalId) {
         call(() => this.w.cancelWithdrawal(big(withdrawalId)));
     }
+    /**
+     * The open split withdrawals. Errata E-75 (c11): `part_inputs`, one per part: the note handles a part that came back goes with
+     * (`null`: any notes). A part with handles is never sent with others: prove those again, for any node.
+     */
     withdrawals() {
         return JSON.parse(call(() => this.w.withdrawals()));
     }
@@ -699,10 +740,18 @@ export class Vault {
     accountForTask(dep, task) {
         return JSON.parse(call(() => this.w.accountForTask(dep, task)));
     }
-    /** Errata E-70 (7): account `n`'s creation was refused `SafeKeyInUse`: retire it (the next allocation takes the next index). */
+    /**
+     * Errata E-70 (7), E-75 (c3): whether a two-source read retired account `n` (it shows an account under its safe key at
+     * another address; the next allocation takes the next index). Throws `STATE` otherwise: a node's `SafeKeyInUse` alone
+     * is an ordinary refusal: sync from two sources and ask another node.
+     */
     accountSquatted(dep, n) {
         call(() => this.w.accountSquatted(dep, n));
     }
+    /**
+     * `create_account { params }` for account `n`. Errata E-75: `params.pop_safe` is the safe key's proof of possession,
+     * signed in this call (an SLH-DSA-128s signature: it takes a moment); the proxy refuses a creation without it.
+     */
     createAccountMsg(dep, n) {
         return JSON.parse(call(() => this.w.createAccountMsg(dep, n)));
     }
@@ -980,12 +1029,16 @@ export class Vault {
     setRescueConsent(consent) {
         call(() => this.w.setRescueConsent(JSON.stringify(consent)));
     }
-    /** Lock: every secret is dropped; afterwards every call answers `LOCKED`. */
+    /**
+     * Lock: the session's whole block and the proof jobs are wiped where they are and the stack is washed (errata E-78 (78)); afterwards every
+     * call answers `LOCKED`. Not covered here: a job already handed to a prover Worker lives in that Worker's module until the
+     * Worker stops (stop it on lock), and JS strings (a job's text, a phrase shown) are the engine's to drop.
+     */
     lock() {
         const w = this.w;
         this.w = LOCKED_HANDLE;
         if (w !== LOCKED_HANDLE)
-            w.lock();
+            call(() => w.lock());
     }
 }
 /** The agent side: an agent key and its delegation. Never `S` or `d`. */
@@ -1021,7 +1074,7 @@ export class Agent {
     pay(destId, denom, amount, fees, now) {
         return JSON.parse(call(() => this.w.pay(destId, denom, amount, JSON.stringify(fees), big(now))));
     }
-    /** A THORChain swap back to the account itself (D16). */
+    /** A THORChain swap back to the account itself (D16). Errata E-78 (41): `minOut` is required, above zero. */
     swapToSelf(denom, asset, amount, toAsset, minOut, fees, now) {
         return JSON.parse(call(() => this.w.swapToSelf(denom, JSON.stringify(asset), amount, toAsset, minOut, JSON.stringify(fees), big(now))));
     }

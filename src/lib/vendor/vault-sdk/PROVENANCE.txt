@@ -1,22 +1,24 @@
 Redacted vault SDK, the viewer part (errata E-66 (4) view keys, E-68 (4) history files), for the /view page.
 
-Source   hops, branch integration, commit 6e41c95732eeb51338b6003ec1067f309e75904c (INTEGRATION §1 on the merge
-         b7d2600 of fix/every-device-r2: errata E-72 review run-2 to run-5 and the amended E-74; before it
-         3c24466, the review run-2 and run-3 fixes of Rujira's findings 78 and 81; a client-only release)
-Export   git archive --format=tar 6e41c95 | tar -x   (a clean export, no working tree)
-Build    packages/vault-sdk/scripts/build-wasm.sh, production module only (feature `wasm`,
-         rust 1.95.0, wasm-bindgen 0.2.128, wasm-opt 132, host paths remapped), then `tsc -p tsconfig.json`
-Result   wasm/vault_core_bg.wasm  sha256 9a945b792dd4f777973d2416307e5341ceae69229fb284c871f5676ab9ae3ec0
-         (4,286,819 bytes) = CORE_WASM_SHA256 pinned in checksums.js; initCore refuses other bytes (E-30).
-         wasm/vault_core.js sha256 cb54e979153e61416f904f269d81ba6e62443769461c0da281e3072a38809cbd
-         (288,980 bytes), as INTEGRATION.md §1 and §5.1 name them; byte-identical to the clean export of the
-         merge commit (.wf/rel/export-merge-e72-r5). The prover module (ea042d5f…) is not vendored.
-         The viewer API is unchanged since a948a92: viewer.{js,d.ts}, sha256.{js,d.ts} and types.js are
-         byte-identical to feaa13b's. openViewKey and openHistory now take the file by value and wipe the
-         module's copy (Rujira 78/81 review run-3); their glue and TS types are unchanged, so the page passes
-         the file as before. core and types.d.ts gained vault-side methods and docs only (deviceGenerations,
-         confirmDeviceGeneration; E-72 run-2 to run-5), none on the viewer's path. The test fixtures
-         regenerated from this export differ from 975c300's only in their `about` line.
+Source   hops release B, release/b-merge 4442ac53bafeab0cfac70630f740bb53619c4223 (the merge of tag release-58cd57a,
+         proxy 55e0f604, into the client's fixes: errata E-75 to E-82, freeze 3 v2.13.1, contract version 1.3.0).
+         The same client the live Strict app vendors (model-b-strict packages/main/vendor/vault-core, VENDOR.json):
+         core.js, core.d.ts, types.d.ts, checksums.js, sha256.js and the wasm glue are byte-identical to the app's.
+Export   git archive --format=tar 4442ac5 | tar -x   (a clean export, no working tree;
+         .wf/release-b-after-zip/app-vendor-4442ac5)
+Build    packages/vault-sdk/scripts/build-wasm.sh, production module (feature `wasm`, rust 1.95.0, wasm-bindgen
+         0.2.128, wasm-opt 132, host paths remapped), then `tsc -p tsconfig.json`
+Result   wasm/vault_core_bg.wasm  sha256 489b92fae80e5479bab7d477e200ea6a850e652c7d1947f2098f5d9deb3ae1f6
+         (4,402,804 bytes) = CORE_WASM_SHA256 pinned in checksums.js; initCore refuses other bytes (E-30).
+         wasm/vault_core.js sha256 c214a557b88cfd3c6d76145f12173c9dd86933c2a99177f2ee85eda970a5d055
+         (293,062 bytes). The prover module (dac324d3…) is not vendored.
+         What changed for the viewer since 6e41c95: the proxy's release-B limits (max_expiry_delta 3,600,
+         root history 32,768) in util.deployment; addressBalances reads the listed addresses in random order with a
+         random pause (E-78 (6), mean 1.5 s); the session's free() washes the wasm stack (E-78). The viewer API and
+         the file format are unchanged: openViewKey and openHistory take (file, deployment_json) as before, and the
+         test fixtures regenerated from this export differ from 6e41c95's only in their `about` line.
+         For the live test proxy thor1nkj6v0…qat8r (code 203) util.deployment gives the id
+         a9c9ca311a82494c9c71203272a1324a3467f8fafc039390134b85a9ab2d4f0b, the proxy's own `deployment_id`.
 
 Files    dist/{viewer,core,checksums,sha256,types}.{js,d.ts} and wasm/{vault_core.js,vault_core.d.ts,
          vault_core_bg.wasm,vault_core_bg.wasm.d.ts}, unchanged; SHA256SUMS lists them (checked by

@@ -15,6 +15,7 @@ export const crossCheckSnapshots: (a: number, b: number, c: number, d: number, e
 export const exitPartExpiry: (a: number, b: number, c: number, d: bigint, e: bigint) => void;
 export const exitSplit: (a: number, b: number, c: number, d: number) => void;
 export const exitTiming: (a: number, b: bigint, c: bigint, d: number) => void;
+export const heldPartTiming: (a: number, b: bigint, c: bigint) => void;
 export const historyCutWindow: (a: number, b: number, c: number, d: bigint) => void;
 export const ladderCeil: (a: number, b: number, c: number) => void;
 export const ladderFloor: (a: number, b: number, c: number) => void;
@@ -37,8 +38,11 @@ export const secondProofRequired: (a: number, b: number, c: number, d: number, e
 export const selftest: (a: number) => void;
 export const snapshotFromFeeds: (a: number, b: number, c: number) => void;
 export const splitBelowSecondProof: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+export const stackWash: () => void;
 export const transitionWalletKeys: (a: number, b: number, c: number, d: number, e: number) => void;
 export const txSize: (a: number, b: number, c: number) => void;
+export const unheldExpiryDelta: (a: bigint) => bigint;
+export const unheldHoldBlocks: (a: bigint) => bigint;
 export const version: (a: number) => void;
 export const walletHome: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
 export const walletMessage: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
@@ -186,6 +190,7 @@ export const wasmvault_secondProofJob: (a: number, b: number, c: bigint) => void
 export const wasmvault_secondProofsDue: (a: number, b: number) => void;
 export const wasmvault_selectFundingInputs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
 export const wasmvault_selectInputs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+export const wasmvault_selectMergeInputs: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
 export const wasmvault_setConfirmPolicy: (a: number, b: number, c: number, d: number) => void;
 export const wasmvault_setDestinations: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
 export const wasmvault_setGenerationDestinations: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;

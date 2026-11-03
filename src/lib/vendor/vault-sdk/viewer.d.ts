@@ -1,4 +1,6 @@
 import type { Amount, ChainSnapshot, Coin, Deployment, HistoryAccount, HistoryCut, HistoryItem, HistoryStatus, HistoryTotals, L1Account, Ownership, ViewAccount, ViewEvent, ViewNote, ViewSyncStatus } from "./types.js";
+/** Errata E-78 (6): the mean pause between two reads of `addressBalances` (each pause uniform in [0, 2 · mean]). */
+export declare const ADDRESS_READ_SPREAD_MS = 1500;
 export interface ViewerEnv {
     deployment: Deployment;
     /** The bulk feeds at one height from one source (a one-source sync: one node could hide a SLOW request). */
@@ -13,6 +15,13 @@ export interface ViewerEnv {
     height?(): Promise<number>;
     /** The L1 balances of an address (cosmos bank), for the Spending and exit addresses the file lists. */
     l1Account?(address: string): Promise<L1Account>;
+    /**
+     * Errata E-78 (6): several independent L1 readers (other LCDs): the listed Spending addresses and the listed exit
+     * addresses are read through different ones when there are several. Without it `addressBalances` uses `l1Account`.
+     */
+    l1Accounts?: ((address: string) => Promise<L1Account>)[];
+    /** Errata E-78 (6): a pause (`addressBalances` waits a random time between reads); default `setTimeout`. */
+    sleep?(ms: number): Promise<void>;
     /**
      * Errata E-68 (4): the CometBFT header hash (`block_id.hash`, hex) of the block at `height` from each independent
      * source the platform reads (one or two), for a history file's cut.
@@ -78,9 +87,14 @@ export declare class ViewerService {
      * The L1 balances of the listed Spending and exit addresses (public chain data; needs `env.l1Account`), each with
      * what establishes it as the account's (errata E-66 fix): a Spending account `established` only when its record
      * carries the key's slot tree (after a sync; else `not_established` or `not_on_chain`); an exit address is
-     * always `claimed_by_file`: nothing public ties it to the account.
+     * always `claimed_by_file`: nothing public ties it to the account. Errata E-78 (6): read in random order with a random
+     * pause before every read after the first (mean `opts.spreadMs`, default 1.5 s), the two lists through different readers
+     * when the platform gives several (`env.l1Accounts`). Mitigated, not closed: a reader can still group what it reads from
+     * one client; only a bulk or local read would close it. The answer keeps the file's order.
      */
-    addressBalances(): Promise<{
+    addressBalances(opts?: {
+        spreadMs?: number;
+    }): Promise<{
         address: string;
         kind: "spending" | "exit";
         owner: Ownership | "claimed_by_file";

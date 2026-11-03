@@ -59,9 +59,10 @@ export class WasmAgent {
     setDelegation(delegation_json: string, destinations_json: string, slots_json: string): void;
     /**
      * A THORChain swap whose output comes back to the account itself (D16: at most four memo fields, no
-     * affiliate). `asset` JSON `{chain, symbol, ticker, secured}`; `min_out` a decimal string or null.
+     * affiliate). `asset` JSON `{chain, symbol, ticker, secured}`; `min_out` a decimal string above zero (errata E-78
+     * (41): required).
      */
-    swapToSelf(denom: string, asset_json: string, amt: string, to_asset: string, min_out: string | null | undefined, fees_json: string, now: bigint): string;
+    swapToSelf(denom: string, asset_json: string, amt: string, to_asset: string, min_out: string, fees_json: string, now: bigint): string;
     /**
      * The agent's public key (hex), for the owner's `delegate`.
      */
@@ -124,8 +125,9 @@ export class WasmVault {
      */
     accountKind(): string;
     /**
-     * Errata E-70 (7): the creation of account `n` was refused `SafeKeyInUse`: retire it (the next allocation takes
-     * the next index).
+     * Errata E-70 (7), E-75 (c3): whether a two-source read retired account `n` (it shows an account under its safe key
+     * at another address; the next allocation takes the next index). `STATE` otherwise: a node's `SafeKeyInUse` alone is
+     * an ordinary refusal.
      */
     accountSquatted(dep: string, n: number): void;
     /**
@@ -352,7 +354,8 @@ export class WasmVault {
     importState(deployment_json: string, blob: Uint8Array): string;
     lineageReport(dep: string): string;
     /**
-     * Lock: drop every secret now (the handle is unusable afterwards).
+     * Lock: drop every secret now (the handle is unusable afterwards). Errata E-78 (78): the session's block is overwritten
+     * whole (`WipedBox`), then the stack is washed.
      */
     lock(): void;
     markAudited(dep: string, indices_json: string): void;
@@ -377,7 +380,9 @@ export class WasmVault {
      * find it (`reachable` is false too): move it. `reserved`: the note is an input of an action in flight (prepared, or
      * relayed and not yet seen spent), so a spend cannot pick it. `this_device`: this device holds the
      * generation's `d`; without it the note pays home or rescue only (spec §3.6). `from_account` (errata E-67 (5),
-     * only when set): a gift, returned from a Spending account this vault does not own (its address).
+     * only when set): a gift, returned from a Spending account this vault does not own (its address). `slow_held` (errata
+     * E-78 (38)): the note is under an own SLOW request (prepared, released and not yet seen, or on chain), and automatic
+     * selection and merges leave it out.
      */
     notes(dep: string): string;
     /**
@@ -554,6 +559,11 @@ export class WasmVault {
     selectFundingInputs(dep: string, denom: string, amt: string): string;
     selectInputs(dep: string, denom: string, amt: string, device_only?: boolean | null): string;
     /**
+     * Errata E-78 (38): the pair an automatic merge takes: the two smallest free notes of one generation, never a note
+     * under an own SLOW request.
+     */
+    selectMergeInputs(dep: string, denom: string): string;
+    /**
      * E-4: `off` (default), `third_party` or `all_withdrawals`.
      */
     setConfirmPolicy(policy: string): void;
@@ -656,8 +666,9 @@ export class WasmVault {
     walletFingerprint(): string;
     warnings(dep: string): string;
     /**
-     * The open split withdrawals: `[{ withdrawal_id, card, released, confirmed_by, timings }]` (`timings`: one per
-     * part, `null` for a part without one; review RF-03).
+     * The open split withdrawals: `[{ withdrawal_id, card, released, confirmed_by, timings, part_inputs }]` (`timings`: one per
+     * part, `null` for a part without one; review RF-03; `part_inputs`: one per part, the note handles a part that came back
+     * goes with, `null` for any; errata E-75 (c11)).
      */
     withdrawals(): string;
 }
@@ -752,6 +763,11 @@ export function exitPartExpiry(timing_json: string, now: bigint, max_expiry_delt
 export function exitSplit(a: string, max_parts: number): string;
 
 export function exitTiming(now: bigint, max_expiry_delta: bigint, send_now: boolean): string;
+
+/**
+ * Errata E-75 (c4): a part a node holds while the browser is closed: its own expiry and the hold inside it.
+ */
+export function heldPartTiming(now: bigint, max_expiry_delta: bigint): string;
 
 /**
  * Errata E-68 (14) R3-J3: the heights `[lo, hi]` (JSON) a reader with the 32-byte `seed_hex` asks for a cut at `cut`
@@ -856,6 +872,12 @@ export function snapshotFromFeeds(records_json: string): string;
 export function splitBelowSecondProof(a: string, v2: string, max_parts: number): string;
 
 /**
+ * Errata E-78 (78, 81): wash the shadow stack now. The SDK calls it after every call into this module: with no wasm frame
+ * live it also covers what a binding's own guard cannot (that binding's frame and the bindgen shim's).
+ */
+export function stackWash(): void;
+
+/**
  * E-18a: the K-path keys of a Transition (K contract) wallet account: `{ account_id, address, fingerprint,
  * owner_secret, scan_key }` (hex; `account_id` base64). `S_w` stays in WebAssembly. Review run-1 of findings
  * 78/81: `owner_secret` and `scan_key` cross as `secret_json` does (a `TransitionWalletKeys` written straight
@@ -868,6 +890,16 @@ export function transitionWalletKeys(k_deployment_json: string, sign_in_json: st
  * The transaction size of a message (JSON of `ExecuteMsg`), to compare with 1,000,000 (E-15).
  */
 export function txSize(msg_json: string): number;
+
+/**
+ * Errata E-75 (c1): the expiry offset of an action not meant to be held, `min(max_expiry_delta, 600)`.
+ */
+export function unheldExpiryDelta(max_expiry_delta: bigint): bigint;
+
+/**
+ * Errata E-75 (c1): the node hold such an action asks for at most (590 at launch).
+ */
+export function unheldHoldBlocks(max_expiry_delta: bigint): bigint;
 
 /**
  * The crate version and spec.
@@ -918,6 +950,7 @@ export interface InitOutput {
     readonly exitPartExpiry: (a: number, b: number, c: number, d: bigint, e: bigint) => void;
     readonly exitSplit: (a: number, b: number, c: number, d: number) => void;
     readonly exitTiming: (a: number, b: bigint, c: bigint, d: number) => void;
+    readonly heldPartTiming: (a: number, b: bigint, c: bigint) => void;
     readonly historyCutWindow: (a: number, b: number, c: number, d: bigint) => void;
     readonly ladderCeil: (a: number, b: number, c: number) => void;
     readonly ladderFloor: (a: number, b: number, c: number) => void;
@@ -940,8 +973,11 @@ export interface InitOutput {
     readonly selftest: (a: number) => void;
     readonly snapshotFromFeeds: (a: number, b: number, c: number) => void;
     readonly splitBelowSecondProof: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly stackWash: () => void;
     readonly transitionWalletKeys: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly txSize: (a: number, b: number, c: number) => void;
+    readonly unheldExpiryDelta: (a: bigint) => bigint;
+    readonly unheldHoldBlocks: (a: bigint) => bigint;
     readonly version: (a: number) => void;
     readonly walletHome: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly walletMessage: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
@@ -1089,6 +1125,7 @@ export interface InitOutput {
     readonly wasmvault_secondProofsDue: (a: number, b: number) => void;
     readonly wasmvault_selectFundingInputs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly wasmvault_selectInputs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly wasmvault_selectMergeInputs: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_setConfirmPolicy: (a: number, b: number, c: number, d: number) => void;
     readonly wasmvault_setDestinations: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly wasmvault_setGenerationDestinations: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;

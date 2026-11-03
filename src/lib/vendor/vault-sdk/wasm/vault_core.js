@@ -411,12 +411,13 @@ export class WasmAgent {
     }
     /**
      * A THORChain swap whose output comes back to the account itself (D16: at most four memo fields, no
-     * affiliate). `asset` JSON `{chain, symbol, ticker, secured}`; `min_out` a decimal string or null.
+     * affiliate). `asset` JSON `{chain, symbol, ticker, secured}`; `min_out` a decimal string above zero (errata E-78
+     * (41): required).
      * @param {string} denom
      * @param {string} asset_json
      * @param {string} amt
      * @param {string} to_asset
-     * @param {string | null | undefined} min_out
+     * @param {string} min_out
      * @param {string} fees_json
      * @param {bigint} now
      * @returns {string}
@@ -434,8 +435,8 @@ export class WasmAgent {
             const len2 = WASM_VECTOR_LEN;
             const ptr3 = passStringToWasm0(to_asset, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
             const len3 = WASM_VECTOR_LEN;
-            var ptr4 = isLikeNone(min_out) ? 0 : passStringToWasm0(min_out, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-            var len4 = WASM_VECTOR_LEN;
+            const ptr4 = passStringToWasm0(min_out, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len4 = WASM_VECTOR_LEN;
             const ptr5 = passStringToWasm0(fees_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
             const len5 = WASM_VECTOR_LEN;
             wasm.wasmagent_swapToSelf(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, now);
@@ -991,8 +992,9 @@ export class WasmVault {
         }
     }
     /**
-     * Errata E-70 (7): the creation of account `n` was refused `SafeKeyInUse`: retire it (the next allocation takes
-     * the next index).
+     * Errata E-70 (7), E-75 (c3): whether a two-source read retired account `n` (it shows an account under its safe key
+     * at another address; the next allocation takes the next index). `STATE` otherwise: a node's `SafeKeyInUse` alone is
+     * an ordinary refusal.
      * @param {string} dep
      * @param {number} n
      */
@@ -2659,7 +2661,8 @@ export class WasmVault {
         }
     }
     /**
-     * Lock: drop every secret now (the handle is unusable afterwards).
+     * Lock: drop every secret now (the handle is unusable afterwards). Errata E-78 (78): the session's block is overwritten
+     * whole (`WipedBox`), then the stack is washed.
      */
     lock() {
         const ptr = this.__destroy_into_raw();
@@ -2799,7 +2802,9 @@ export class WasmVault {
      * find it (`reachable` is false too): move it. `reserved`: the note is an input of an action in flight (prepared, or
      * relayed and not yet seen spent), so a spend cannot pick it. `this_device`: this device holds the
      * generation's `d`; without it the note pays home or rescue only (spec §3.6). `from_account` (errata E-67 (5),
-     * only when set): a gift, returned from a Spending account this vault does not own (its address).
+     * only when set): a gift, returned from a Spending account this vault does not own (its address). `slow_held` (errata
+     * E-78 (38)): the note is under an own SLOW request (prepared, released and not yet seen, or on chain), and automatic
+     * selection and merges leave it out.
      * @param {string} dep
      * @returns {string}
      */
@@ -4315,6 +4320,41 @@ export class WasmVault {
         }
     }
     /**
+     * Errata E-78 (38): the pair an automatic merge takes: the two smallest free notes of one generation, never a note
+     * under an own SLOW request.
+     * @param {string} dep
+     * @param {string} denom
+     * @returns {string}
+     */
+    selectMergeInputs(dep, denom) {
+        let deferred4_0;
+        let deferred4_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(dep, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(denom, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len1 = WASM_VECTOR_LEN;
+            wasm.wasmvault_selectMergeInputs(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            var ptr3 = r0;
+            var len3 = r1;
+            if (r3) {
+                ptr3 = 0; len3 = 0;
+                throw takeObject(r2);
+            }
+            deferred4_0 = ptr3;
+            deferred4_1 = len3;
+            return getStringFromWasm0(ptr3, len3);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export4(deferred4_0, deferred4_1, 1);
+        }
+    }
+    /**
      * E-4: `off` (default), `third_party` or `all_withdrawals`.
      * @param {string} policy
      */
@@ -5036,8 +5076,9 @@ export class WasmVault {
         }
     }
     /**
-     * The open split withdrawals: `[{ withdrawal_id, card, released, confirmed_by, timings }]` (`timings`: one per
-     * part, `null` for a part without one; review RF-03).
+     * The open split withdrawals: `[{ withdrawal_id, card, released, confirmed_by, timings, part_inputs }]` (`timings`: one per
+     * part, `null` for a part without one; review RF-03; `part_inputs`: one per part, the note handles a part that came back
+     * goes with, `null` for any; errata E-75 (c11)).
      * @returns {string}
      */
     withdrawals() {
@@ -5766,6 +5807,37 @@ export function exitTiming(now, max_expiry_delta, send_now) {
 }
 
 /**
+ * Errata E-75 (c4): a part a node holds while the browser is closed: its own expiry and the hold inside it.
+ * @param {bigint} now
+ * @param {bigint} max_expiry_delta
+ * @returns {string}
+ */
+export function heldPartTiming(now, max_expiry_delta) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.heldPartTiming(retptr, now, max_expiry_delta);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        var ptr1 = r0;
+        var len1 = r1;
+        if (r3) {
+            ptr1 = 0; len1 = 0;
+            throw takeObject(r2);
+        }
+        deferred2_0 = ptr1;
+        deferred2_1 = len1;
+        return getStringFromWasm0(ptr1, len1);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export4(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Errata E-68 (14) R3-J3: the heights `[lo, hi]` (JSON) a reader with the 32-byte `seed_hex` asks for a cut at `cut`
  * (a viewer keeps a random seed of its own per file).
  * @param {string} seed_hex
@@ -6323,6 +6395,14 @@ export function splitBelowSecondProof(a, v2, max_parts) {
 }
 
 /**
+ * Errata E-78 (78, 81): wash the shadow stack now. The SDK calls it after every call into this module: with no wasm frame
+ * live it also covers what a binding's own guard cannot (that binding's frame and the bindgen shim's).
+ */
+export function stackWash() {
+    wasm.stackWash();
+}
+
+/**
  * E-18a: the K-path keys of a Transition (K contract) wallet account: `{ account_id, address, fingerprint,
  * owner_secret, scan_key }` (hex; `account_id` base64). `S_w` stays in WebAssembly. Review run-1 of findings
  * 78/81: `owner_secret` and `scan_key` cross as `secret_json` does (a `TransitionWalletKeys` written straight
@@ -6373,6 +6453,26 @@ export function txSize(msg_json) {
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
+}
+
+/**
+ * Errata E-75 (c1): the expiry offset of an action not meant to be held, `min(max_expiry_delta, 600)`.
+ * @param {bigint} max_expiry_delta
+ * @returns {bigint}
+ */
+export function unheldExpiryDelta(max_expiry_delta) {
+    const ret = wasm.unheldExpiryDelta(max_expiry_delta);
+    return BigInt.asUintN(64, ret);
+}
+
+/**
+ * Errata E-75 (c1): the node hold such an action asks for at most (590 at launch).
+ * @param {bigint} max_expiry_delta
+ * @returns {bigint}
+ */
+export function unheldHoldBlocks(max_expiry_delta) {
+    const ret = wasm.unheldHoldBlocks(max_expiry_delta);
+    return BigInt.asUintN(64, ret);
 }
 
 /**

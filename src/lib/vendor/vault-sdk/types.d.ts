@@ -131,6 +131,25 @@ export interface CallFees {
     protocol_fee_bps: number;
     protocol_fees: [string, Amount][];
 }
+/**
+ * A Spending account's creation parameters (freeze 3 `CreateAccountParams`, spec §3.10): keys and the slot root as 64
+ * lowercase hex characters. Errata E-75 (finding 01 of Rujira's review): `pop_safe` is the safe key's proof of
+ * possession (standard base64 of a 7,856-byte SLH-DSA-128s signature over the address and salt, spec §7.2 row 26;
+ * errata E-77 (2): in a fund, row 26f, over the fund's nullifiers too), which the proxy requires in every creation;
+ * the vault signs it into each creation message it builds (`createAccountMsg`, `prepareSpend` with a fund's `create`,
+ * replacing any proof given) and keeps none, so the parameters of an account record carry no `pop_safe`. A proof signed
+ * ahead of the funding cannot work: whoever signs must know the notes that pay (a payment request is interactive).
+ */
+export interface CreateAccountParams {
+    full_vk: string;
+    safe_vk: string;
+    slot_root: string;
+    slot_count: number;
+    dest_commit: string;
+    policy: unknown | null;
+    loosen_delay: number;
+    pop_safe?: string;
+}
 export type SpendKind = {
     kind: "withdraw";
     recipient: string;
@@ -138,7 +157,7 @@ export type SpendKind = {
 } | {
     kind: "fund";
     account: string;
-    create: unknown | null;
+    create: CreateAccountParams | null;
 } | {
     kind: "merge";
 } | {
@@ -248,6 +267,11 @@ export interface NoteView {
     this_device: boolean;
     /** An input of an action in flight (prepared, or relayed and not yet seen spent): no spend picks it. */
     reserved: boolean;
+    /**
+     * Errata E-78 (38): under an own SLOW request (prepared, released and not yet seen, or on chain): automatic selection
+     * and merges leave it out (a FAST spend or a merge would override the request). Naming it stays possible.
+     */
+    slow_held: boolean;
     /**
      * A restore from the phrase alone finds it (it lies within the spec scan's gaps, §3.12). `false` for a
      * note only this device's records or a deep sync find: move it (fund a Spending account and return).

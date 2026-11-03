@@ -1,6 +1,6 @@
 /**
  * The page with a history file (errata E-68) end to end, without a browser: the page's bridge, the viewer host
- * with the vendored production client module (9a945b79…), the chain reads (feeds at the tip, the cut's block
+ * with the vendored production client module (489b92fa…), the chain reads (feeds at the tip, the cut's block
  * inside this viewer's window) and Ozone's screening over a recording fetch. Checks the warnings and verdicts the
  * page shows, that nothing after the cut shows, that no request carries the file, a value of it or the window
  * seed, and how the seed is kept per fingerprint.
