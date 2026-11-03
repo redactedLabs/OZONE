@@ -164,6 +164,9 @@
 		bad: 'tone-bad',
 		muted: 'tone-muted'
 	};
+	/** The model's standing notice: not shown (the viewer's own warning under Details says it). */
+	const NOT_PROOF = 'Not a proof of funds';
+	const shown = (list: Banner[]) => list.filter((b) => b.title !== NOT_PROOF);
 </script>
 
 <svelte:head>
@@ -174,25 +177,47 @@
 </svelte:head>
 
 {#snippet bannerList(list: Banner[], warnings: string[], seedNote: string | null)}
-		<div class="space-y-2 mb-6" data-testid="banners">
-			{#each list as b}
-				<div class="vk-banner {TONE[b.tone]} rounded-xl px-4 py-3" role={b.tone === 'bad' ? 'alert' : undefined}>
-					<div class="text-sm font-semibold">{b.title}</div>
-					<div class="text-xs mt-0.5">{b.text}</div>
-				</div>
-			{/each}
-			{#if seedNote}
-				<div class="vk-banner tone-warn rounded-xl px-4 py-2 text-xs" data-testid="seed-note">{seedNote}</div>
-			{/if}
-			<button type="button" class="vk-link text-xs" onclick={() => (showAllWarnings = !showAllWarnings)}>
-				{showAllWarnings ? 'Hide' : 'Show'} the viewer's warnings ({warnings.length})
-			</button>
+		<!-- One status line; every text in Details -->
+		<div class="mb-6" data-testid="banners">
+			<div class="flex flex-wrap items-center gap-2">
+				{#each shown(list) as b}
+					<span class="vk-status {TONE[b.tone]} rounded-full px-2.5 py-1 text-xs font-medium" title={b.text} role={b.tone === 'bad' ? 'alert' : undefined}>
+						<span class="vk-dot" aria-hidden="true"></span>{b.title}
+					</span>
+				{/each}
+				{#if seedNote}
+					<span class="vk-status tone-warn rounded-full px-2.5 py-1 text-xs font-medium" title={seedNote} data-testid="seed-note">
+						<span class="vk-dot" aria-hidden="true"></span>Window seed not kept
+					</span>
+				{/if}
+				<button type="button" class="vk-link text-xs ml-1" onclick={() => (showAllWarnings = !showAllWarnings)}>
+					{showAllWarnings ? 'Hide details' : 'Details'}
+				</button>
+			</div>
 			{#if showAllWarnings}
-				<ol class="vk-card rounded-xl p-4 space-y-2 text-xs list-decimal list-inside" data-win-title="Viewer warnings">
-					{#each warnings as w}
-						<li class="break-words" style="color: var(--text-secondary);">{w}</li>
-					{/each}
-				</ol>
+				<div class="vk-card rounded-xl p-4 mt-3 text-xs space-y-3" data-win-title="Details">
+					<dl class="space-y-2">
+						{#each shown(list) as b}
+							<div>
+								<dt class="font-semibold" style="color: var(--text);">{b.title}</dt>
+								<dd style="color: var(--text-secondary);">{b.text}</dd>
+							</div>
+						{/each}
+						{#if seedNote}
+							<div>
+								<dt class="font-semibold" style="color: var(--text);">Window seed not kept</dt>
+								<dd style="color: var(--text-secondary);">{seedNote}</dd>
+							</div>
+						{/if}
+					</dl>
+					{#if warnings.length}
+						<ol class="space-y-2 list-decimal list-inside pt-3 vk-rule">
+							{#each warnings as w}
+								<li class="break-words" style="color: var(--text-secondary);">{w}</li>
+							{/each}
+						</ol>
+					{/if}
+				</div>
 			{/if}
 		</div>
 
@@ -345,7 +370,6 @@
 				{:else}
 					<div class="text-sm" style="color: var(--text-faint);">No unspent notes</div>
 				{/if}
-				<div class="vk-chip tone-bad mt-2 inline-block rounded px-1.5 py-0.5 text-[10px]">Not a proof of funds</div>
 			</div>
 		</div>
 
@@ -493,7 +517,6 @@
 						<span style="color: var(--text-faint);">Left</span><span class="font-mono text-right" style="color: var(--text);">{t.left}</span>
 					</div>
 				{/each}
-				<div class="vk-chip tone-bad mt-2 inline-block rounded px-1.5 py-0.5 text-[10px]">Not a proof of funds</div>
 			</div>
 		</div>
 
@@ -623,20 +646,38 @@
 		border: 1px solid;
 		white-space: nowrap;
 	}
+	.vk-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		border: 1px solid;
+		white-space: nowrap;
+		cursor: default;
+	}
+	.vk-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 9999px;
+		background: currentColor;
+	}
+	.vk-rule {
+		border-top: 1px solid var(--app-border-subtle);
+	}
+	/* the theme's text tones (readable on the light page), tinted surfaces */
 	.tone-bad {
-		color: #fca5a5;
-		background: rgba(239, 68, 68, 0.08);
-		border-color: rgba(239, 68, 68, 0.35);
+		color: var(--danger-text);
+		background: color-mix(in srgb, var(--danger) 9%, transparent);
+		border-color: color-mix(in srgb, var(--danger) 35%, transparent);
 	}
 	.tone-warn {
-		color: #fcd34d;
-		background: rgba(245, 158, 11, 0.08);
-		border-color: rgba(245, 158, 11, 0.35);
+		color: var(--warning-text);
+		background: color-mix(in srgb, var(--warning) 12%, transparent);
+		border-color: color-mix(in srgb, var(--warning) 45%, transparent);
 	}
 	.tone-ok {
-		color: #6ee7b7;
-		background: rgba(16, 185, 129, 0.08);
-		border-color: rgba(16, 185, 129, 0.3);
+		color: var(--success-text);
+		background: color-mix(in srgb, var(--success) 12%, transparent);
+		border-color: color-mix(in srgb, var(--success) 45%, transparent);
 	}
 	.tone-muted {
 		color: var(--text-secondary);
